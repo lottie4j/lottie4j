@@ -1,5 +1,7 @@
 package be.webtechie.jlottie.core.definition;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * https://lottiefiles.github.io/lottie-docs/effects/
  */
@@ -21,6 +23,7 @@ public enum EffectType {
     SPHERIZE(33, "Spherize"),
     PUPPET(34, "Puppet");
 
+    @JsonValue
     private final int value;
     private final String label;
 
