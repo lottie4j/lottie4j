@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>be.webtechie.jlottie</artifactId>
+        <groupId>be.webtechie</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <groupId>be.webtechie.jlottie</groupId>
+    <artifactId>fxplayer</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <name>core</name>
+    <url>http://www.webtechie.be</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+
+        <!-- Dependencies -->
+        <javafx.version>17.0.2</javafx.version>
+
+        <!-- Test dependencies -->
+
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>be.webtechie.jlottie</groupId>
+            <artifactId>core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+
+    </build>
+</project>

@@ -1,5 +1,6 @@
 package be.webtechie.jlottie.core.handler;
 
+import be.webtechie.jlottie.core.handler.FileLoader;
 import be.webtechie.jlottie.core.model.Animation;
 import be.webtechie.jlottie.core.model.Layer;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,5 @@
 package be.webtechie.jlottie.core.model;
 
-import be.webtechie.jlottie.core.definition.BlendMode;
-import be.webtechie.jlottie.core.definition.MatteMode;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 

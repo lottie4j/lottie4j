@@ -1,6 +1,8 @@
 package be.webtechie.jlottie.core.model;
 
 import be.webtechie.jlottie.core.handler.FileLoader;
+import be.webtechie.jlottie.core.model.Animation;
+import be.webtechie.jlottie.core.model.Layer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
