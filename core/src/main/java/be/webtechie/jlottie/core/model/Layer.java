@@ -3,9 +3,11 @@ package be.webtechie.jlottie.core.model;
 import be.webtechie.jlottie.core.definition.BlendMode;
 import be.webtechie.jlottie.core.definition.LayerType;
 import be.webtechie.jlottie.core.definition.MatteMode;
+import be.webtechie.jlottie.core.helper.ShapeDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.util.List;
 
@@ -41,7 +43,7 @@ public record Layer(
         @JsonProperty("hix") Integer hix,
 
         // Shape
-        @JsonProperty("shapes") List<Shape> shapes,
+        @JsonProperty("shapes") @JsonDeserialize(using = ShapeDeserializer.class) List<Object> shapes,
 
         // Precomposition
         @JsonProperty("refId") String referenceId,

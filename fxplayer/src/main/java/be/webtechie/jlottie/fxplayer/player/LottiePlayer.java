@@ -1,10 +1,10 @@
 package be.webtechie.jlottie.fxplayer.player;
 
 import be.webtechie.jlottie.core.model.Animation;
+import be.webtechie.jlottie.core.model.Layer;
+import be.webtechie.jlottie.fxplayer.element.ShapeDrawer;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.ArcType;
 
 public class LottiePlayer extends Canvas {
 
@@ -20,7 +20,10 @@ public class LottiePlayer extends Canvas {
     }
 
     private void play() {
+        animation.layers().forEach(this::drawLayer);
+
         // DUMMY TEST
+        /*
         graphicContext.setFill(Color.DARKKHAKI);
         graphicContext.setStroke(Color.DARKVIOLET);
         graphicContext.setLineWidth(6);
@@ -34,5 +37,10 @@ public class LottiePlayer extends Canvas {
         graphicContext.strokeArc(61, 111, 31, 31, 46, 241, ArcType.CHORD);
         graphicContext.fillArc(110, 111, 31, 31, 46, 241, ArcType.ROUND);
         graphicContext.strokeArc(111, 111, 31, 31, 46, 241, ArcType.ROUND);
+        */
+    }
+
+    private void drawLayer(Layer layer) {
+        layer.shapes().forEach(s -> ShapeDrawer.draw(graphicContext, s));
     }
 }

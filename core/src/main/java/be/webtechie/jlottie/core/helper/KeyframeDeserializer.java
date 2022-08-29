@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class KeyFrameDeserializer extends JsonDeserializer {
+public class KeyframeDeserializer extends JsonDeserializer {
     @Override
     public List<Double> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
         List<Double> rt = new ArrayList<>();

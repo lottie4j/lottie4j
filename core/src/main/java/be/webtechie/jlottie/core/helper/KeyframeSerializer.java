@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class KeyFrameSerializer extends JsonSerializer {
+public class KeyframeSerializer extends JsonSerializer {
 
     /**
      * A custom serializer is needed as

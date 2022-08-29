@@ -6,24 +6,24 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * https://lottiefiles.github.io/lottie-docs/shapes/#shape-element
  */
 public enum ShapeType {
-    RECTANGLE("rc", "Rectangle"),
     ELLIPSE("el", "Ellipse"),
-    POLYSTAR("sr", "PolyStar"),
-    PATH("sh", "Path"),
     FILL("fl", "Fill"),
-    STROKE("st", "Stroke"),
     GRADIENT_FILL("gf", "Gradient Fill"),
     GRADIENT_STROKE("gs", "Gradient Stroke"),
-    NO_STYLE("no", "No Style"),
     GROUP("gr", "Group"),
-    TRANSFORM("tr", "Transform"),
-    REPEATER("rp", "Repeater"),
-    TRIM("tm", "Trim"),
-    ROUNDED_CORNERS("rd", "Rounded Corners"),
-    PUCKER("pb", "Pucker / Bloat"),
     MERGE("mm", "Merge"),
-    TWIST("tw", "Twist"),
+    NO_STYLE("no", "No Style"),
     OFFSET_PATH("op", "Offset Path"),
+    PATH("sh", "Path"),
+    POLYSTAR("sr", "PolyStar"),
+    PUCKER("pb", "Pucker / Bloat"),
+    RECTANGLE("rc", "Rectangle"),
+    REPEATER("rp", "Repeater"),
+    ROUNDED_CORNERS("rd", "Rounded Corners"),
+    STROKE("st", "Stroke"),
+    TRANSFORM("tr", "Transform"),
+    TRIM("tm", "Trim"),
+    TWIST("tw", "Twist"),
     ZIG_ZAG("zz", "Zig Zag");
 
     @JsonValue
@@ -33,6 +33,15 @@ public enum ShapeType {
     ShapeType(String value, String label) {
         this.value = value;
         this.label = label;
+    }
+
+    public static ShapeType fromValue(String ty) {
+        for (ShapeType shapeType : ShapeType.values()) {
+            if (shapeType.value.equals(ty)) {
+                return shapeType;
+            }
+        }
+        throw new IllegalArgumentException("ShapeType " + ty + " is not defined");
     }
 
     public String value() {

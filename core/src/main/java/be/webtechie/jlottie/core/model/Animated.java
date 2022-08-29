@@ -1,7 +1,7 @@
 package be.webtechie.jlottie.core.model;
 
-import be.webtechie.jlottie.core.helper.KeyFrameDeserializer;
-import be.webtechie.jlottie.core.helper.KeyFrameSerializer;
+import be.webtechie.jlottie.core.helper.KeyframeDeserializer;
+import be.webtechie.jlottie.core.helper.KeyframeSerializer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -19,8 +19,8 @@ import java.util.List;
 public record Animated(
         @JsonProperty("a") Integer animated,
         @JsonProperty("k")
-        @JsonSerialize(using = KeyFrameSerializer.class)
-        @JsonDeserialize(using = KeyFrameDeserializer.class)
+        @JsonSerialize(using = KeyframeSerializer.class)
+        @JsonDeserialize(using = KeyframeDeserializer.class)
         List<Double> keyframes
 ) {
 }
