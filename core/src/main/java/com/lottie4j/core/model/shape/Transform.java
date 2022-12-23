@@ -32,8 +32,8 @@ public record Transform(
         @JsonProperty("rx") Animated rx,
         @JsonProperty("ry") Animated ry,
         @JsonProperty("rz") Animated rz,
-        @JsonProperty("sk") Integer skew,
-        @JsonProperty("sa") Integer skewAxis,
+        @JsonProperty("sk") Animated skew,
+        @JsonProperty("sa") Animated skewAxis,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("or") Animated unknown
 ) implements Shape {

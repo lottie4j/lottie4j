@@ -12,14 +12,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(Include.NON_NULL)
 public record Transform(
         @JsonProperty("a") Animated anchor,
-        @JsonProperty("p") Position position,
+        @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated scale,
         @JsonProperty("r") Animated rotation,
         @JsonProperty("rx") Animated rx,
         @JsonProperty("ry") Animated ry,
         @JsonProperty("rz") Animated rz,
-        @JsonProperty("sk") Integer skew,
-        @JsonProperty("sa") Integer skewAxis,
+        @JsonProperty("sk") Animated skew,
+        @JsonProperty("sa") Animated skewAxis,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("or") Animated unknown
 ) {

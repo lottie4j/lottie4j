@@ -13,9 +13,9 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public record Bezier(
-        @JsonProperty("c") Integer closed,
-        @JsonProperty("v") List<Integer> vertices,
-        @JsonProperty("i") List<Integer> tangentsIn,
-        @JsonProperty("o") List<Integer> tangentsOut
+        @JsonProperty("c") Boolean closed,
+        @JsonProperty("v") List<List<Integer>> vertices,
+        @JsonProperty("i") List<List<Integer>> tangentsIn,
+        @JsonProperty("o") List<List<Integer>> tangentsOut
 ) {
 }

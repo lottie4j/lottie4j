@@ -1,7 +1,7 @@
 package com.lottie4j.core.model;
 
-import com.lottie4j.core.handler.FileLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lottie4j.core.handler.FileLoader;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -9,49 +9,21 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * https://jsonassert.skyscreamer.org/
+ */
 public class ModelTest {
 
-    /**
-     * https://jsonassert.skyscreamer.org/
-     */
-    @Test
-    void fromJsonToJsonSmallFileSingleLayerNoShapes() throws IOException, JSONException {
-        File f = new File(this.getClass().getResource("/lottie/java_duke_single_layer_no_shapes.json").getFile());
-        String fromJson = FileLoader.loadFileAsString(f);
-        Layer animationFromJson = FileLoader.parseLayer(fromJson);
-
-        ObjectMapper mapper = new ObjectMapper();
-        String fromObject = mapper.writeValueAsString(animationFromJson);
-
-        System.out.println("Original:\n" + fromJson.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + fromObject);
-
-        JSONAssert.assertEquals(fromJson, fromObject, false);
-    }
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void fromJsonToJsonSmallFileSingleLayer() throws IOException, JSONException {
-        File f = new File(this.getClass().getResource("/lottie/java_duke_single_layer.json").getFile());
+    void fromJsonBezier() throws IOException, JSONException {
+        File f = new File(this.getClass().getResource("/lottie/model/bezier.json").getFile());
         String fromJson = FileLoader.loadFileAsString(f);
-        Layer animationFromJson = FileLoader.parseLayer(fromJson);
+        var bezier = mapper.readValue(fromJson, Bezier.class);
 
         ObjectMapper mapper = new ObjectMapper();
-        String fromObject = mapper.writeValueAsString(animationFromJson);
-
-        System.out.println("Original:\n" + fromJson.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + fromObject);
-
-        JSONAssert.assertEquals(fromJson, fromObject, false);
-    }
-
-    @Test
-    void fromJsonToJsonSmallFile() throws IOException, JSONException {
-        File f = new File(this.getClass().getResource("/lottie/java_duke.json").getFile());
-        String fromJson = FileLoader.loadFileAsString(f);
-        Animation animationFromJson = FileLoader.parseAnimation(fromJson);
-
-        ObjectMapper mapper = new ObjectMapper();
-        String fromObject = mapper.writeValueAsString(animationFromJson);
+        String fromObject = mapper.writeValueAsString(bezier);
 
         System.out.println("Original:\n" + fromJson.replace("\n", "").replace(" ", ""));
         System.out.println("Generated:\n" + fromObject);
