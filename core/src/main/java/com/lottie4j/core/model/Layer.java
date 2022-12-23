@@ -37,6 +37,7 @@ public record Layer(
         @JsonProperty("masksProperties") List<Mask> masks,
         @JsonProperty("ef") List<Effect> effects,
         @JsonProperty("ks") Transform transform,
+        @JsonProperty("ao") Integer autoRotate,
 
         // Unknown
         @JsonProperty("hix") Integer hix,

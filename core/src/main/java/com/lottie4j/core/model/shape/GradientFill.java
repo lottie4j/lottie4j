@@ -25,6 +25,11 @@ public record GradientFill(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // GradientFill
         @JsonProperty("r") FillRule fillRule,
         @JsonProperty("o") Animated opacity,

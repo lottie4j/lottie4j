@@ -24,6 +24,11 @@ public record TrimPath(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Trim
         @JsonProperty("s") Animated segmentStart,
         @JsonProperty("e") Animated segmentEnd,

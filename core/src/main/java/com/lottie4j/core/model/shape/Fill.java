@@ -24,6 +24,11 @@ public record Fill(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Fill
         @JsonProperty("r") FillRule fillRule,
         @JsonProperty("o") Animated opacity,

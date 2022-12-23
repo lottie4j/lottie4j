@@ -23,6 +23,11 @@ public record RoundedCorners(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // RoundedCorners
         @JsonProperty("r") Animated radius
 ) implements Shape {

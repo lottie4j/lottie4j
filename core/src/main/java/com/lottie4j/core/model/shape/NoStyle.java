@@ -20,6 +20,11 @@ public record NoStyle(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
+
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix
 ) implements Shape {
 }

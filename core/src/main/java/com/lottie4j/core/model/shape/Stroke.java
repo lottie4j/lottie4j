@@ -28,6 +28,11 @@ public record Stroke(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        //@JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Stroke
         @JsonProperty("lc") LineCap lineCap,
         @JsonProperty("lj") LineJoin lineJoin,

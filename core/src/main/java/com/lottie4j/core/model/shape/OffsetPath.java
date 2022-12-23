@@ -24,6 +24,11 @@ public record OffsetPath(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // OffsetPath
         @JsonProperty("a") Animated amount,
         @JsonProperty("lj") LineJoin lineJoin,

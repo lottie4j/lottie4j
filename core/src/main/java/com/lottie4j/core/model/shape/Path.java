@@ -23,6 +23,11 @@ public record Path(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Path
         @JsonProperty("ks") Animated bezierPath
 ) implements Shape {

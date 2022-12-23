@@ -23,6 +23,11 @@ public record Merge(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Merge
         @JsonProperty("mm") MergeMode mergeMode
 ) implements Shape {

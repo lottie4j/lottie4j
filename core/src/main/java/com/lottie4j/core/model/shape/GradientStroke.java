@@ -25,6 +25,11 @@ public record GradientStroke(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // GradientStroke
         @JsonProperty("lc") LineCap lineCap,
         @JsonProperty("lj") LineJoin lineJoin,

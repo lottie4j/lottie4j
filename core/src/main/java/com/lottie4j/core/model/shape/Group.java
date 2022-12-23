@@ -24,6 +24,11 @@ public record Group(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Group
         @JsonProperty("np") Integer numberOfProperties,
         @JsonProperty("it") List<Shape> shapes

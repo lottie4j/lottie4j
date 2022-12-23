@@ -24,6 +24,11 @@ public record Polystar(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Polystar
         @JsonProperty("p") Animated position,
         @JsonProperty("or") Animated outerRadius,

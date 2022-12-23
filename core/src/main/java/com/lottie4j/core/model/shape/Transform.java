@@ -24,6 +24,11 @@ public record Transform(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Transform
         @JsonProperty("a") Animated anchor,
         @JsonProperty("p") Position position,

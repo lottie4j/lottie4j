@@ -23,6 +23,11 @@ public record Twist(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Twist
         @JsonProperty("a") Animated angle,
         @JsonProperty("c") Animated center

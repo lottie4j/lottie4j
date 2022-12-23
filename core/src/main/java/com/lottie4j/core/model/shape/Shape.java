@@ -36,4 +36,8 @@ public interface Shape {
     Integer index = 0;
     String clazz = "";
     String id = "";
+
+    // Undefined
+    Integer d = 0;
+    Integer cix = 0;
 }

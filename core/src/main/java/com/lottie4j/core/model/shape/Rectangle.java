@@ -23,6 +23,11 @@ public record Rectangle(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
+        // Undefined
+
+        @JsonProperty("d") Integer d,
+        @JsonProperty("cix") Integer cix,
+
         // Rectangle
         @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated size,

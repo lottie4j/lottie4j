@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 /**
  * https://lottiefiles.github.io/lottie-docs/concepts/#keyframe
  */
@@ -12,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(Include.NON_NULL)
 public record Keyframe(
         @JsonProperty("t") Integer time, // in frames
-        @JsonProperty("s") String value,
+        @JsonProperty("s") List<Double> values,
         @JsonProperty("i") EasingHandle easingIn,
         @JsonProperty("o") EasingHandle easingOut,
         @JsonProperty("h") Integer holdFrame
