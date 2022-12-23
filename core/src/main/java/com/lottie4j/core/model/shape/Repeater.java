@@ -25,7 +25,7 @@ public record Repeater(
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
 
-        // Repeater,
+        // Repeater
         @JsonProperty("c") Animated copies,
         @JsonProperty("o") Animated offset,
         @JsonProperty("m") Composite stackingOrder,

@@ -27,9 +27,9 @@ public class ShapeTest {
                 Arguments.of("/lottie/shape/polystar.json", Polystar.class),
                 Arguments.of("/lottie/shape/pucker.json", Pucker.class),
                 Arguments.of("/lottie/shape/rectangle.json", Rectangle.class),
-                Arguments.of("/lottie/shape/repeater_transform.json", RepeaterTransform.class),
+                Arguments.of("/lottie/shape/repeater_transform.json", Repeater.class),
                 Arguments.of("/lottie/shape/rounded_corners.json", RoundedCorners.class),
-                Arguments.of("/lottie/shape/stroke_dashes.json", StrokeDash.class),
+                Arguments.of("/lottie/shape/stroke_dashes.json", Stroke.class),
                 Arguments.of("/lottie/shape/trim_path.json", TrimPath.class)
         );
     }

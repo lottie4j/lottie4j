@@ -9,8 +9,6 @@ import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
-import java.util.List;
-
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#gradients
  */
@@ -30,9 +28,18 @@ public record GradientFill(
         // GradientFill
         @JsonProperty("r") FillRule fillRule,
         @JsonProperty("o") Animated opacity,
-        @JsonProperty("d") Animated startingPoint,
+        @JsonProperty("s") Animated startingPoint,
         @JsonProperty("e") Animated endPoint,
         @JsonProperty("t") GradientType gradientType,
-        @JsonProperty("g") List<Double> colors
+        @JsonProperty("g") GradientColor colors,
+        @JsonProperty("h") Animated highlightLength,
+        @JsonProperty("a") Animated highlightAngle
 ) implements Shape {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record GradientColor(
+            @JsonProperty("p") Integer numberOfColors,
+            @JsonProperty("k") Animated colors
+    ) {
+    }
 }

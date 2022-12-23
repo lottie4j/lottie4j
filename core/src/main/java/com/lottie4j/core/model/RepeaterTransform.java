@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(Include.NON_NULL)
 public record RepeaterTransform(
         @JsonProperty("a") Animated anchor,
-        @JsonProperty("p") Position position,
+        @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated scale,
         @JsonProperty("r") Animated rotation,
         @JsonProperty("rx") Animated rx,
