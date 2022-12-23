@@ -1,4 +1,4 @@
-# Java library to handle Lottie files
+# Lottie4J :: Java library to handle Lottie files
 
 Aim is to create a JavaFX player capable of playing Lottie files.
 
