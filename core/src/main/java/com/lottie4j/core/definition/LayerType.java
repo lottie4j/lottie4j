@@ -1,6 +1,9 @@
 package com.lottie4j.core.definition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/layers/
@@ -32,6 +35,14 @@ public enum LayerType {
         this.value = value;
         this.label = label;
         this.description = description;
+    }
+
+    @JsonCreator
+    public static LayerType fromValue(String value) {
+        return Arrays.stream(LayerType.values()).sequential()
+                .filter(v -> String.valueOf(v.value).equals(value))
+                .findFirst()
+                .get();
     }
 
     public int value() {

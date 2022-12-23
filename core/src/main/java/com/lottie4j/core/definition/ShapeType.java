@@ -1,5 +1,6 @@
 package com.lottie4j.core.definition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
@@ -36,6 +37,7 @@ public enum ShapeType {
         this.label = label;
     }
 
+    @JsonCreator
     public static ShapeType fromValue(String ty) {
         for (ShapeType shapeType : ShapeType.values()) {
             if (shapeType.value.equals(ty)) {
