@@ -1,12 +1,12 @@
 package com.lottie4j.core.model.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.Position;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#transform-shape
@@ -36,5 +36,5 @@ public record Transform(
         @JsonProperty("sa") Integer skewAxis,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("or") Animated unknown
-) {
+) implements Shape {
 }

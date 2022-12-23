@@ -3,8 +3,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>com.lottie4j</artifactId>
-        <groupId>lottie4j</groupId>
+        <groupId>com.lottie4j</groupId>
+        <artifactId>lottie4j</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
@@ -50,6 +50,13 @@
             <version>2.10.0</version>
         </dependency>
 
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>

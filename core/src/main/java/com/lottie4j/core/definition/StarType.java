@@ -3,18 +3,17 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#linejoin
+ * https://lottiefiles.github.io/lottie-docs/constants/#star-type
  */
-public enum LineJoin {
-    MITER(1, "Miter"),
-    ROUND(2, "Round"),
-    BEVEL(3, "Bevel");
+public enum StarType {
+    STAR(1, "Star"),
+    POLYGON(2, "Polygon");
 
     @JsonValue
     private final int value;
     private final String label;
 
-    LineJoin(int value, String label) {
+    StarType(int value, String label) {
         this.value = value;
         this.label = label;
     }

@@ -1,13 +1,12 @@
 package com.lottie4j.core.model;
 
-import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.LayerType;
-import com.lottie4j.core.definition.MatteMode;
-import com.lottie4j.core.helper.ShapeDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.LayerType;
+import com.lottie4j.core.definition.MatteMode;
+import com.lottie4j.core.model.shape.Shape;
 
 import java.util.List;
 
@@ -43,7 +42,7 @@ public record Layer(
         @JsonProperty("hix") Integer hix,
 
         // Shape
-        @JsonProperty("shapes") @JsonDeserialize(using = ShapeDeserializer.class) List<Object> shapes,
+        @JsonProperty("shapes") List<Shape> shapes,
 
         // Precomposition
         @JsonProperty("refId") String referenceId,

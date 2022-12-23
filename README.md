@@ -1,6 +1,6 @@
 # Lottie4J :: Java library to handle Lottie files
 
-Aim is to create a JavaFX player capable of playing Lottie files.
+The aim is to create a JavaFX player capable of playing Lottie files.
 
 https://lottiefiles.com/what-is-lottie
 
@@ -18,6 +18,20 @@ JSON Lottie animation file: https://lottiefiles.github.io/lottie-docs/schema/lot
 Adobe AfterEffects is used a lot to create Lottie animations. But there is a free
 alternative: [Haiku](https://www.haikuanimator.com/) that was turned
 into [an opensource project in August 2021](https://www.haikuanimator.com/blog/open-source).
+
+## Project structure
+
+This project consists of different modules to make it easier to maintain and use only the required components when used
+in an application.
+
+### Core
+
+* Contains objects matching the Lottie data model.
+* Can read and write Lottie files (JSON and ZIP).
+* Uses records for the data objects, partially based on the solution provided
+  in [this StackOverflow question](https://stackoverflow.com/questions/74890806/parse-json-to-java-records-with-fasterxml-jackson/74891785#74891785).
+
+### FXPlayer
 
 ## IDE settings
 

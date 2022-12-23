@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.Animated;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#rounded-corners
@@ -20,8 +21,9 @@ public record RoundedCorners(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
         // RoundedCorners
-) {
+        @JsonProperty("r") Animated radius
+) implements Shape {
 }

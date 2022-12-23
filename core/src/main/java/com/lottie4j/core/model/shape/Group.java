@@ -1,12 +1,10 @@
 package com.lottie4j.core.model.shape;
 
-import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.ShapeType;
-import com.lottie4j.core.helper.ShapeDeserializer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.ShapeType;
 
 import java.util.List;
 
@@ -28,6 +26,6 @@ public record Group(
 
         // Group
         @JsonProperty("np") Integer numberOfProperties,
-        @JsonProperty("it") @JsonDeserialize(using = ShapeDeserializer.class) List<Object> shapes
-) {
+        @JsonProperty("it") List<Shape> shapes
+) implements Shape {
 }

@@ -25,9 +25,13 @@ public class KeyframeSerializer extends JsonSerializer {
                 jsonGenerator.writeRawValue(value == 0 ? "0" : value.toString());
             } else {
                 jsonGenerator.writeRawValue("[" + list.stream()
-                        .map(v -> ((double) v) == 0 ? "0" : v.toString())
+                        .map(v -> getNumberValue((double) v))
                         .collect(Collectors.joining(",")) + "]");
             }
         }
+    }
+
+    private String getNumberValue(Double value) {
+        return Math.round(value) == value ? String.valueOf(Math.round(value)) : String.valueOf(value);
     }
 }

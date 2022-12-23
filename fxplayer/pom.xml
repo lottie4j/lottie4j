@@ -4,8 +4,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>com.lottie4j</artifactId>
-        <groupId>lottie4j</groupId>
+        <groupId>com.lottie4j</groupId>
+        <artifactId>lottie4j</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 

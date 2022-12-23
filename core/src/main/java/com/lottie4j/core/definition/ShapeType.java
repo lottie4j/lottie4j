@@ -24,7 +24,8 @@ public enum ShapeType {
     TRANSFORM("tr", "Transform"),
     TRIM("tm", "Trim"),
     TWIST("tw", "Twist"),
-    ZIG_ZAG("zz", "Zig Zag");
+    ZIG_ZAG("zz", "Zig Zag"),
+    UNKNOWN("", "");
 
     @JsonValue
     private final String value;

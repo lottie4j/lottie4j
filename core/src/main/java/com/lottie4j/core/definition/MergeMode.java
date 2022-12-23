@@ -3,18 +3,20 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#linejoin
+ * https://lottiefiles.github.io/lottie-docs/constants/#blendmode
  */
-public enum LineJoin {
-    MITER(1, "Miter"),
-    ROUND(2, "Round"),
-    BEVEL(3, "Bevel");
+public enum MergeMode {
+    NORMAL(1, "Normal"),
+    ADD(2, "Add"),
+    SUBTRACT(3, "Subtract"),
+    INTERSECT(4, "Intersect"),
+    EXCLUDE(5, "Exclude Intersections");
 
     @JsonValue
     private final int value;
     private final String label;
 
-    LineJoin(int value, String label) {
+    MergeMode(int value, String label) {
         this.value = value;
         this.label = label;
     }

@@ -1,10 +1,10 @@
 package com.lottie4j.core.model.shape;
 
-import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.ShapeType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.ShapeType;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#no-style
@@ -21,5 +21,5 @@ public record NoStyle(
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id
-) {
+) implements Shape {
 }

@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.Composite;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.RepeaterTransform;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#repeater
@@ -20,8 +23,13 @@ public record Repeater(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
-        // Repeater
-) {
+        // Repeater,
+        @JsonProperty("c") Animated copies,
+        @JsonProperty("o") Animated offset,
+        @JsonProperty("m") Composite stackingOrder,
+
+        @JsonProperty("tr") RepeaterTransform repeaterTransform
+) implements Shape {
 }

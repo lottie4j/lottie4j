@@ -36,6 +36,6 @@ public record GradientStroke(
         @JsonProperty("d") Animated startingPoint,
         @JsonProperty("e") Animated endPoint,
         @JsonProperty("t") GradientType gradientType,
-        @JsonProperty("g") Object colors // TODO
-) {
+        @JsonProperty("g") List<Double> colors
+) implements Shape {
 }

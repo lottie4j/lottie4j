@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.Animated;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#zig-zag
@@ -20,8 +22,11 @@ public record ZigZag(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
         // ZigZag
-) {
+        @JsonProperty("a") Animated amount,
+        @JsonProperty("lj") LineJoin lineJoin,
+        @JsonProperty("ml") Animated miterLimit
+) implements Shape {
 }

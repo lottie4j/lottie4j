@@ -1,13 +1,15 @@
 package com.lottie4j.core.model.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.FillRule;
 import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#gradients
@@ -31,6 +33,6 @@ public record GradientFill(
         @JsonProperty("d") Animated startingPoint,
         @JsonProperty("e") Animated endPoint,
         @JsonProperty("t") GradientType gradientType,
-        @JsonProperty("g") Object colors // TODO
-) {
+        @JsonProperty("g") List<Double> colors
+) implements Shape {
 }

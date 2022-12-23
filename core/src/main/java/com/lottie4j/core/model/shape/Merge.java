@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
+import com.lottie4j.core.definition.MergeMode;
 import com.lottie4j.core.definition.ShapeType;
 
 /**
@@ -20,8 +21,9 @@ public record Merge(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
         // Merge
-) {
+        @JsonProperty("mm") MergeMode mergeMode
+) implements Shape {
 }

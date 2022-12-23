@@ -1,14 +1,14 @@
 package com.lottie4j.core.model.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.LineCap;
 import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.StrokeDash;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -37,5 +37,5 @@ public record Stroke(
         @JsonProperty("d") List<StrokeDash> strokeDashes,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("c") Animated color
-) {
+) implements Shape {
 }

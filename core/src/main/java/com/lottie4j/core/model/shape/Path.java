@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.Bezier;
+
+import java.util.List;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#path
@@ -20,8 +23,9 @@ public record Path(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
-        // OffsetPath
-) {
+        // Path
+        @JsonProperty("ks") List<Bezier> bezierPath
+) implements Shape {
 }

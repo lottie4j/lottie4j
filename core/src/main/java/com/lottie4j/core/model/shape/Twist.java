@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.Animated;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#twist
@@ -20,8 +21,10 @@ public record Twist(
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
-        @JsonProperty("ln") String id
+        @JsonProperty("ln") String id,
 
         // Twist
-) {
+        @JsonProperty("a") Animated angle,
+        @JsonProperty("c") Animated center
+) implements Shape {
 }
