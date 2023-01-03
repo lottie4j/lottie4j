@@ -29,7 +29,7 @@ public class KeyframeSerializer extends JsonSerializer {
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         if (o instanceof List<?> list) {
             if (list.size() == 1 && list.get(0) instanceof NumberKeyframe keyframe) {
-                jsonGenerator.writeRawValue(keyframe.value().doubleValue() == 0 ? "0" : keyframe.value().toString());
+                jsonGenerator.writeRawValue(keyframe.doubleValue() == 0 ? "0" : keyframe.toString());
             } else {
                 jsonGenerator.writeRawValue("[" + list.stream()
                         .map(v -> getNumberValue((Keyframe) v))
@@ -40,9 +40,9 @@ public class KeyframeSerializer extends JsonSerializer {
 
     private String getNumberValue(Keyframe keyframe) {
         if (keyframe instanceof NumberKeyframe numberKeyframe) {
-            return Math.round(numberKeyframe.value().doubleValue()) == numberKeyframe.value().doubleValue() ?
-                    String.valueOf(Math.round(numberKeyframe.value().doubleValue())) :
-                    String.valueOf(numberKeyframe.value().doubleValue());
+            return Math.round(numberKeyframe.doubleValue()) == numberKeyframe.doubleValue() ?
+                    String.valueOf(Math.round(numberKeyframe.doubleValue())) :
+                    String.valueOf(numberKeyframe.doubleValue());
         } else if (keyframe instanceof TimedKeyframe timedKeyframe) {
             try {
                 return mapper.writeValueAsString(timedKeyframe);

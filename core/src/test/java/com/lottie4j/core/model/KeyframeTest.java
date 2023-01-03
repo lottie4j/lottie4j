@@ -31,7 +31,7 @@ public class KeyframeTest {
         assertAll(
                 () -> assertEquals(1, animated.keyframes().size()),
                 () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
-                () -> assertEquals(123, ((NumberKeyframe) animated.keyframes().get(0)).value().intValue()),
+                () -> assertEquals(123, ((NumberKeyframe) animated.keyframes().get(0)).intValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
     }
@@ -52,7 +52,7 @@ public class KeyframeTest {
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
                 () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
-                () -> assertEquals(128, ((NumberKeyframe) animated.keyframes().get(0)).value().intValue()),
+                () -> assertEquals(128, ((NumberKeyframe) animated.keyframes().get(0)).intValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
     }
@@ -73,7 +73,7 @@ public class KeyframeTest {
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
                 () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
-                () -> assertEquals(5.01, ((NumberKeyframe) animated.keyframes().get(0)).value().doubleValue()),
+                () -> assertEquals(5.01, ((NumberKeyframe) animated.keyframes().get(0)).doubleValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
     }

@@ -3,10 +3,10 @@ package com.lottie4j.core.model.keyframe;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
+@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = NumberKeyframe.class)
 @JsonSubTypes({
+        @JsonSubTypes.Type(NumberKeyframe.class),
         @JsonSubTypes.Type(TimedKeyframe.class),
-        @JsonSubTypes.Type(NumberKeyframe.class)
 })
 public interface Keyframe {
 

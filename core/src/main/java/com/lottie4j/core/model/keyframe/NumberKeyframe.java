@@ -7,8 +7,14 @@ import java.math.BigDecimal;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record NumberKeyframe(
-        BigDecimal value
-) implements Keyframe {
+public class NumberKeyframe extends BigDecimal implements Keyframe {
+
+    public NumberKeyframe(int val) {
+        super(val);
+    }
+
+    public NumberKeyframe(double val) {
+        super(val);
+    }
 }
 

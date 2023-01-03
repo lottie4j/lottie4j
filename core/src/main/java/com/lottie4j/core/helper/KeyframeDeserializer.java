@@ -32,11 +32,11 @@ public class KeyframeDeserializer extends JsonDeserializer {
                 if (childNode.has("i") || childNode.has("o") || childNode.has("t") || childNode.has("x")) {
                     rt.add(mapper.convertValue(childNode, TimedKeyframe.class));
                 } else {
-                    rt.add(new NumberKeyframe(childNode.decimalValue()));
+                    rt.add(new NumberKeyframe(childNode.doubleValue()));
                 }
             }
         } else {
-            rt.add(new NumberKeyframe(node.decimalValue()));
+            rt.add(new NumberKeyframe(node.doubleValue()));
         }
 
         return rt;
