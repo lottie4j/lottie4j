@@ -7,7 +7,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
-import com.lottie4j.core.model.Keyframe;
+import com.lottie4j.core.model.keyframe.Keyframe;
+import com.lottie4j.core.model.keyframe.NumberKeyframe;
+import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,10 +29,14 @@ public class KeyframeDeserializer extends JsonDeserializer {
         if (node instanceof ArrayNode array) {
             for (Iterator<JsonNode> it = array.elements(); it.hasNext(); ) {
                 JsonNode childNode = it.next();
-                rt.add(mapper.convertValue(childNode, Keyframe.class));
+                if (childNode.has("i") || childNode.has("o") || childNode.has("t") || childNode.has("x")) {
+                    rt.add(mapper.convertValue(childNode, TimedKeyframe.class));
+                } else {
+                    rt.add(new NumberKeyframe(childNode.decimalValue()));
+                }
             }
         } else {
-            // TODO rt.add(new Keyframe(getValue(node));
+            rt.add(new NumberKeyframe(node.decimalValue()));
         }
 
         return rt;

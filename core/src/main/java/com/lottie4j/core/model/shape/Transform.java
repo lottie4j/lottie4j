@@ -6,10 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.Position;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#transform-shape
+ * https://lottiefiles.github.io/lottie-docs/concepts/#transform
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -31,7 +30,7 @@ public record Transform(
 
         // Transform
         @JsonProperty("a") Animated anchor,
-        @JsonProperty("p") Position position,
+        @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated scale,
         @JsonProperty("r") Animated rotation,
         @JsonProperty("rx") Animated rx,

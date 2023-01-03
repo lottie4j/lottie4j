@@ -21,7 +21,7 @@
         <maven.compiler.target>17</maven.compiler.target>
 
         <!-- Dependencies -->
-        <jackson.version>2.12.3</jackson.version>
+        <jackson.version>2.14.1</jackson.version>
 
         <!-- Test dependencies -->
         <jsonassert.version>1.5.0</jsonassert.version>
@@ -42,12 +42,6 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.10.0</version>
         </dependency>
 
         <!-- Test -->

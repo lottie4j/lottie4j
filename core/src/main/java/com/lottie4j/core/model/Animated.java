@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.lottie4j.core.helper.KeyframeDeserializer;
 import com.lottie4j.core.helper.KeyframeSerializer;
+import com.lottie4j.core.model.keyframe.Keyframe;
 
 import java.util.List;
 
@@ -25,6 +26,9 @@ public record Animated(
         List<Keyframe> keyframes,
 
         @JsonProperty("ix") Integer ix,
-        @JsonProperty("l") Integer l
+        @JsonProperty("l") Integer l,
+        @JsonProperty("s") Boolean s,
+        @JsonProperty("x") Animated x,
+        @JsonProperty("y") Animated y
 ) {
 }
