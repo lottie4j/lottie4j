@@ -3,6 +3,8 @@ package com.lottie4j.core.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.shape.Path;
+import com.lottie4j.core.model.shape.Shape;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -21,6 +23,17 @@ class FileLoaderTest {
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(
+                Arguments.of("/lottie/lottie_file/java_duke_empty_layers.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1_no_shapes.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only_path.json", Path.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only.json", Shape.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_2.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_3.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_4.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_5.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/java_duke.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/loading.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_single_layer_no_shapes.json", Layer.class),
                 Arguments.of("/lottie/lottie_file/java_duke_single_layer.json", Layer.class),
@@ -38,13 +51,13 @@ class FileLoaderTest {
         ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
 
+        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
+        System.out.println("Generated:\n" + jsonFromObject);
+
         assertAll(
                 () -> assertTrue(clazz.isInstance(objectFromJson)),
                 () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
         );
-
-        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + jsonFromObject);
     }
 
     @Test
@@ -82,7 +95,7 @@ class FileLoaderTest {
     }
 
     @Test
-    void testLoadSmallFile() throws IOException {
+    void testLoadSmallFile(String fileName) throws IOException {
         File f = new File(this.getClass().getResource("/lottie/lottie_file/java_duke.json").getFile());
         var jsonFromFile = FileLoader.loadFileAsString(f);
         var a = mapper.readValue(jsonFromFile, Animation.class);

@@ -29,17 +29,21 @@ public class KeyframeDeserializer extends JsonDeserializer {
         if (node instanceof ArrayNode array) {
             for (Iterator<JsonNode> it = array.elements(); it.hasNext(); ) {
                 JsonNode childNode = it.next();
-                if (childNode.has("i") || childNode.has("o") || childNode.has("t") || childNode.has("x")) {
-                    rt.add(mapper.convertValue(childNode, TimedKeyframe.class));
-                } else {
-                    rt.add(new NumberKeyframe(childNode.doubleValue()));
-                }
+                rt.add(getKeyframe(childNode));
             }
         } else {
-            rt.add(new NumberKeyframe(node.doubleValue()));
+            rt.add(getKeyframe(node));
         }
 
         return rt;
+    }
+
+    private Keyframe getKeyframe(JsonNode node) {
+        if (node.has("i") || node.has("o") || node.has("t") || node.has("x")) {
+            return mapper.convertValue(node, TimedKeyframe.class);
+        } else {
+            return new NumberKeyframe(node.doubleValue());
+        }
     }
 
     private Double getValue(JsonNode node) {

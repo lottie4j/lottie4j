@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.lottie4j.core.helper.ListListSerializer;
 
 import java.util.List;
 
@@ -14,8 +16,14 @@ import java.util.List;
 @JsonInclude(Include.NON_NULL)
 public record Bezier(
         @JsonProperty("c") Boolean closed,
-        @JsonProperty("v") List<List<Integer>> vertices,
-        @JsonProperty("i") List<List<Integer>> tangentsIn,
-        @JsonProperty("o") List<List<Integer>> tangentsOut
+        @JsonProperty("v")
+        @JsonSerialize(using = ListListSerializer.class)
+        List<List<Double>> vertices,
+        @JsonProperty("i")
+        @JsonSerialize(using = ListListSerializer.class)
+        List<List<Double>> tangentsIn,
+        @JsonProperty("o")
+        @JsonSerialize(using = ListListSerializer.class)
+        List<List<Double>> tangentsOut
 ) {
 }
