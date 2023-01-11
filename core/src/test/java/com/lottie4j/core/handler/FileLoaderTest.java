@@ -51,8 +51,8 @@ class FileLoaderTest {
         ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
 
-        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + jsonFromObject);
+        //System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
+        //System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
                 () -> assertTrue(clazz.isInstance(objectFromJson)),
@@ -95,7 +95,7 @@ class FileLoaderTest {
     }
 
     @Test
-    void testLoadSmallFile(String fileName) throws IOException {
+    void testLoadSmallFile() throws IOException {
         File f = new File(this.getClass().getResource("/lottie/lottie_file/java_duke.json").getFile());
         var jsonFromFile = FileLoader.loadFileAsString(f);
         var a = mapper.readValue(jsonFromFile, Animation.class);

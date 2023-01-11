@@ -18,6 +18,7 @@ public record TimedKeyframe(
         // Use BigDecimal here to be able to handle both Integer and Double
         // https://stackoverflow.com/questions/40885065/jackson-mapper-integer-from-json-parsed-as-double-with-drong-precision
         @JsonProperty("s") List<BigDecimal> values,
+        @JsonProperty("e") List<BigDecimal> unknown_e,
         @JsonProperty("i") EasingHandle easingIn,
         @JsonProperty("o") EasingHandle easingOut,
         @JsonProperty("h") Integer holdFrame
