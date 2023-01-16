@@ -38,4 +38,8 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: lottie4j
-          path: target/*.jar
+          path: core/target/*.jar
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lottie4j
+          path: fxplayer/target/*.jar
