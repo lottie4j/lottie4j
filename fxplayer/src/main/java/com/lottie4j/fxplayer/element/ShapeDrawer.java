@@ -26,10 +26,10 @@ public class ShapeDrawer {
 
     private static void drawEllipse(GraphicsContext graphicContext, Ellipse ellipse) {
         graphicContext.setFill(Color.DARKKHAKI);
-        graphicContext.fillOval(ellipse.position().keyframes().get(0).intValue(),
+        /*graphicContext.fillOval(ellipse.position().keyframes().get(0).intValue(),
                 ellipse.position().keyframes().get(1).intValue(),
                 ellipse.size().keyframes().get(0).intValue(),
-                ellipse.size().keyframes().get(1).intValue());
+                ellipse.size().keyframes().get(1).intValue());*/
     }
 
     private static void drawTransform(GraphicsContext graphicContext, Transform transform) {
