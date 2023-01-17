@@ -5,6 +5,7 @@ import com.lottie4j.core.model.Layer;
 import com.lottie4j.fxplayer.element.ShapeDrawer;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 
 public class LottiePlayer extends Canvas {
 
@@ -16,6 +17,9 @@ public class LottiePlayer extends Canvas {
         this.setWidth(animation.width());
         this.setHeight(animation.height());
         graphicContext = this.getGraphicsContext2D();
+        // Adding background color, just to see if something is drawn on top of it
+        graphicContext.setFill(Color.LIGHTBLUE);
+        graphicContext.fillRect(0, 0, animation.width(), animation.height());
         play();
     }
 

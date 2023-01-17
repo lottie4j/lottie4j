@@ -7,11 +7,18 @@ import com.lottie4j.fxplayer.player.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import java.io.File;
 
 public class DemoApplication extends Application {
+
+    private static final String TEST_FILE_LOTTIE = "/lottie/test_circle.json";
+    private static final String TEST_FILE_IMAGE = "/lottie/test_circle.png";
 
     public static void main(String[] args) {
         launch(args);
@@ -19,7 +26,7 @@ public class DemoApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        File f = new File(this.getClass().getResource("/lottie/java_duke.json").getFile());
+        File f = new File(this.getClass().getResource(TEST_FILE_LOTTIE).getFile());
         String jsonFromFile = FileLoader.loadFileAsString(f);
         ObjectMapper mapper = new ObjectMapper();
         Animation animation = mapper.readValue(jsonFromFile, Animation.class);
@@ -33,8 +40,17 @@ public class DemoApplication extends Application {
 
         Group group = new Group();
         group.getChildren().add(player);
+        group.getChildren().add(new TextField(TEST_FILE_IMAGE));
 
-        Scene scene = new Scene(group, animation.width(), animation.height());
+        ImageView preview = new ImageView(new Image(TEST_FILE_IMAGE));
+
+        HBox holder = new HBox();
+        holder.setMinWidth(animation.width() * 2);
+        holder.setMinHeight(animation.height());
+        holder.getChildren().add(group);
+        holder.getChildren().add(preview);
+
+        Scene scene = new Scene(holder, animation.width() * 2, animation.height());
         primaryStage.setTitle(f.getName());
         primaryStage.setScene(scene);
         primaryStage.show();
