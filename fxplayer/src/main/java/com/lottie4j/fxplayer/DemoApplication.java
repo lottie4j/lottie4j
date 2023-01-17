@@ -17,8 +17,8 @@ import java.io.File;
 
 public class DemoApplication extends Application {
 
-    private static final String TEST_FILE_LOTTIE = "/lottie/test_circle.json";
-    private static final String TEST_FILE_IMAGE = "/lottie/test_circle.png";
+    private static final String TEST_FILE_LOTTIE = "/lottie/java_duke_still.json";
+    private static final String TEST_FILE_IMAGE = "/lottie/java_duke.png";
 
     public static void main(String[] args) {
         launch(args);
@@ -40,9 +40,11 @@ public class DemoApplication extends Application {
 
         Group group = new Group();
         group.getChildren().add(player);
-        group.getChildren().add(new TextField(TEST_FILE_IMAGE));
+        group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
 
         ImageView preview = new ImageView(new Image(TEST_FILE_IMAGE));
+        preview.setFitHeight(animation.height());
+        preview.setFitWidth(animation.width());
 
         HBox holder = new HBox();
         holder.setMinWidth(animation.width() * 2);
