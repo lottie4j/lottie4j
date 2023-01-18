@@ -39,7 +39,7 @@ public record GradientFill(
         @JsonProperty("g") GradientColor colors,
         @JsonProperty("h") Animated highlightLength,
         @JsonProperty("a") Animated highlightAngle
-) implements Shape {
+) implements BaseShape {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record GradientColor(

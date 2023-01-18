@@ -42,5 +42,5 @@ public record GradientStroke(
         @JsonProperty("e") Animated endPoint,
         @JsonProperty("t") GradientType gradientType,
         @JsonProperty("g") List<Double> colors
-) implements Shape {
+) implements BaseShape {
 }

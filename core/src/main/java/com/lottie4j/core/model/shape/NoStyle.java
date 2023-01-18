@@ -26,5 +26,5 @@ public record NoStyle(
 
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix
-) implements Shape {
+) implements BaseShape {
 }

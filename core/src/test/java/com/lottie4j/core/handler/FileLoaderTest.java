@@ -3,8 +3,8 @@ package com.lottie4j.core.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.Path;
-import com.lottie4j.core.model.shape.Shape;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,7 +27,7 @@ class FileLoaderTest {
                 Arguments.of("/lottie/lottie_file/java_duke_empty_layers.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_1_no_shapes.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only_path.json", Path.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only.json", Shape.class),
+                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only.json", BaseShape.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_1.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_2.json", Animation.class),

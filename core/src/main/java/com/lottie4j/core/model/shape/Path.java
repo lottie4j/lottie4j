@@ -30,5 +30,5 @@ public record Path(
 
         // Path
         @JsonProperty("ks") AnimatedBezier animatedBezier
-) implements Shape {
+) implements BaseShape {
 }

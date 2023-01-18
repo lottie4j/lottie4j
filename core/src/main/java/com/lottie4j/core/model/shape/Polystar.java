@@ -38,5 +38,5 @@ public record Polystar(
         @JsonProperty("sy") StarType starType,
         @JsonProperty("ir") Animated innerRadius,
         @JsonProperty("is") Animated innerRoundness
-) implements Shape {
+) implements BaseShape {
 }

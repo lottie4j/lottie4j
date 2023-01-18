@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ShapeTest {
+public class BaseShapeTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -39,16 +39,16 @@ public class ShapeTest {
     void shapeFile(String file, Class clazz) throws IOException {
         File f = new File(this.getClass().getResource(file).getFile());
         String jsonFromFile = FileLoader.loadFileAsString(f);
-        Shape shape = mapper.readValue(jsonFromFile, Shape.class);
+        BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
 
         ObjectMapper mapper = new ObjectMapper();
-        String jsonFromObject = mapper.writeValueAsString(shape);
+        String jsonFromObject = mapper.writeValueAsString(baseShape);
 
         System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
         System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
-                () -> assertTrue(clazz.isInstance(shape)),
+                () -> assertTrue(clazz.isInstance(baseShape)),
                 () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
         );
     }

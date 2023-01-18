@@ -33,5 +33,5 @@ public record OffsetPath(
         @JsonProperty("a") Animated amount,
         @JsonProperty("lj") LineJoin lineJoin,
         @JsonProperty("ml") Animated miterLimit
-) implements Shape {
+) implements BaseShape {
 }

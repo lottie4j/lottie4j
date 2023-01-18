@@ -32,5 +32,5 @@ public record Rectangle(
         @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated size,
         @JsonProperty("r") Animated roundedCornerRadius
-) implements Shape {
+) implements BaseShape {
 }

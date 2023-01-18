@@ -31,6 +31,6 @@ public record Group(
 
         // Group
         @JsonProperty("np") Integer numberOfProperties,
-        @JsonProperty("it") List<Shape> shapes
-) implements Shape {
+        @JsonProperty("it") List<BaseShape> shapes
+) implements BaseShape {
 }

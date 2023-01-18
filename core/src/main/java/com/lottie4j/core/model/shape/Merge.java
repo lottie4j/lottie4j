@@ -30,5 +30,5 @@ public record Merge(
 
         // Merge
         @JsonProperty("mm") MergeMode mergeMode
-) implements Shape {
+) implements BaseShape {
 }

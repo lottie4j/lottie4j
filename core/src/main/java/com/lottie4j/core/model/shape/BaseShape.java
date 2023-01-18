@@ -27,7 +27,7 @@ import com.lottie4j.core.definition.ShapeType;
         @JsonSubTypes.Type(name = "tw", value = Twist.class),
         @JsonSubTypes.Type(name = "zz", value = ZigZag.class)
 })
-public interface Shape {
+public interface BaseShape {
     String name = "";
     String matchName = "";
     ShapeType type = ShapeType.UNKNOWN;

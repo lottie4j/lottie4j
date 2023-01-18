@@ -11,9 +11,9 @@
 
     <groupId>com.lottie4j</groupId>
     <artifactId>fxplayer</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version>
 
-    <name>fxplayer</name>
+    <name>Lottie4J JavaFX Player</name>
     <url>http://www.lottie4j.com</url>
 
     <properties>

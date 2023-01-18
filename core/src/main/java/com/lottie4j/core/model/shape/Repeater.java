@@ -36,5 +36,5 @@ public record Repeater(
         @JsonProperty("m") Composite stackingOrder,
 
         @JsonProperty("tr") RepeaterTransform repeaterTransform
-) implements Shape {
+) implements BaseShape {
 }

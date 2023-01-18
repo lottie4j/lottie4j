@@ -40,5 +40,5 @@ public record Transform(
         @JsonProperty("sa") Animated skewAxis,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("or") Animated unknown
-) implements Shape {
+) implements BaseShape {
 }

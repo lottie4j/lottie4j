@@ -30,5 +30,5 @@ public record RoundedCorners(
 
         // RoundedCorners
         @JsonProperty("r") Animated radius
-) implements Shape {
+) implements BaseShape {
 }

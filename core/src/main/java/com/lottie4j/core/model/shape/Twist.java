@@ -31,5 +31,5 @@ public record Twist(
         // Twist
         @JsonProperty("a") Animated angle,
         @JsonProperty("c") Animated center
-) implements Shape {
+) implements BaseShape {
 }

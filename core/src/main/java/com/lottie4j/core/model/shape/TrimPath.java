@@ -34,5 +34,5 @@ public record TrimPath(
         @JsonProperty("e") Animated segmentEnd,
         @JsonProperty("o") Animated offset,
         @JsonProperty("m") TrimMultipleShapes trimMultipleShapes
-) implements Shape {
+) implements BaseShape {
 }

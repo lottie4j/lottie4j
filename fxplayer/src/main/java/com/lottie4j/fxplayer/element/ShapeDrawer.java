@@ -5,6 +5,7 @@ import com.lottie4j.core.model.shape.*;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ShapeDrawer {
@@ -15,16 +16,35 @@ public class ShapeDrawer {
         // Hide constructor
     }
 
-    public static void draw(GraphicsContext gc, Object shape) {
-        logger.info("Drawing " + shape);
-        if (shape instanceof Group group) {
-            group.shapes().forEach(s -> draw(gc, s));
-        } else if (shape instanceof Ellipse ellipse) {
-            drawEllipse(gc, ellipse);
-        } else if (shape instanceof Stroke stroke) {
-            drawStroke(gc, stroke);
-        } else if (shape instanceof Path path) {
-            drawPath(gc, path);
+    public static void draw(GraphicsContext gc, BaseShape baseShape) {
+        logger.info("Drawing " + baseShape.getClass().getName());
+        if (baseShape instanceof Group group) {
+            drawGroup(gc, group);
+            return;
+        }
+        logger.log(Level.WARNING, "Unexpected shape");
+    }
+
+    /**
+     * A Lottie Group consists of a ShapeGroup.SHAPE object
+     * with one or more ShapeGroup.STYLE and/or ShapeGroup.TRANSFORM.
+     *
+     * @param gc
+     * @param group
+     */
+    private static void drawGroup(GraphicsContext gc, Group group) {
+        logger.info(" > Group " + group.name());
+        for (BaseShape baseShape : group.shapes()) {
+            logger.info("   > Drawing " + baseShape.getClass().getName());
+            if (baseShape instanceof Group subGroup) {
+                drawGroup(gc, subGroup);
+            } else if (baseShape instanceof Ellipse ellipse) {
+                drawEllipse(gc, ellipse);
+            } else if (baseShape instanceof Stroke stroke) {
+                drawStroke(gc, stroke);
+            } else if (baseShape instanceof Path path) {
+                drawPath(gc, path);
+            }
         }
     }
 

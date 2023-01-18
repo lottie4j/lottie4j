@@ -33,5 +33,5 @@ public record Fill(
         @JsonProperty("r") FillRule fillRule,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("c") Animated color
-) implements Shape {
+) implements BaseShape {
 }

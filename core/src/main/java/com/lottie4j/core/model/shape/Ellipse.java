@@ -31,5 +31,5 @@ public record Ellipse(
         // Ellipse
         @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated size
-) implements Shape {
+) implements BaseShape {
 }

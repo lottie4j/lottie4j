@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.definition.MatteMode;
-import com.lottie4j.core.model.shape.Shape;
+import com.lottie4j.core.model.shape.BaseShape;
 
 import java.util.List;
 
@@ -43,7 +43,7 @@ public record Layer(
         @JsonProperty("hix") Integer hix,
 
         // Shape
-        @JsonProperty("shapes") List<Shape> shapes,
+        @JsonProperty("shapes") List<BaseShape> shapes,
 
         // Precomposition
         @JsonProperty("refId") String referenceId,

@@ -30,5 +30,5 @@ public record Pucker(
 
         // Pucker
         @JsonProperty("a") Animated percentage
-) implements Shape {
+) implements BaseShape {
 }

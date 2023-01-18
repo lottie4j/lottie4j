@@ -1,4 +1,4 @@
-package com.lottie4j.fxplayer;
+package com.lottie4j.fxdemo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
@@ -14,11 +14,12 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.net.URL;
 
 public class DemoApplication extends Application {
 
-    private static final String TEST_FILE_LOTTIE = "/lottie/java_duke_still.json";
-    private static final String TEST_FILE_IMAGE = "/lottie/java_duke.png";
+    private static final String TEST_FILE_LOTTIE = "/duke/java_duke_still.json";
+    private static final String TEST_FILE_IMAGE = "/duke/java_duke.png";
 
     public static void main(String[] args) {
         launch(args);
@@ -38,19 +39,20 @@ public class DemoApplication extends Application {
         }
         LottiePlayer player = new LottiePlayer(animation);
 
-        Group group = new Group();
-        group.getChildren().add(player);
-        group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
-
-        ImageView preview = new ImageView(new Image(TEST_FILE_IMAGE));
-        preview.setFitHeight(animation.height());
-        preview.setFitWidth(animation.width());
-
         HBox holder = new HBox();
         holder.setMinWidth(animation.width() * 2);
         holder.setMinHeight(animation.height());
-        holder.getChildren().add(group);
+
+        URL imageUrl = DemoApplication.class.getResource(TEST_FILE_IMAGE);
+        ImageView preview = new ImageView(new Image(imageUrl.toExternalForm()));
+        preview.setFitHeight(animation.height());
+        preview.setFitWidth(animation.width());
         holder.getChildren().add(preview);
+
+        Group group = new Group();
+        group.getChildren().add(player);
+        group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
+        holder.getChildren().add(group);
 
         Scene scene = new Scene(holder, animation.width() * 2, animation.height());
         primaryStage.setTitle(f.getName());
