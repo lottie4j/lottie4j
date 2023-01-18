@@ -3,6 +3,7 @@ package com.lottie4j.fxdemo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
+import com.lottie4j.fxplayer.element.ShapeDrawer;
 import com.lottie4j.fxplayer.player.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Group;
@@ -14,9 +15,12 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DemoApplication extends Application {
+
+    private static final Logger logger = Logger.getLogger(ShapeDrawer.class.getName());
 
     private static final String TEST_FILE_LOTTIE = "/duke/java_duke_still.json";
     private static final String TEST_FILE_IMAGE = "/duke/java_duke.png";
@@ -27,34 +31,34 @@ public class DemoApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        File f = new File(this.getClass().getResource(TEST_FILE_LOTTIE).getFile());
-        String jsonFromFile = FileLoader.loadFileAsString(f);
-        ObjectMapper mapper = new ObjectMapper();
-        Animation animation = mapper.readValue(jsonFromFile, Animation.class);
+        var f = new File(this.getClass().getResource(TEST_FILE_LOTTIE).getFile());
+        var jsonFromFile = FileLoader.loadFileAsString(f);
+        var animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
 
-        System.out.println("Starting with W/H " + animation.width() + "/" + animation.height());
-        System.out.println("Number of layers: " + animation.layers().size());
+        logger.log(Level.INFO, "Starting with W/H " + animation.width() + "/" + animation.height());
+        logger.log(Level.INFO, "Number of layers: " + animation.layers().size());
         for (var i = 0; i < animation.layers().size(); i++) {
-            System.out.println("Layer " + (i + 1) + ", shapes: " + animation.layers().get(i).shapes().size());
+            logger.log(Level.INFO, "Layer " + (i + 1) + ", shapes: " + animation.layers().get(i).shapes().size());
         }
-        LottiePlayer player = new LottiePlayer(animation);
 
-        HBox holder = new HBox();
+        var player = new LottiePlayer(animation);
+
+        var holder = new HBox();
         holder.setMinWidth(animation.width() * 2);
         holder.setMinHeight(animation.height());
 
-        URL imageUrl = DemoApplication.class.getResource(TEST_FILE_IMAGE);
+        var imageUrl = DemoApplication.class.getResource(TEST_FILE_IMAGE);
         ImageView preview = new ImageView(new Image(imageUrl.toExternalForm()));
         preview.setFitHeight(animation.height());
         preview.setFitWidth(animation.width());
         holder.getChildren().add(preview);
 
-        Group group = new Group();
+        var group = new Group();
         group.getChildren().add(player);
         group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
         holder.getChildren().add(group);
 
-        Scene scene = new Scene(holder, animation.width() * 2, animation.height());
+        var scene = new Scene(holder, animation.width() * 2, animation.height());
         primaryStage.setTitle(f.getName());
         primaryStage.setScene(scene);
         primaryStage.show();
