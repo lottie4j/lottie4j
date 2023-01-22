@@ -21,10 +21,13 @@ public enum FillRule {
         this.label = label;
     }
 
+    /**
+     * Some files seem to contain decimal values. So some extra convertion is needed.
+     */
     @JsonCreator
     public static FillRule fromValue(String value) {
         return Arrays.stream(FillRule.values()).sequential()
-                .filter(v -> String.valueOf(v.value).equals(value))
+                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
                 .get();
     }

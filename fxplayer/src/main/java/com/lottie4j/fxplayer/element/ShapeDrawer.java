@@ -1,6 +1,8 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.Transform;
+import com.lottie4j.core.model.keyframe.NumberKeyframe;
+import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import com.lottie4j.core.model.shape.*;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -40,15 +42,13 @@ public class ShapeDrawer {
                 drawGroup(gc, subGroup);
             } else if (baseShape instanceof Ellipse ellipse) {
                 drawEllipse(gc, ellipse);
-            } else if (baseShape instanceof Stroke stroke) {
-                drawStroke(gc, stroke);
             } else if (baseShape instanceof Path path) {
-                drawPath(gc, path);
+                drawPath(gc, path, group);
             }
         }
     }
 
-    private static void drawPath(GraphicsContext gc, Path path) {
+    private static void drawPath(GraphicsContext gc, Path path, Group group) {
         if (path.animatedBezier() != null
                 && path.animatedBezier().bezier() != null
                 && path.animatedBezier().bezier().vertices() != null) {
@@ -61,6 +61,24 @@ public class ShapeDrawer {
                 }
             }
         }
+    }
+
+    private static void setStroke(GraphicsContext gc, Group group, Long time) {
+        for (BaseShape shape : group.shapes()) {
+            if (shape instanceof Stroke stroke) {
+                var strokeWidthKeyframe = stroke.strokeWidth().atTime(time);
+                var strokeWidth = 1;
+                if (strokeWidthKeyframe instanceof NumberKeyframe numberKeyframe) {
+                    strokeWidth = numberKeyframe.intValue();
+                } else if (strokeWidthKeyframe instanceof TimedKeyframe timedKeyframe) {
+                    strokeWidth = timedKeyframe.values() != null && !timedKeyframe.values().isEmpty() ? timedKeyframe.values().get(0).intValue() : 1;
+                }
+                gc.setLineWidth(strokeWidth);
+                gc.setStroke(Color.DARKVIOLET);
+            }
+        }
+
+
     }
 
     private static void drawEllipse(GraphicsContext gc, Ellipse ellipse) {

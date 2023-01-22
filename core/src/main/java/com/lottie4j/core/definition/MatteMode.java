@@ -24,10 +24,13 @@ public enum MatteMode {
         this.label = label;
     }
 
+    /**
+     * Some files seem to contain decimal values. So some extra convertion is needed.
+     */
     @JsonCreator
     public static MatteMode fromValue(String value) {
         return Arrays.stream(MatteMode.values()).sequential()
-                .filter(v -> String.valueOf(v.value).equals(value))
+                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
                 .get();
     }

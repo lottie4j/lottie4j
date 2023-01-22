@@ -22,10 +22,13 @@ public enum LineJoin {
         this.label = label;
     }
 
+    /**
+     * Some files seem to contain decimal values. So some extra convertion is needed.
+     */
     @JsonCreator
     public static LineJoin fromValue(String value) {
         return Arrays.stream(LineJoin.values()).sequential()
-                .filter(v -> String.valueOf(v.value).equals(value))
+                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
                 .get();
     }

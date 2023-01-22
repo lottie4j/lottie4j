@@ -21,10 +21,13 @@ public enum GradientType {
         this.label = label;
     }
 
+    /**
+     * Some files seem to contain decimal values. So some extra convertion is needed.
+     */
     @JsonCreator
     public static GradientType fromValue(String value) {
         return Arrays.stream(GradientType.values()).sequential()
-                .filter(v -> String.valueOf(v.value).equals(value))
+                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
                 .get();
     }
