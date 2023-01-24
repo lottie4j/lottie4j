@@ -22,8 +22,8 @@ public class DemoApplication extends Application {
 
     private static final Logger logger = Logger.getLogger(ShapeDrawer.class.getName());
 
-    private static final String TEST_FILE_LOTTIE = "/test/timeline.json"; // "/duke/java_duke_still.json";
-    private static final String TEST_FILE_IMAGE = "/test/timeline_start.png"; // "/duke/java_duke.png";
+    private static final String TEST_FILE_LOTTIE = "/duke/java_duke_still.json"; // "/test/timeline.json"; // "/duke/java_duke_still.json";
+    private static final String TEST_FILE_IMAGE = "/duke/java_duke.png"; // "/test/timeline_start.png"; // "/duke/java_duke.png";
 
     public static void main(String[] args) {
         launch(args);
