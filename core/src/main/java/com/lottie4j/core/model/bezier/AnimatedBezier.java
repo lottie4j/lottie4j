@@ -13,7 +13,8 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public record AnimatedBezier(
-        @JsonProperty("a") Integer animated,
+        @JsonProperty("a")
+        Integer animated,
 
         @JsonProperty("k")
         List<BezierKeyframe> beziers
