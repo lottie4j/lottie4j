@@ -35,6 +35,8 @@ class FileLoaderTest {
                 Arguments.of("/lottie/lottie_file/java_duke_layer_4.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_layer_5.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/timeline_single_shape.json", Animation.class),
+                Arguments.of("/lottie/lottie_file/timeline.json", Animation.class),
                 //Arguments.of("/lottie/lottie_file/lf20_gOmta2.json", Animation.class),
                 //Arguments.of("/lottie/lottie_file/loading.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke_single_layer_no_shapes.json", Layer.class),
@@ -50,10 +52,11 @@ class FileLoaderTest {
         String jsonFromFile = FileLoader.loadFileAsString(f);
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
         ObjectMapper mapper = new ObjectMapper();
-        String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
+        String jsonFromObject = mapper.writeValueAsString(objectFromJson);
+        // mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
 
-        //System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        //System.out.println("Generated:\n" + jsonFromObject);
+        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
+        System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
                 () -> assertTrue(clazz.isInstance(objectFromJson)),
