@@ -9,11 +9,11 @@ import java.math.BigDecimal;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class NumberKeyframe extends BigDecimal implements Keyframe {
 
-    public NumberKeyframe(int val) {
+    public NumberKeyframe(Integer val) {
         super(val);
     }
 
-    public NumberKeyframe(double val) {
+    public NumberKeyframe(Double val) {
         super(val);
     }
 }

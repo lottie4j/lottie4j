@@ -49,7 +49,8 @@ public class ShapeDrawer {
     }
 
     private static void drawPath(GraphicsContext gc, Path path, Group group) {
-        if (path.animatedBezier() != null
+        // TODO
+        /*if (path.animatedBezier() != null
                 && path.animatedBezier().bezier() != null
                 && path.animatedBezier().bezier().vertices() != null) {
             var vertices = path.animatedBezier().bezier().vertices();
@@ -60,7 +61,7 @@ public class ShapeDrawer {
                     gc.stroke();
                 }
             }
-        }
+        }*/
     }
 
     private static void setStroke(GraphicsContext gc, Group group, Long time) {

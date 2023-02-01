@@ -9,29 +9,29 @@ import java.util.Arrays;
  * https://lottiefiles.github.io/lottie-docs/layers/
  */
 public enum LayerType {
-    PRECOMPOSITION(0, "Precomposition", "Renders a Precomposition"),
-    SOLD_COLOR(1, "Solid Color", "Static rectangle filling the canvas with a single color"),
-    IMAGE(2, "Image", "Renders an Image"),
-    NULL(3, "Null (Empty)", "No contents, only used for parenting"),
-    SHAPE(4, "Shape", "Has an array of shapes"),
-    TEXT(5, "Text", "Renders text"),
-    AUDIO(6, "Audio", "Plays some audio"),
-    VIDEO_PLACEHOLDER(7, "Video Placeholder", ""),
-    IMAGE_SEQUENCE(8, "Image Sequence", ""),
-    VIDEO(9, "Video", ""),
-    IMAGE_PLACEHOLDER(10, "Image Placeholder", ""),
-    GUIDE(11, "Guide", ""),
-    ADJUSTMENT(12, "Adjustment", ""),
-    CAMERA(13, "Camera 	3D Camera", ""),
-    LIGHT(14, "Light", ""),
-    DATA(15, "Data", "");
+    PRECOMPOSITION(0D, "Precomposition", "Renders a Precomposition"),
+    SOLD_COLOR(1D, "Solid Color", "Static rectangle filling the canvas with a single color"),
+    IMAGE(2D, "Image", "Renders an Image"),
+    NULL(3D, "Null (Empty)", "No contents, only used for parenting"),
+    SHAPE(4D, "Shape", "Has an array of shapes"),
+    TEXT(5D, "Text", "Renders text"),
+    AUDIO(6D, "Audio", "Plays some audio"),
+    VIDEO_PLACEHOLDER(7D, "Video Placeholder", ""),
+    IMAGE_SEQUENCE(8D, "Image Sequence", ""),
+    VIDEO(9D, "Video", ""),
+    IMAGE_PLACEHOLDER(10D, "Image Placeholder", ""),
+    GUIDE(11D, "Guide", ""),
+    ADJUSTMENT(12D, "Adjustment", ""),
+    CAMERA(13D, "Camera 	3D Camera", ""),
+    LIGHT(14D, "Light", ""),
+    DATA(15D, "Data", "");
 
     @JsonValue
-    private final int value;
+    private final Double value;
     private final String label;
     private final String description;
 
-    LayerType(int value, String label, String description) {
+    LayerType(Double value, String label, String description) {
         this.value = value;
         this.label = label;
         this.description = description;
@@ -48,7 +48,7 @@ public enum LayerType {
                 .get();
     }
 
-    public int value() {
+    public Double value() {
         return value;
     }
 

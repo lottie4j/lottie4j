@@ -20,7 +20,8 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public record Animated(
-        @JsonProperty("a") Integer animated,
+        @JsonProperty("a")
+        Double animated,
 
         @JsonProperty("k")
         @JsonSerialize(using = KeyframeSerializer.class)
