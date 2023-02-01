@@ -16,11 +16,9 @@ import java.util.List;
 @JsonInclude(Include.NON_NULL)
 public record EasingHandle(
         @JsonProperty("x")
-        //@JsonSerialize(using = ListDoubleSerializer.class)
         @JsonDeserialize(using = ListDoubleDeserializer.class)
         List<Double> x,
         @JsonProperty("y")
-        //@JsonSerialize(using = ListDoubleSerializer.class)
         @JsonDeserialize(using = ListDoubleDeserializer.class)
         List<Double> y
 ) {

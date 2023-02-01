@@ -3,8 +3,10 @@ package com.lottie4j.core.model.shape;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.helper.BezierDeserializer;
 import com.lottie4j.core.model.bezier.Bezier;
 
 /**
@@ -31,6 +33,7 @@ public record Path(
 
         // Path
         @JsonProperty("ks")
+        @JsonDeserialize(using = BezierDeserializer.class)
         Bezier bezier
 ) implements BaseShape {
 }
