@@ -1,6 +1,9 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.Transform;
+import com.lottie4j.core.model.bezier.AnimatedBezier;
+import com.lottie4j.core.model.bezier.BezierDefinition;
+import com.lottie4j.core.model.bezier.FixedBezier;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import com.lottie4j.core.model.shape.*;
@@ -42,6 +45,8 @@ public class ShapeDrawer {
                 drawGroup(gc, subGroup);
             } else if (baseShape instanceof Ellipse ellipse) {
                 drawEllipse(gc, ellipse);
+            } else if (baseShape instanceof Rectangle rectangle) {
+                drawRectangle(gc, rectangle);
             } else if (baseShape instanceof Path path) {
                 drawPath(gc, path, group);
             }
@@ -49,19 +54,30 @@ public class ShapeDrawer {
     }
 
     private static void drawPath(GraphicsContext gc, Path path, Group group) {
-        // TODO
-        /*if (path.animatedBezier() != null
-                && path.animatedBezier().bezier() != null
-                && path.animatedBezier().bezier().vertices() != null) {
-            var vertices = path.animatedBezier().bezier().vertices();
-            if (vertices.size() >= 2) {
-                gc.moveTo(vertices.get(0).get(0), vertices.get(0).get(1));
-                for (int i = 1; i < vertices.size(); i++) {
-                    gc.lineTo(vertices.get(i).get(0), vertices.get(i).get(1));
-                    gc.stroke();
-                }
+        if (path.bezier() == null) {
+            return;
+        }
+        if (path.bezier() instanceof FixedBezier fixedBezier) {
+            if (fixedBezier.bezier() != null) {
+                drawBezier(gc, fixedBezier.bezier());
             }
-        }*/
+        } else if (path.bezier() instanceof AnimatedBezier animatedBezier) {
+            if (animatedBezier.beziers() != null
+                    && !animatedBezier.beziers().isEmpty()) {
+                drawBezier(gc, animatedBezier.beziers().get(0).beziers().get(0));
+            }
+        }
+    }
+
+    private static void drawBezier(GraphicsContext gc, BezierDefinition bezierDefinition) {
+        var vertices = bezierDefinition.vertices();
+        if (vertices.size() >= 2) {
+            gc.moveTo(vertices.get(0).get(0), vertices.get(0).get(1));
+            for (int i = 1; i < vertices.size(); i++) {
+                gc.lineTo(vertices.get(i).get(0), vertices.get(i).get(1));
+                gc.stroke();
+            }
+        }
     }
 
     private static void setStroke(GraphicsContext gc, Group group, Long time) {
@@ -88,6 +104,20 @@ public class ShapeDrawer {
                 ellipse.position().keyframes().get(1).intValue(),
                 ellipse.size().keyframes().get(0).intValue(),
                 ellipse.size().keyframes().get(1).intValue());*/
+    }
+
+    private static void drawRectangle(GraphicsContext gc, Rectangle rectangle) {
+        gc.setFill(Color.DARKKHAKI);
+
+        //gc.setStroke(colors[colorIdx]);
+        /*
+        gc.rect((double) rectangle.position().keyframes().get(0),
+                (double) rectangle.position().keyframes().get(1),
+                (double) rectangle.size().keyframes().get(0),
+                (double) rectangle.size().keyframes().get(1));
+        */
+        //gc.strokeRect(0, 200, 50, 200);
+        //gc.fillRect(10, 320, 300, 40);
     }
 
     private static void drawTransform(GraphicsContext gc, Transform transform) {

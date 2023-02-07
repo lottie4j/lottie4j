@@ -14,6 +14,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Because animated and non-animated beziers have a different JSON-structure, it was not able to just use Jackson to parse these.
+ * This Deserializer helps to create the right type of object.
+ * <p>
+ * As discussed on https://stackoverflow.com/questions/75290282/jackson-json-jsontypeinfo-and-jsonsubtypes-integer-value-is-serialized-as-string/75291037
+ */
 public class BezierDeserializer extends JsonDeserializer {
 
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -24,7 +30,7 @@ public class BezierDeserializer extends JsonDeserializer {
 
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
 
-        if (node.get("a").asInt() == 1) {
+        if (node.get("a") != null && node.get("a").asInt() == 1) {
             return mapper.convertValue(node, AnimatedBezier.class);
         }
         return mapper.convertValue(node, FixedBezier.class);

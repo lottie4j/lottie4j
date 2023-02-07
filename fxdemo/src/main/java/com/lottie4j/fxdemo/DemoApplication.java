@@ -8,7 +8,6 @@ import com.lottie4j.fxplayer.player.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -21,9 +20,12 @@ import java.util.logging.Logger;
 public class DemoApplication extends Application {
 
     private static final Logger logger = Logger.getLogger(ShapeDrawer.class.getName());
+    private static final String TEST_FILE_LOTTIE = "/test/timeline.json"; // "/duke/java_duke_still.json";
+    private static final String TEST_FILE_IMAGE = "/test/timeline_start.png"; // "/duke/java_duke.png";
 
-    private static final String TEST_FILE_LOTTIE = "/duke/java_duke_still.json"; // "/test/timeline.json"; // "/duke/java_duke_still.json";
-    private static final String TEST_FILE_IMAGE = "/duke/java_duke.png"; // "/test/timeline_start.png"; // "/duke/java_duke.png";
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tF %1$tT] [%4$-7s] %2$s \t\t %5$s %n");
+    }
 
     public static void main(String[] args) {
         launch(args);
@@ -38,7 +40,8 @@ public class DemoApplication extends Application {
         logger.log(Level.INFO, "Starting with W/H " + animation.width() + "/" + animation.height());
         logger.log(Level.INFO, "Number of layers: " + animation.layers().size());
         for (var i = 0; i < animation.layers().size(); i++) {
-            logger.log(Level.INFO, "Layer " + (i + 1) + ", shapes: " + animation.layers().get(i).shapes().size());
+            var layer = animation.layers().get(i);
+            logger.log(Level.INFO, "Layer " + (i + 1) + ", shapes: " + (layer.shapes() == null ? "empty" : layer.shapes().size()));
         }
 
         var player = new LottiePlayer(animation);
@@ -55,7 +58,7 @@ public class DemoApplication extends Application {
 
         var group = new Group();
         group.getChildren().add(player);
-        group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
+        //group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
         holder.getChildren().add(group);
 
         var scene = new Scene(holder, animation.width() * 2, animation.height());

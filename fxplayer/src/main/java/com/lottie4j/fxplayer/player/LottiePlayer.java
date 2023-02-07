@@ -45,6 +45,8 @@ public class LottiePlayer extends Canvas {
     }
 
     private void drawLayer(Layer layer) {
-        layer.shapes().forEach(s -> ShapeDrawer.draw(graphicContext, s));
+        if (layer.shapes() != null) {
+            layer.shapes().forEach(s -> ShapeDrawer.draw(graphicContext, s));
+        }
     }
 }

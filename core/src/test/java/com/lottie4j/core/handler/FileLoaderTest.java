@@ -36,6 +36,8 @@ class FileLoaderTest {
                 Arguments.of("/lottie/lottie_file/java_duke_layer_5.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/java_duke.json", Animation.class),
                 Arguments.of("/lottie/lottie_file/timeline_single_shape_reduced.json", Animation.class),
+                //Arguments.of("/lottie/lottie_file/timeline_animation_assets_only.json", Animation.class),
+                //Arguments.of("/lottie/lottie_file/timeline_animation.json", Animation.class),
                 //Arguments.of("/lottie/lottie_file/timeline_single_shape.json", Animation.class),
                 //Arguments.of("/lottie/lottie_file/timeline.json", Animation.class),
                 //Arguments.of("/lottie/lottie_file/lf20_gOmta2.json", Animation.class),
