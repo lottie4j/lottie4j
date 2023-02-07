@@ -34,7 +34,12 @@ public class DemoApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        var f = new File(this.getClass().getResource(TEST_FILE_LOTTIE).getFile());
+        var r = this.getClass().getResource(TEST_FILE_LOTTIE);
+        if (r == null) {
+            logger.log(Level.SEVERE, "The Lottie file can not be found");
+            return;
+        }
+        var f = new File(r.getFile());
         var jsonFromFile = FileLoader.loadFileAsString(f);
         var animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
 
@@ -52,10 +57,14 @@ public class DemoApplication extends Application {
         holder.setMinHeight(animation.height());
 
         var imageUrl = DemoApplication.class.getResource(TEST_FILE_IMAGE);
-        ImageView preview = new ImageView(new Image(imageUrl.toExternalForm()));
-        preview.setFitHeight(animation.height());
-        preview.setFitWidth(animation.width());
-        holder.getChildren().add(preview);
+        if (imageUrl == null) {
+            logger.log(Level.SEVERE, "The image file can not be found");
+        } else {
+            ImageView preview = new ImageView(new Image(imageUrl.toExternalForm()));
+            preview.setFitHeight(animation.height());
+            preview.setFitWidth(animation.width());
+            holder.getChildren().add(preview);
+        }
 
         var group = new Group();
         group.getChildren().add(player);

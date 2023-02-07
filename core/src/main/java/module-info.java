@@ -3,6 +3,7 @@ module com.lottie4j.core {
     requires com.fasterxml.jackson.databind;
 
     exports com.lottie4j.core.definition;
+    exports com.lottie4j.core.exception;
     exports com.lottie4j.core.handler;
     exports com.lottie4j.core.helper;
     exports com.lottie4j.core.model;
