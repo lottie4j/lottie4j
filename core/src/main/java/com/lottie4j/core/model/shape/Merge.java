@@ -8,7 +8,7 @@ import com.lottie4j.core.definition.MergeMode;
 import com.lottie4j.core.definition.ShapeType;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#merge
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#merge">Lottie Docs: Merge</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

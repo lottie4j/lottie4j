@@ -1,14 +1,14 @@
 package com.lottie4j.core.model;
 
-import com.lottie4j.core.definition.ShapeType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.definition.ShapeType;
 
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/assets/
+ * <a href="https://lottiefiles.github.io/lottie-docs/assets/">Lottie Docs: Asset</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -2,6 +2,7 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.lottie4j.core.exception.LottieModelDefinitionException;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/shapes/#shape-element
@@ -40,13 +41,13 @@ public enum ShapeType {
     }
 
     @JsonCreator
-    public static ShapeType fromValue(String ty) {
+    public static ShapeType fromValue(String value) throws LottieModelDefinitionException {
         for (ShapeType shapeType : ShapeType.values()) {
-            if (shapeType.value.equals(ty)) {
+            if (shapeType.value.equals(value)) {
                 return shapeType;
             }
         }
-        throw new IllegalArgumentException("ShapeType " + ty + " is not defined");
+        throw new LottieModelDefinitionException(ShapeType.class, value);
     }
 
     public String value() {

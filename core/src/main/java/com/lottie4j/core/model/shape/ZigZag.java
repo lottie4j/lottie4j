@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#zig-zag
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#zig-zag">Lottie Docs: ZigZag</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

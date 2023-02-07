@@ -10,7 +10,7 @@ import com.lottie4j.core.helper.ListDoubleDeserializer;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/concepts/#animated-property
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#easing-handles">Lottie Docs: Easing Handle</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

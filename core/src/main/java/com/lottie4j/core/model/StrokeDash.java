@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.StrokeDashType;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#stroke
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

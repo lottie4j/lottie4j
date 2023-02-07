@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.TrimMultipleShapes;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#trim-path
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#trim-path">Lottie Docs: Trim Path</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

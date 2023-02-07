@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/concepts/#transform
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

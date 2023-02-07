@@ -11,8 +11,7 @@ import com.lottie4j.core.model.shape.BaseShape;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/layers/
- * https://www.baeldung.com/jackson-inheritance
+ * <a href="https://lottiefiles.github.io/lottie-docs/layers/">Lottie Docs: Layer</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

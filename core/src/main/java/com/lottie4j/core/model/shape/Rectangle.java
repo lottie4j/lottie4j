@@ -8,7 +8,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#rectangle
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#rectangle">Lottie Docs: Rectangle</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

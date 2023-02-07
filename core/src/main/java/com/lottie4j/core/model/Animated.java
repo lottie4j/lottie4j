@@ -15,7 +15,7 @@ import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/concepts/#animated-property
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#animated-property">Lottie Docs: Animated</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

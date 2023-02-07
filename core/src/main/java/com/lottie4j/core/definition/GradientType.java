@@ -2,6 +2,7 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.lottie4j.core.exception.LottieModelDefinitionException;
 
 import java.util.Arrays;
 
@@ -25,11 +26,11 @@ public enum GradientType {
      * Some files seem to contain decimal values. So some extra convertion is needed.
      */
     @JsonCreator
-    public static GradientType fromValue(String value) {
+    public static GradientType fromValue(String value) throws LottieModelDefinitionException {
         return Arrays.stream(GradientType.values()).sequential()
                 .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
-                .get();
+                .orElseThrow(() -> new LottieModelDefinitionException(GradientType.class, value));
     }
 
     public int value() {

@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#fill
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#fill">Lottie Docs: Fill</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

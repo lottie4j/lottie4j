@@ -7,7 +7,7 @@ import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#no-style
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#no-style">Lottie Docs: No Style</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

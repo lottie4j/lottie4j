@@ -13,7 +13,7 @@ import com.lottie4j.core.model.StrokeDash;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#stroke
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

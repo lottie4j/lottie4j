@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.StarType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#polystar
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#polystar">Lottie Docs: Polystar</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

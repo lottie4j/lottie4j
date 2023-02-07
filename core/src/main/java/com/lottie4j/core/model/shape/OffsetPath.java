@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#offset-path
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#offset-path">Lottie Docs: Offset Path</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

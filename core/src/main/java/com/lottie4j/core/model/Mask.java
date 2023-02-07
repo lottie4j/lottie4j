@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/layers/#masks
+ * <a href="https://lottiefiles.github.io/lottie-docs/layers/#masks">Lottie Docs: Mask</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Mask(

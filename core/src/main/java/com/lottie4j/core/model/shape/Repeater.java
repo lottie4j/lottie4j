@@ -10,7 +10,7 @@ import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.RepeaterTransform;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#repeater
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#repeater">Lottie Docs: Repeater</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -10,7 +10,7 @@ import com.lottie4j.core.helper.BezierDeserializer;
 import com.lottie4j.core.model.bezier.Bezier;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#path
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#path">Lottie Docs: Path</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

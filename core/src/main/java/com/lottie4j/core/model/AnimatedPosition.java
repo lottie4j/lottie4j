@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/concepts/#animated-position
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#animated-position">Lottie Docs: Animated Position</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

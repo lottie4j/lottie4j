@@ -8,7 +8,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#rounded-corners
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#rounded-corners">Lottie Docs: Rounded Corners</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -8,6 +8,7 @@ import com.lottie4j.fxplayer.player.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -58,7 +59,7 @@ public class DemoApplication extends Application {
 
         var group = new Group();
         group.getChildren().add(player);
-        //group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
+        group.getChildren().add(new TextField(TEST_FILE_LOTTIE));
         holder.getChildren().add(group);
 
         var scene = new Scene(holder, animation.width() * 2, animation.height());

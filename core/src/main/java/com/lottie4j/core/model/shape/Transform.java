@@ -8,7 +8,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.model.Animated;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/concepts/#transform
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

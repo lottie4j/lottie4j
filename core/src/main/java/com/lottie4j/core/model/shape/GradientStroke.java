@@ -10,7 +10,7 @@ import com.lottie4j.core.model.StrokeDash;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#gradients
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#gradients">Lottie Docs: Gradient Stroke</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

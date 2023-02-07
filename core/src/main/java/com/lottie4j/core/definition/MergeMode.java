@@ -2,6 +2,7 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.lottie4j.core.exception.LottieModelDefinitionException;
 
 import java.util.Arrays;
 
@@ -28,11 +29,11 @@ public enum MergeMode {
      * Some files seem to contain decimal values. So some extra convertion is needed.
      */
     @JsonCreator
-    public static MergeMode fromValue(String value) {
+    public static MergeMode fromValue(String value) throws LottieModelDefinitionException {
         return Arrays.stream(MergeMode.values()).sequential()
                 .filter(v -> Math.round(Double.valueOf(value)) == v.value)
                 .findFirst()
-                .get();
+                .orElseThrow(() -> new LottieModelDefinitionException(MergeMode.class, value));
     }
 
     public int value() {

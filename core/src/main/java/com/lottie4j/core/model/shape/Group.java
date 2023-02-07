@@ -9,7 +9,7 @@ import com.lottie4j.core.definition.ShapeType;
 import java.util.List;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#group
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#group">Lottie Docs: Group</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
