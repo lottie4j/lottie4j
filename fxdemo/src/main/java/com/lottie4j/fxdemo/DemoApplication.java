@@ -20,8 +20,15 @@ import java.util.logging.Logger;
 public class DemoApplication extends Application {
 
     private static final Logger logger = Logger.getLogger(GroupDrawer.class.getName());
-    private static final String TEST_FILE_LOTTIE = "/test/timeline-square.json"; // "/test/timeline.json"; // "/duke/java_duke_still.json";
-    private static final String TEST_FILE_IMAGE = "/test/timeline-square.png"; //"/test/timeline_start.png"; // "/duke/java_duke.png";
+
+    private static final String TEST_FILE_LOTTIE = "/test/timeline-square.json";
+    private static final String TEST_FILE_IMAGE = "/test/timeline-square.png";
+
+    //private static final String TEST_FILE_LOTTIE = "/test/timeline.json";
+    //private static final String TEST_FILE_IMAGE = "/test/timeline_start.png";
+
+    //private static final String TEST_FILE_LOTTIE = "/duke/java_duke_still.json";
+    //private static final String TEST_FILE_IMAGE = "/duke/java_duke.png";
 
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tF %1$tT] [%4$-7s] %2$s \t\t %5$s %n");

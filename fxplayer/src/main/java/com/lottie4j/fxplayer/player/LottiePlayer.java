@@ -3,8 +3,8 @@ package com.lottie4j.fxplayer.player;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Asset;
 import com.lottie4j.core.model.Layer;
-import com.lottie4j.core.model.shape.Group;
 import com.lottie4j.fxplayer.element.GroupDrawer;
+import com.lottie4j.fxplayer.element.LayerDrawer;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -63,16 +63,7 @@ public class LottiePlayer extends Canvas {
             if (asset != null && asset.layers() != null) {
                 for (Layer nestedLayer : asset.layers()) {
                     logger.log(Level.INFO, "\t\tAsset Layer " + nestedLayer.name());
-                    if (nestedLayer.shapes() != null) {
-                        nestedLayer.shapes().forEach(s -> {
-                            if (s instanceof Group group) {
-                                var groupDrawer = new GroupDrawer(graphicContext, group);
-                                groupDrawers.add(groupDrawer);
-                            } else {
-                                logger.log(Level.WARNING, "Unexpected shape");
-                            }
-                        });
-                    }
+                    new LayerDrawer(graphicContext, nestedLayer);
                 }
             }
         }

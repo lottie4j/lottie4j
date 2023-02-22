@@ -1,6 +1,7 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.Animated.ValueType;
+import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.Transform;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
@@ -18,10 +19,16 @@ public class GroupDrawer {
 
     private final GraphicsContext gc;
     private final Group group;
+    private final Layer layer;
 
     public GroupDrawer(GraphicsContext gc, Group group) {
+        this(gc, group, null);
+    }
+
+    public GroupDrawer(GraphicsContext gc, Group group, Layer layer) {
         this.gc = gc;
         this.group = group;
+        this.layer = layer;
         draw();
     }
 
@@ -53,12 +60,26 @@ public class GroupDrawer {
     private void drawBezier(GraphicsContext gc, BezierDefinition bezierDefinition) {
         var vertices = bezierDefinition.vertices();
         if (vertices.size() >= 2) {
-            gc.moveTo(vertices.get(0).get(0), vertices.get(0).get(1));
+            gc.moveTo(vertices.get(0).get(0) + getOffsetX(), vertices.get(0).get(1) + getOffsetY());
             for (int i = 1; i < vertices.size(); i++) {
-                gc.lineTo(vertices.get(i).get(0), vertices.get(i).get(1));
+                gc.lineTo(vertices.get(i).get(0) + getOffsetX(), vertices.get(i).get(1) + getOffsetY());
                 gc.stroke();
             }
         }
+    }
+
+    private Double getOffsetX() {
+        if (layer == null) {
+            return 0D;
+        }
+        return layer.transform().position().getValue(ValueType.X, 0);
+    }
+
+    private Double getOffsetY() {
+        if (layer == null) {
+            return 0D;
+        }
+        return layer.transform().position().getValue(ValueType.X, 0);
     }
 
     private void setStroke(GraphicsContext gc, Group group, Long time) {
