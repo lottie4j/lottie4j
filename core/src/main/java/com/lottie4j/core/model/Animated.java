@@ -34,21 +34,53 @@ public record Animated(
         @JsonProperty("x") Animated x,
         @JsonProperty("y") Animated y
 ) {
-    public Keyframe atTime(Long time) {
+    public Double getValue(ValueType valueType, long timestamp) {
         if (keyframes == null || keyframes.isEmpty()) {
-            return new NumberKeyframe(0);
+            return 0D;
         }
         if (animated == null || animated == 0) {
             // not animated, fixed value
-            return keyframes.get(0);
+            return getValue(valueType.getIndex());
         }
         for (Keyframe keyframe : keyframes) {
             if (keyframe instanceof TimedKeyframe timedKeyframe) {
-                if (timedKeyframe.time() >= time) {
-                    return timedKeyframe;
+                if (timedKeyframe.time() >= timestamp) {
+                    return 0D;
                 }
             }
         }
-        return keyframes.get(0);
+        return 0D;
+    }
+
+    private Double getValue(int idx) {
+        if (keyframes == null || keyframes.isEmpty() || keyframes.size() < idx) {
+            return 0D;
+        }
+        var keyframe = keyframes.get(idx);
+        if (keyframe instanceof NumberKeyframe numberKeyframe) {
+            return numberKeyframe.doubleValue();
+        }
+        return 0D;
+    }
+
+    public enum ValueType {
+        X(0),
+        Y(1),
+        WIDTH(0),
+        HEIGHT(1),
+        RED(0),
+        GREEN(1),
+        BLEU(2),
+        OPACITY(3);
+
+        final int index;
+
+        ValueType(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
     }
 }

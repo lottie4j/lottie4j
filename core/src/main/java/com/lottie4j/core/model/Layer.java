@@ -45,6 +45,7 @@ public record Layer(
         @JsonProperty("shapes") List<BaseShape> shapes,
 
         // Precomposition
+        // https://lottiefiles.github.io/lottie-docs/assets/#precomposition
         @JsonProperty("refId") String referenceId,
         @JsonProperty("w") Integer width,
         @JsonProperty("h") Integer height,
