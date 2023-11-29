@@ -34,12 +34,12 @@ public record Polystar(
         @JsonProperty("cix") Integer cix,
 
         // Polystar
+        @JsonProperty("sy") StarType starType,
         @JsonProperty("p") Animated position,
         @JsonProperty("or") Animated outerRadius,
         @JsonProperty("os") Animated outerRoundness,
         @JsonProperty("r") Animated rotation,
         @JsonProperty("pt") Animated points,
-        @JsonProperty("sy") StarType starType,
         @JsonProperty("ir") Animated innerRadius,
         @JsonProperty("is") Animated innerRoundness
 ) implements BaseShape {
@@ -54,14 +54,14 @@ public record Polystar(
                 new PropertyLabelValue("ID", id),
                 new PropertyLabelValue("d", d),
                 new PropertyLabelValue("cix", cix),
-                new PropertyLabelValue("Line cap", lineCap == null ? "-" : lineCap.label()),
-                new PropertyLabelValue("Line join", lineJoin == null ? "-" : lineJoin.label()),
-                new PropertyLabelValue("Miter limit", miterLimit),
-                new PropertyLabelValue("Miter limit alternative", "", miterLimitAlternative == null ? new ArrayList<>() : miterLimitAlternative.getLabelValues()),
-                new PropertyLabelValue("Stroke width", "", strokeWidth == null ? new ArrayList<>() : strokeWidth.getLabelValues()),
-                new PropertyLabelValue("Opacity", "", opacity == null ? new ArrayList<>() : opacity.getLabelValues()),
-                new PropertyLabelValue("Color", "", color == null ? new ArrayList<>() : color.getLabelValues()),
-                new PropertyLabelValue("Stroke dashes", strokeDashes == null ? "0" : String.valueOf(strokeDashes.size()),
-                        strokeDashes == null ? new ArrayList<>() : strokeDashes.stream().map(sd -> new PropertyLabelValue("Stroke dash", sd.name() == null ? "No name" : sd.name(), sd.getLabelValues())).toList()));
+                new PropertyLabelValue("Star type", starType == null ? "-" : starType.label()),
+                new PropertyLabelValue("Position", "", position == null ? new ArrayList<>() : position.getLabelValues()),
+                new PropertyLabelValue("Outer radius", "", outerRadius == null ? new ArrayList<>() : outerRadius.getLabelValues()),
+                new PropertyLabelValue("Outer roundness", "", outerRoundness == null ? new ArrayList<>() : outerRoundness.getLabelValues()),
+                new PropertyLabelValue("Rotation", "", rotation == null ? new ArrayList<>() : rotation.getLabelValues()),
+                new PropertyLabelValue("Points", "", points == null ? new ArrayList<>() : points.getLabelValues()),
+                new PropertyLabelValue("Inner radius", "", innerRadius == null ? new ArrayList<>() : innerRadius.getLabelValues()),
+                new PropertyLabelValue("Inner roundness", "", innerRoundness == null ? new ArrayList<>() : innerRoundness.getLabelValues())
+        );
     }
 }

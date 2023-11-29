@@ -34,8 +34,8 @@ public record ZigZag(
         @JsonProperty("cix") Integer cix,
 
         // ZigZag
-        @JsonProperty("a") Animated amount,
         @JsonProperty("lj") LineJoin lineJoin,
+        @JsonProperty("a") Animated amount,
         @JsonProperty("ml") Animated miterLimit
 ) implements BaseShape {
     @Override
@@ -49,14 +49,8 @@ public record ZigZag(
                 new PropertyLabelValue("ID", id),
                 new PropertyLabelValue("d", d),
                 new PropertyLabelValue("cix", cix),
-                new PropertyLabelValue("Line cap", lineCap == null ? "-" : lineCap.label()),
                 new PropertyLabelValue("Line join", lineJoin == null ? "-" : lineJoin.label()),
-                new PropertyLabelValue("Miter limit", miterLimit),
-                new PropertyLabelValue("Miter limit alternative", "", miterLimitAlternative == null ? new ArrayList<>() : miterLimitAlternative.getLabelValues()),
-                new PropertyLabelValue("Stroke width", "", strokeWidth == null ? new ArrayList<>() : strokeWidth.getLabelValues()),
-                new PropertyLabelValue("Opacity", "", opacity == null ? new ArrayList<>() : opacity.getLabelValues()),
-                new PropertyLabelValue("Color", "", color == null ? new ArrayList<>() : color.getLabelValues()),
-                new PropertyLabelValue("Stroke dashes", strokeDashes == null ? "0" : String.valueOf(strokeDashes.size()),
-                        strokeDashes == null ? new ArrayList<>() : strokeDashes.stream().map(sd -> new PropertyLabelValue("Stroke dash", sd.name() == null ? "No name" : sd.name(), sd.getLabelValues())).toList()));
+                new PropertyLabelValue("Amount", "", amount == null ? new ArrayList<>() : amount.getLabelValues()),
+                new PropertyLabelValue("Miter limit", "", miterLimit == null ? new ArrayList<>() : miterLimit.getLabelValues()));
     }
 }
