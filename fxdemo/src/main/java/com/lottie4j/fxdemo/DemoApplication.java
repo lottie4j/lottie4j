@@ -3,7 +3,6 @@ package com.lottie4j.fxdemo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.fxplayer.element.GroupDrawer;
 import com.lottie4j.fxplayer.player.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Group;
@@ -19,7 +18,7 @@ import java.util.logging.Logger;
 
 public class DemoApplication extends Application {
 
-    private static final Logger logger = Logger.getLogger(GroupDrawer.class.getName());
+    private static final Logger logger = Logger.getLogger(DemoApplication.class.getName());
 
     private static final String TEST_FILE_LOTTIE = "/test/timeline-square.json";
     private static final String TEST_FILE_IMAGE = "/test/timeline-square.png";

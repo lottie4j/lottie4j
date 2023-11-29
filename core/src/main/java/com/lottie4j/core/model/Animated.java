@@ -12,6 +12,7 @@ import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,7 +34,21 @@ public record Animated(
         @JsonProperty("s") Boolean s,
         @JsonProperty("x") Animated x,
         @JsonProperty("y") Animated y
-) {
+) implements PropertyListing {
+    @Override
+    public List<PropertyLabelValue> getLabelValues() {
+        return List.of(
+                new PropertyLabelValue("Animated", animated),
+                new PropertyLabelValue("Keyframes", keyframes == null ? "0" : String.valueOf(keyframes.size()),
+                        keyframes == null ? new ArrayList<>() : keyframes.stream().map(kf -> new PropertyLabelValue("Keyframe", kf.getClass().getSimpleName(), kf.getLabelValues())).toList()),
+                new PropertyLabelValue("ix", ix),
+                new PropertyLabelValue("l", l),
+                new PropertyLabelValue("s", s),
+                new PropertyLabelValue("x", "", x == null ? new ArrayList<>() : x.getLabelValues()),
+                new PropertyLabelValue("y", "", y == null ? new ArrayList<>() : y.getLabelValues())
+        );
+    }
+
     public Double getValue(ValueType valueType, long timestamp) {
         if (keyframes == null || keyframes.isEmpty()) {
             return 0D;

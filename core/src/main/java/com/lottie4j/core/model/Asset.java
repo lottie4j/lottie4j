@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.ShapeType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,7 +19,7 @@ public record Asset(
         @JsonProperty("nm") String name,
 
         // Generic for Image, Sound, Datasource
-        @JsonProperty("u") ShapeType path,
+        @JsonProperty("u") ShapeType shapeType,
         @JsonProperty("p") Boolean fileName,
         @JsonProperty("e") Integer embedded,
 
@@ -35,5 +36,22 @@ public record Asset(
         // Image "seq" = Marks as part of an image sequence if present
         // Datasource "3" = Type
         @JsonProperty("t") Integer type
-) {
+) implements PropertyListing {
+    @Override
+    public List<PropertyLabelValue> getLabelValues() {
+        return List.of(
+                new PropertyLabelValue("ID", id()),
+                new PropertyLabelValue("Path", (shapeType() == null ? "-" : shapeType().label())),
+                new PropertyLabelValue("File name", fileName()),
+                new PropertyLabelValue("Embedded", embedded()),
+                new PropertyLabelValue("Width", width()),
+                new PropertyLabelValue("Height", height()),
+                new PropertyLabelValue("Frame rate", frameRate()),
+                new PropertyLabelValue("Extra composition", extraComposition()),
+                new PropertyLabelValue("Type", type()),
+                new PropertyLabelValue("Layers", layers == null ? "0" : String.valueOf(layers.size()),
+                        layers == null ? new ArrayList<>() : layers.stream().map(l -> new PropertyLabelValue("Layer", l.name() == null ? "No name" : l.name(), l.getLabelValues())).toList())
+
+        );
+    }
 }

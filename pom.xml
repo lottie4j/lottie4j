@@ -18,6 +18,7 @@
 
     <modules>
         <module>core</module>
+        <module>fxfileviewer</module>
         <module>fxplayer</module>
         <module>fxdemo</module>
     </modules>

@@ -2,6 +2,9 @@ package com.lottie4j.core.model.keyframe;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.lottie4j.core.model.PropertyLabelValue;
+
+import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION, defaultImpl = NumberKeyframe.class)
 @JsonSubTypes({
@@ -10,4 +13,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface Keyframe {
 
+    List<PropertyLabelValue> getLabelValues();
 }

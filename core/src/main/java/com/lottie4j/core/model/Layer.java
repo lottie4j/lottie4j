@@ -8,6 +8,7 @@ import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.definition.MatteMode;
 import com.lottie4j.core.model.shape.BaseShape;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -51,5 +52,37 @@ public record Layer(
         @JsonProperty("h") Integer height,
         @JsonProperty("tm") Animated timeRemapping
 
-) {
+) implements PropertyListing {
+    @Override
+    public List<PropertyLabelValue> getLabelValues() {
+        return List.of(
+                new PropertyLabelValue("Match name", matchName()),
+                new PropertyLabelValue("Has 3D layers", has3dLayers()),
+                new PropertyLabelValue("Hidden", hidden()),
+                new PropertyLabelValue("Layer type", (layerType() == null ? "-" : layerType().label())),
+                new PropertyLabelValue("Index layer", indexLayer()),
+                new PropertyLabelValue("Index Parent", indexParent()),
+                new PropertyLabelValue("Time stretch", timeStretch()),
+                new PropertyLabelValue("In point", inPoint()),
+                new PropertyLabelValue("Out point", outPoint()),
+                new PropertyLabelValue("Start type", startTime()),
+                new PropertyLabelValue("Blend mode", (blendMode() == null ? "-" : blendMode().label())),
+                new PropertyLabelValue("Clazz", clazz()),
+                new PropertyLabelValue("ID attribute", idAttribute()),
+                new PropertyLabelValue("Tag name", tagName()),
+                new PropertyLabelValue("Matte mode", (matteMode() == null ? "-" : matteMode().label())),
+                new PropertyLabelValue("Matte target", matteTarget()),
+                new PropertyLabelValue("Auto rotate", autoRotate()),
+                new PropertyLabelValue("Hix", hix()),
+                new PropertyLabelValue("Reference ID", referenceId()),
+                new PropertyLabelValue("Width", width()),
+                new PropertyLabelValue("Height", height()),
+                new PropertyLabelValue("Masks", masks == null ? "0" : String.valueOf(masks.size()),
+                        masks == null ? new ArrayList<>() : masks.stream().map(m -> new PropertyLabelValue("Mask", "", m.getLabelValues())).toList()),
+                new PropertyLabelValue("Effects", effects == null ? "0" : String.valueOf(effects.size()),
+                        effects == null ? new ArrayList<>() : effects.stream().map(e -> new PropertyLabelValue("Effect", e.name() == null ? "No name" : e.name(), e.getLabelValues())).toList()),
+                new PropertyLabelValue("Shapes", shapes == null ? "0" : String.valueOf(shapes.size()),
+                        shapes == null ? new ArrayList<>() : shapes.stream().map(s -> new PropertyLabelValue("Shape", s.getName() == null ? "No name" : s.getName(), s.getLabelValues())).toList())
+        );
+    }
 }

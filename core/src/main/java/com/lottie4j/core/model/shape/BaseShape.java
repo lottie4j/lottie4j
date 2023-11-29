@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.model.PropertyLabelValue;
+
+import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty")
 @JsonSubTypes({
@@ -40,4 +43,6 @@ public interface BaseShape {
     // Undefined
     Integer d = 0;
     Integer cix = 0;
+
+    List<PropertyLabelValue> getLabelValues();
 }

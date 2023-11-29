@@ -7,5 +7,6 @@ Further technical information about this project can be found on [lottie4j.com](
 ## Structure of the sources
 
 * `core`: Lottie data model + reading and writing of Lottie files.
+* `fxfileviewer`: JavaFX application to visualize the structure of a Lottie file, using `core`.
 * `fxplayer`: JavaFX component to play Lottie animations, using `core`.
-* `fxdemo`: Demo application demonstrating the use of `fxplayer`.
+* `fxdemo`: Demo application demonstrating the use of `fxplayer` (which is using `core`).
