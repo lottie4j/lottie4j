@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#linejoin
  */
-public enum LineJoin {
+public enum LineJoin implements DefinitionWithLabel {
     MITER(1, "Miter"),
     ROUND(2, "Round"),
     BEVEL(3, "Bevel");
@@ -38,6 +39,7 @@ public enum LineJoin {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

@@ -6,11 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.definition.StarType;
+import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.PropertyLabelValue;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#polystar">Lottie Docs: Polystar</a>
@@ -44,24 +41,25 @@ public record Polystar(
         @JsonProperty("is") Animated innerRoundness
 ) implements BaseShape {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(new PropertyLabelValue("Match name", matchName),
-                new PropertyLabelValue("Type", type == null ? "-" : type.label()),
-                new PropertyLabelValue("Hidden", hidden),
-                new PropertyLabelValue("Blend mode", blendMode == null ? "-" : blendMode.label()),
-                new PropertyLabelValue("Index", index),
-                new PropertyLabelValue("Clazz", clazz),
-                new PropertyLabelValue("ID", id),
-                new PropertyLabelValue("d", d),
-                new PropertyLabelValue("cix", cix),
-                new PropertyLabelValue("Star type", starType == null ? "-" : starType.label()),
-                new PropertyLabelValue("Position", "", position == null ? new ArrayList<>() : position.getLabelValues()),
-                new PropertyLabelValue("Outer radius", "", outerRadius == null ? new ArrayList<>() : outerRadius.getLabelValues()),
-                new PropertyLabelValue("Outer roundness", "", outerRoundness == null ? new ArrayList<>() : outerRoundness.getLabelValues()),
-                new PropertyLabelValue("Rotation", "", rotation == null ? new ArrayList<>() : rotation.getLabelValues()),
-                new PropertyLabelValue("Points", "", points == null ? new ArrayList<>() : points.getLabelValues()),
-                new PropertyLabelValue("Inner radius", "", innerRadius == null ? new ArrayList<>() : innerRadius.getLabelValues()),
-                new PropertyLabelValue("Inner roundness", "", innerRoundness == null ? new ArrayList<>() : innerRoundness.getLabelValues())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Polystar");
+        list.add("Match name", matchName);
+        list.add("Type", type);
+        list.add("Hidden", hidden);
+        list.add("Blend mode", blendMode);
+        list.add("Index", index);
+        list.add("Clazz", clazz);
+        list.add("ID", id);
+        list.add("d", d);
+        list.add("cix", cix);
+        list.add("Star type", starType);
+        list.add("Position", position);
+        list.add("Outer radius", outerRadius);
+        list.add("Outer roundness", outerRoundness);
+        list.add("Rotation", rotation);
+        list.add("Points", points);
+        list.add("Inner radius", innerRadius);
+        list.add("Inner roundness", innerRoundness);
+        return list;
     }
 }

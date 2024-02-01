@@ -1,14 +1,14 @@
 package com.lottie4j.fxfileviewer;
 
+import com.lottie4j.core.info.PropertyLabelValue;
+import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.core.model.PropertyLabelValue;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 
-import java.util.List;
 import java.util.logging.Logger;
 
 public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty> {
@@ -43,16 +43,16 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
         animationItem.setExpanded(true);
         rootItem.getChildren().add(animationItem);
 
-        addLabelValues(animationItem, animation.getLabelValues());
+        addLabelValues(animationItem, animation.getList());
 
         this.setRoot(rootItem);
     }
 
-    private void addLabelValues(TreeItem<LottieProperty> parent, List<PropertyLabelValue> labelValues) {
-        for (PropertyLabelValue labelValue : labelValues) {
+    private void addLabelValues(TreeItem<LottieProperty> parent, PropertyListingList list) {
+        for (PropertyLabelValue labelValue : list.getList()) {
             var treeItem = getLottiePropertyTreeItem(labelValue.label(), labelValue.value());
-            if (labelValue.nestedLabelValues() != null && !labelValue.nestedLabelValues().isEmpty()) {
-                addLabelValues(treeItem, labelValue.nestedLabelValues());
+            if (labelValue.nestedLabelValues().isPresent() && !labelValue.nestedLabelValues().get().getList().isEmpty()) {
+                addLabelValues(treeItem, labelValue.nestedLabelValues().get());
             }
             parent.getChildren().add(treeItem);
         }
@@ -70,11 +70,6 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
         public LottieProperty(String label, String value) {
             this.label = new SimpleStringProperty(label);
             this.value = new SimpleStringProperty(value);
-        }
-
-        public LottieProperty(PropertyLabelValue propertyLabelValue) {
-            this.label = new SimpleStringProperty(propertyLabelValue.label());
-            this.value = new SimpleStringProperty(propertyLabelValue.value());
         }
 
         public StringProperty getLabelProperty() {

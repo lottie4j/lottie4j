@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#blendmode
  */
-public enum MatteMode {
+public enum MatteMode implements DefinitionWithLabel {
     NORMAL(0, "Normal"),
     ALPHA(1, "Alpha"),
     INVERTED_ALPHA(2, "Inverted Alpha"),
@@ -40,6 +41,7 @@ public enum MatteMode {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

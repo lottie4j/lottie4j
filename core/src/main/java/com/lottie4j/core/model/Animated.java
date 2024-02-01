@@ -8,11 +8,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.lottie4j.core.helper.KeyframeDeserializer;
 import com.lottie4j.core.helper.KeyframeSerializer;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,17 +37,16 @@ public record Animated(
         @JsonProperty("y") Animated y
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Animated", animated),
-                new PropertyLabelValue("Keyframes", keyframes == null ? "0" : String.valueOf(keyframes.size()),
-                        keyframes == null ? new ArrayList<>() : keyframes.stream().map(kf -> new PropertyLabelValue("Keyframe", kf.getClass().getSimpleName(), kf.getLabelValues())).toList()),
-                new PropertyLabelValue("ix", ix),
-                new PropertyLabelValue("l", l),
-                new PropertyLabelValue("s", s),
-                new PropertyLabelValue("x", "", x == null ? new ArrayList<>() : x.getLabelValues()),
-                new PropertyLabelValue("y", "", y == null ? new ArrayList<>() : y.getLabelValues())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Animated");
+        list.add("Animated", animated);
+        list.addKeyframeList("Keyframes", keyframes);
+        list.add("ix", ix);
+        list.add("l", l);
+        list.add("s", s);
+        list.add("x", x);
+        list.add("y", y);
+        return list;
     }
 
     public Double getValue(ValueType valueType, long timestamp) {

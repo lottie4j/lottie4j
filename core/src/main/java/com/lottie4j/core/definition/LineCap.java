@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#linecap
  */
-public enum LineCap {
+public enum LineCap implements DefinitionWithLabel {
     BUTT(1, "Butt"),
     ROUND(2, "Round"),
     SQUARE(3, "Square");
@@ -38,6 +39,7 @@ public enum LineCap {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

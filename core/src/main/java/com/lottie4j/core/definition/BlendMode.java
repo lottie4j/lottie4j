@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#blendmode
  */
-public enum BlendMode {
+public enum BlendMode implements DefinitionWithLabel {
     NORMAL(0, "Normal"),
     MULTIPLY(1, "Multiply"),
     SCREEN(2, "Screen"),
@@ -51,6 +52,7 @@ public enum BlendMode {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

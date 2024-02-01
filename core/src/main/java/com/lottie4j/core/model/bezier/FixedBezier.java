@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/concepts/#bezier
@@ -18,4 +19,11 @@ public record FixedBezier(
         BezierDefinition bezier
 
 ) implements Bezier {
+    @Override
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Fixed Bezier");
+        list.add("Animated", animated);
+        list.add("Bezier", bezier);
+        return list;
+    }
 }

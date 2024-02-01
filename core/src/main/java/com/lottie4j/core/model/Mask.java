@@ -2,8 +2,8 @@ package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.List;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/layers/#masks">Lottie Docs: Mask</a>
@@ -16,10 +16,10 @@ public record Mask(
         // TODO EXTEND FURTHER
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Match name", matchName),
-                new PropertyLabelValue("Inverted", inverted)
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Mask");
+        list.add("Match name", matchName);
+        list.add("Inverted", inverted);
+        return list;
     }
 }

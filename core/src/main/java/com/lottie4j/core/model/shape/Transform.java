@@ -5,11 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.PropertyLabelValue;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
@@ -46,24 +43,28 @@ public record Transform(
         @JsonProperty("or") Animated unknown
 ) implements BaseShape {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(new PropertyLabelValue("Match name", matchName),
-                new PropertyLabelValue("Type", type == null ? "-" : type.label()),
-                new PropertyLabelValue("Hidden", hidden),
-                new PropertyLabelValue("Blend mode", blendMode == null ? "-" : blendMode.label()),
-                new PropertyLabelValue("Index", index),
-                new PropertyLabelValue("Clazz", clazz),
-                new PropertyLabelValue("ID", id),
-                new PropertyLabelValue("d", d),
-                new PropertyLabelValue("cix", cix),
-                new PropertyLabelValue("Line cap", lineCap == null ? "-" : lineCap.label()),
-                new PropertyLabelValue("Line join", lineJoin == null ? "-" : lineJoin.label()),
-                new PropertyLabelValue("Miter limit", miterLimit),
-                new PropertyLabelValue("Miter limit alternative", "", miterLimitAlternative == null ? new ArrayList<>() : miterLimitAlternative.getLabelValues()),
-                new PropertyLabelValue("Stroke width", "", strokeWidth == null ? new ArrayList<>() : strokeWidth.getLabelValues()),
-                new PropertyLabelValue("Opacity", "", opacity == null ? new ArrayList<>() : opacity.getLabelValues()),
-                new PropertyLabelValue("Color", "", color == null ? new ArrayList<>() : color.getLabelValues()),
-                new PropertyLabelValue("Stroke dashes", strokeDashes == null ? "0" : String.valueOf(strokeDashes.size()),
-                        strokeDashes == null ? new ArrayList<>() : strokeDashes.stream().map(sd -> new PropertyLabelValue("Stroke dash", sd.name() == null ? "No name" : sd.name(), sd.getLabelValues())).toList()));
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Transform");
+        list.add("Match name", matchName);
+        list.add("Type", type);
+        list.add("Hidden", hidden);
+        list.add("Blend mode", blendMode);
+        list.add("Index", index);
+        list.add("Clazz", clazz);
+        list.add("ID", id);
+        list.add("d", d);
+        list.add("cix", cix);
+        list.add("Anchor", anchor);
+        list.add("Position", position);
+        list.add("Scale", scale);
+        list.add("Rotation", rotation);
+        list.add("RX", rx);
+        list.add("RY", ry);
+        list.add("RZ", rz);
+        list.add("Skew", skew);
+        list.add("Skew axis", skewAxis);
+        list.add("Opacity", opacity);
+        list.add("Unknown", unknown);
+        return list;
     }
 }

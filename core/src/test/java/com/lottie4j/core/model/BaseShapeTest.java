@@ -27,7 +27,7 @@ public class BaseShapeTest {
                 Arguments.of("/lottie/shape/polystar.json", Polystar.class),
                 Arguments.of("/lottie/shape/pucker.json", Pucker.class),
                 Arguments.of("/lottie/shape/rectangle.json", Rectangle.class),
-                Arguments.of("/lottie/shape/repeater_transform.json", Repeater.class),
+                Arguments.of("/lottie/shape/repeater.json", Repeater.class),
                 Arguments.of("/lottie/shape/rounded_corners.json", RoundedCorners.class),
                 Arguments.of("/lottie/shape/stroke_dashes.json", Stroke.class),
                 Arguments.of("/lottie/shape/trim_path.json", TrimPath.class)
@@ -37,11 +37,11 @@ public class BaseShapeTest {
     @ParameterizedTest
     @MethodSource("provideShapeFiles")
     void shapeFile(String file, Class clazz) throws IOException {
+        System.out.println("Testing file: " + file);
         File f = new File(this.getClass().getResource(file).getFile());
         String jsonFromFile = FileLoader.loadFileAsString(f);
         BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
 
-        ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writeValueAsString(baseShape);
 
         System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));

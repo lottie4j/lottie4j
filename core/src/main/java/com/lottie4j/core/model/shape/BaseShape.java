@@ -1,12 +1,11 @@
 package com.lottie4j.core.model.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
-import com.lottie4j.core.model.PropertyLabelValue;
-
-import java.util.List;
+import com.lottie4j.core.info.PropertyListingList;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty")
 @JsonSubTypes({
@@ -44,5 +43,5 @@ public interface BaseShape {
     Integer d = 0;
     Integer cix = 0;
 
-    List<PropertyLabelValue> getLabelValues();
+    PropertyListingList getList();
 }

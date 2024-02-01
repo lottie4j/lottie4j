@@ -4,8 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,20 +39,19 @@ public record Asset(
         @JsonProperty("t") Integer type
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("ID", id()),
-                new PropertyLabelValue("Path", (shapeType() == null ? "-" : shapeType().label())),
-                new PropertyLabelValue("File name", fileName()),
-                new PropertyLabelValue("Embedded", embedded()),
-                new PropertyLabelValue("Width", width()),
-                new PropertyLabelValue("Height", height()),
-                new PropertyLabelValue("Frame rate", frameRate()),
-                new PropertyLabelValue("Extra composition", extraComposition()),
-                new PropertyLabelValue("Type", type()),
-                new PropertyLabelValue("Layers", layers == null ? "0" : String.valueOf(layers.size()),
-                        layers == null ? new ArrayList<>() : layers.stream().map(l -> new PropertyLabelValue("Layer", l.name() == null ? "No name" : l.name(), l.getLabelValues())).toList())
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Asset");
+        list.add("ID", id());
+        list.add("Path", shapeType);
+        list.add("File name", fileName());
+        list.add("Embedded", embedded());
+        list.add("Width", width());
+        list.add("Height", height());
+        list.add("Frame rate", frameRate());
+        list.add("Extra composition", extraComposition());
+        list.add("Type", type());
+        list.addList("Layers", layers);
 
-        );
+        return list;
     }
 }

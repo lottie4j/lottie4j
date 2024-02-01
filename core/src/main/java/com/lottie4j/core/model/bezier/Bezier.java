@@ -1,9 +1,7 @@
 package com.lottie4j.core.model.bezier;
 
-import com.lottie4j.core.model.PropertyLabelValue;
-
-import java.util.List;
+import com.lottie4j.core.info.PropertyListingList;
 
 public interface Bezier {
-    List<PropertyLabelValue> getLabelValues();
+    PropertyListingList getList();
 }

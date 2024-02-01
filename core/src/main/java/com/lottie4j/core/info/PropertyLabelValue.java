@@ -1,11 +1,14 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.info;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
-public record PropertyLabelValue(String label, String value, List<PropertyLabelValue> nestedLabelValues) {
+/**
+ * Record used to transform the data within the core model to readable output.
+ * This helps to make the structure of a Lottie file easier to understand.
+ */
+public record PropertyLabelValue(String label, String value, Optional<PropertyListingList> nestedLabelValues) {
     public PropertyLabelValue(String label, String value) {
-        this(label, value == null ? "" : value, new ArrayList<>());
+        this(label, value == null ? "" : value, Optional.empty());
     }
 
     public PropertyLabelValue(String label, Double value) {

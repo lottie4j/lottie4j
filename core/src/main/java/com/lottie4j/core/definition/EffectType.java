@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/effects/
  */
-public enum EffectType {
+public enum EffectType implements DefinitionWithLabel {
     NORMAL(5, "Old-style Effect"),
     PAINT_OVER_TRANSPARENT(7, "Paint Over Transparent"),
     TINT(20, "Tint"),
@@ -51,6 +52,7 @@ public enum EffectType {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

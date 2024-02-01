@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#linecap
  */
-public enum FillRule {
+public enum FillRule implements DefinitionWithLabel {
     NON_ZERO(1, "Non Zero"),
     EVEN_ODD(2, "Even Odd");
 
@@ -37,6 +38,7 @@ public enum FillRule {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

@@ -5,9 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.StrokeDashType;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
@@ -20,10 +19,10 @@ public record StrokeDash(
         @JsonProperty("v") Animated length
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Type", type == null ? "-" : type.label()),
-                new PropertyLabelValue("Length", "", length == null ? new ArrayList<>() : length.getLabelValues())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Stroke Dash");
+        list.add("Type", type);
+        list.add("Length", length);
+        return list;
     }
 }

@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/layers/
  */
-public enum LayerType {
+public enum LayerType implements DefinitionWithLabel {
     PRECOMPOSITION(0D, "Precomposition", "Renders a Precomposition"),
     SOLD_COLOR(1D, "Solid Color", "Static rectangle filling the canvas with a single color"),
     IMAGE(2D, "Image", "Renders an Image"),
@@ -53,6 +54,7 @@ public enum LayerType {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

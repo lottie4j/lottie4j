@@ -4,9 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
@@ -27,19 +26,19 @@ public record Transform(
         @JsonProperty("or") Animated unknown
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Anchor", "", anchor == null ? new ArrayList<>() : anchor.getLabelValues()),
-                new PropertyLabelValue("Position", "", position == null ? new ArrayList<>() : position.getLabelValues()),
-                new PropertyLabelValue("Scale", "", scale == null ? new ArrayList<>() : scale.getLabelValues()),
-                new PropertyLabelValue("Rotation", "", rotation == null ? new ArrayList<>() : rotation.getLabelValues()),
-                new PropertyLabelValue("RX", "", rx == null ? new ArrayList<>() : rx.getLabelValues()),
-                new PropertyLabelValue("RY", "", ry == null ? new ArrayList<>() : ry.getLabelValues()),
-                new PropertyLabelValue("RZ", "", rz == null ? new ArrayList<>() : rz.getLabelValues()),
-                new PropertyLabelValue("Skew", "", skew == null ? new ArrayList<>() : skew.getLabelValues()),
-                new PropertyLabelValue("Skew axis", "", skewAxis == null ? new ArrayList<>() : skewAxis.getLabelValues()),
-                new PropertyLabelValue("Opacity", "", opacity == null ? new ArrayList<>() : opacity.getLabelValues()),
-                new PropertyLabelValue("Unknown", "", unknown == null ? new ArrayList<>() : unknown.getLabelValues())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Transform");
+        list.add("Anchor", anchor);
+        list.add("Position", position);
+        list.add("Scale", scale);
+        list.add("Rotation", rotation);
+        list.add("RX", rx);
+        list.add("RY", ry);
+        list.add("RZ", rz);
+        list.add("Skew", skew);
+        list.add("Skew axis", skewAxis);
+        list.add("Opacity", opacity);
+        list.add("Unknown", unknown);
+        return list;
     }
 }

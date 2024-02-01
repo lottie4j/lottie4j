@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#composite
  */
-public enum Composite {
+public enum Composite implements DefinitionWithLabel {
     ABOVE(1, "Above"),
     BELOW(2, "Below");
 
@@ -37,6 +38,7 @@ public enum Composite {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

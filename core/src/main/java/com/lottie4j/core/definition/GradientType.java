@@ -3,13 +3,14 @@ package com.lottie4j.core.definition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.lottie4j.core.exception.LottieModelDefinitionException;
+import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
 
 /**
  * https://lottiefiles.github.io/lottie-docs/constants/#linecap
  */
-public enum GradientType {
+public enum GradientType implements DefinitionWithLabel {
     LINEAR(1, "Linear"),
     RADIAL(2, "Radial");
 
@@ -37,6 +38,7 @@ public enum GradientType {
         return value;
     }
 
+    @Override
     public String label() {
         return label;
     }

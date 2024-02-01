@@ -6,9 +6,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.definition.MatteMode;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.shape.BaseShape;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -54,35 +55,33 @@ public record Layer(
 
 ) implements PropertyListing {
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Match name", matchName()),
-                new PropertyLabelValue("Has 3D layers", has3dLayers()),
-                new PropertyLabelValue("Hidden", hidden()),
-                new PropertyLabelValue("Layer type", (layerType() == null ? "-" : layerType().label())),
-                new PropertyLabelValue("Index layer", indexLayer()),
-                new PropertyLabelValue("Index Parent", indexParent()),
-                new PropertyLabelValue("Time stretch", timeStretch()),
-                new PropertyLabelValue("In point", inPoint()),
-                new PropertyLabelValue("Out point", outPoint()),
-                new PropertyLabelValue("Start type", startTime()),
-                new PropertyLabelValue("Blend mode", (blendMode() == null ? "-" : blendMode().label())),
-                new PropertyLabelValue("Clazz", clazz()),
-                new PropertyLabelValue("ID attribute", idAttribute()),
-                new PropertyLabelValue("Tag name", tagName()),
-                new PropertyLabelValue("Matte mode", (matteMode() == null ? "-" : matteMode().label())),
-                new PropertyLabelValue("Matte target", matteTarget()),
-                new PropertyLabelValue("Auto rotate", autoRotate()),
-                new PropertyLabelValue("Hix", hix()),
-                new PropertyLabelValue("Reference ID", referenceId()),
-                new PropertyLabelValue("Width", width()),
-                new PropertyLabelValue("Height", height()),
-                new PropertyLabelValue("Masks", masks == null ? "0" : String.valueOf(masks.size()),
-                        masks == null ? new ArrayList<>() : masks.stream().map(m -> new PropertyLabelValue("Mask", "", m.getLabelValues())).toList()),
-                new PropertyLabelValue("Effects", effects == null ? "0" : String.valueOf(effects.size()),
-                        effects == null ? new ArrayList<>() : effects.stream().map(e -> new PropertyLabelValue("Effect", e.name() == null ? "No name" : e.name(), e.getLabelValues())).toList()),
-                new PropertyLabelValue("Shapes", shapes == null ? "0" : String.valueOf(shapes.size()),
-                        shapes == null ? new ArrayList<>() : shapes.stream().map(s -> new PropertyLabelValue("Shape", s.getName() == null ? "No name" : s.getName(), s.getLabelValues())).toList())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Layer");
+        list.add("Match name", matchName);
+        list.add("Has 3D layers", has3dLayers);
+        list.add("Hidden", hidden);
+        list.add("Layer type", layerType);
+        list.add("Index layer", indexLayer);
+        list.add("Index Parent", indexParent);
+        list.add("Time stretch", timeStretch);
+        list.add("In point", inPoint);
+        list.add("Out point", outPoint);
+        list.add("Start type", startTime);
+        list.add("Blend mode", blendMode);
+        list.add("Clazz", clazz);
+        list.add("ID attribute", idAttribute);
+        list.add("Tag name", tagName);
+        list.add("Matte mode", matteMode);
+        list.add("Matte target", matteTarget);
+        list.add("Auto rotate", autoRotate);
+        list.add("Hix", hix);
+        list.add("Reference ID", referenceId);
+        list.add("Width", width);
+        list.add("Height", height);
+        list.add("Time remapping", timeRemapping);
+        list.addList("Masks", masks);
+        list.addList("Effects", effects);
+        list.addShapeList("Shapes", shapes);
+        return list;
     }
 }

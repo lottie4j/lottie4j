@@ -2,11 +2,10 @@ package com.lottie4j.core.model.keyframe;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.lottie4j.core.model.PropertyLabelValue;
-import com.lottie4j.core.model.PropertyListing;
+import com.lottie4j.core.info.PropertyListing;
+import com.lottie4j.core.info.PropertyListingList;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -22,10 +21,10 @@ public class NumberKeyframe extends BigDecimal implements Keyframe, PropertyList
     }
 
     @Override
-    public List<PropertyLabelValue> getLabelValues() {
-        return List.of(
-                new PropertyLabelValue("Number value", this.doubleValue())
-        );
+    public PropertyListingList getList() {
+        var list = new PropertyListingList("Number Keyframe");
+        list.add("Number value", this.doubleValue());
+        return list;
     }
 }
 
