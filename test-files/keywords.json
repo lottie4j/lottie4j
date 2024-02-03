@@ -23,5 +23,89 @@
     "8": "light",
     "9": "image sequence"
   },
-  "sr": "solo flag"
+  "sr": "solo flag",
+  "ks": "keyframe data",
+  "o": "opacity",
+  "opacity": {
+    "a": "state",
+    "k": "keyframes",
+    "keyframes": {
+      "i": "influence",
+      "o": "outfluence",
+      "t": "time",
+      "s" : "opacity"
+    },
+    "ix": "index"
+  },
+  "r": "rotation",
+  "rotation": {
+    "a": "state",
+    "k": "keyframes",
+    "keyframes": {
+      "i": "influence",
+      "o": "outfluence",
+      "t": "time",
+      "s" : "degree"
+    },
+    "ix": "index",
+    "l": "number of keyframes"
+  },
+  "p": "position",
+  "position": {
+    "a": "state",
+    "k": "keyframes",
+    "keyframes": {
+      "i": "influence",
+      "o": "outfluence",
+      "t": "time",
+      "s" : "values",
+      "values": {
+        "x": "x",
+        "y": "y",
+        "z": "z"
+      }
+    },
+    "ix": "index",
+    "l": "number of keyframes"
+  },
+  "a": "anchor",
+  "anchor": {
+    "a": "state",
+    "k": "keyframes",
+    "keyframes": {
+      "i": "influence",
+      "o": "outfluence",
+      "t": "time",
+      "s" : "values",
+      "values": {
+        "x": "x",
+        "y": "y",
+        "z": "z"
+      }
+    },
+    "ix": "index",
+    "l": "number of keyframes"
+  },
+  "s": "scale",
+  "scale": {
+    "a": "state",
+    "k": "keyframes",
+    "keyframes": {
+      "i": "influence",
+      "o": "outfluence",
+      "t": "time",
+      "s" : "values",
+      "values": {
+        "x": "x",
+        "y": "y",
+        "z": "z"
+      }
+    },
+    "ix": "index",
+    "l": "number of keyframes"
+  },
+  "ao": "auto orient",
+  "shapes": {
+    "ty": "type"
+  }
 }
