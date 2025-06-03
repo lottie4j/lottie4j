@@ -8,5 +8,6 @@ module com.lottie4j.fxplayer {
 
     exports com.lottie4j.fxplayer.player;
     exports com.lottie4j.fxplayer.element;
+    exports com.lottie4j.fxplayer;
 }
 
