@@ -35,7 +35,7 @@ public class LottieViewer extends Application {
     private GraphicsContext gc;
     private Timeline timeline;
     private Animation animation;
-    private double currentFrame = 0;
+    private int currentFrame = 0;
     private boolean isPlaying = false;
 
     // UI Controls
@@ -125,7 +125,7 @@ public class LottieViewer extends Application {
         frameSlider.setDisable(true);
         frameSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (!isPlaying) {
-                currentFrame = newVal.doubleValue();
+                currentFrame = newVal.intValue();
                 renderFrame();
             }
         });

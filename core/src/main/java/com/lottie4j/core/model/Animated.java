@@ -67,7 +67,7 @@ public record Animated(
         return 0D;
     }
 
-    private Double getValue(int idx) {
+    public Double getValue(int idx) {
         if (keyframes == null || keyframes.isEmpty() || keyframes.size() < idx) {
             return 0D;
         }
