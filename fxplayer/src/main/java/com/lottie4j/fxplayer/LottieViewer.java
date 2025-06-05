@@ -1,7 +1,10 @@
 package com.lottie4j.fxplayer;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.shape.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -20,8 +23,6 @@ import javafx.util.Duration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * JavaFX Lottie Animation Viewer
@@ -33,7 +34,7 @@ public class LottieViewer extends Application {
     private Canvas canvas;
     private GraphicsContext gc;
     private Timeline timeline;
-    private LottieAnimation currentAnimation;
+    private Animation animation;
     private double currentFrame = 0;
     private boolean isPlaying = false;
 
@@ -158,52 +159,26 @@ public class LottieViewer extends Application {
 
     private void loadAnimation(File file) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode rootNode = mapper.readTree(file);
-
-            // Parse basic Lottie structure
-            currentAnimation = new LottieAnimation();
-            currentAnimation.version = rootNode.path("v").asText();
-            currentAnimation.frameRate = rootNode.path("fr").asDouble(30.0);
-            currentAnimation.inPoint = rootNode.path("ip").asDouble(0.0);
-            currentAnimation.outPoint = rootNode.path("op").asDouble(60.0);
-            currentAnimation.width = rootNode.path("w").asInt(800);
-            currentAnimation.height = rootNode.path("h").asInt(600);
-            currentAnimation.name = rootNode.path("nm").asText(file.getName());
-
-            // Parse layers (simplified)
-            JsonNode layersNode = rootNode.path("layers");
-            currentAnimation.layers = new ArrayList<>();
-            if (layersNode.isArray()) {
-                for (JsonNode layerNode : layersNode) {
-                    LottieLayer layer = new LottieLayer();
-                    layer.name = layerNode.path("nm").asText();
-                    layer.type = layerNode.path("ty").asInt();
-                    layer.startTime = layerNode.path("st").asDouble(0.0);
-                    layer.inPoint = layerNode.path("ip").asDouble(0.0);
-                    layer.outPoint = layerNode.path("op").asDouble(currentAnimation.outPoint);
-                    currentAnimation.layers.add(layer);
-                }
-            }
+            var jsonFromFile = FileLoader.loadFileAsString(file);
+            animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
 
             // Update UI
             setupAnimationControls();
-            currentFrame = currentAnimation.inPoint;
+            currentFrame = animation.inPoint();
             renderFrame();
 
             showInfo("Animation loaded successfully!\n" +
-                    "Name: " + currentAnimation.name + "\n" +
-                    "Duration: " + (currentAnimation.outPoint - currentAnimation.inPoint) / currentAnimation.frameRate + "s\n" +
-                    "Size: " + currentAnimation.width + "x" + currentAnimation.height + "\n" +
-                    "Layers: " + currentAnimation.layers.size());
-
+                    "Name: " + animation.name() + "\n" +
+                    "Duration: " + (animation.outPoint() - animation.inPoint()) / animation.framesPerSecond() + "s\n" +
+                    "Size: " + animation.width() + "x" + animation.height() + "\n" +
+                    "Layers: " + animation.layers().size());
         } catch (IOException e) {
             showError("Failed to load animation: " + e.getMessage());
         }
     }
 
     private void setupAnimationControls() {
-        if (currentAnimation == null) return;
+        if (animation == null) return;
 
         // Enable controls
         playButton.setDisable(false);
@@ -212,17 +187,17 @@ public class LottieViewer extends Application {
         frameSlider.setDisable(false);
 
         // Setup frame slider
-        frameSlider.setMin(currentAnimation.inPoint);
-        frameSlider.setMax(currentAnimation.outPoint);
-        frameSlider.setValue(currentAnimation.inPoint);
+        frameSlider.setMin(animation.inPoint());
+        frameSlider.setMax(animation.outPoint());
+        frameSlider.setValue(animation.inPoint());
 
         // Update labels
-        fpsLabel.setText("FPS: " + String.format("%.1f", currentAnimation.frameRate));
+        fpsLabel.setText("FPS: " + String.format("%d", animation.framesPerSecond()));
         updateFrameLabel();
     }
 
     private void play() {
-        if (currentAnimation == null) return;
+        if (animation == null) return;
 
         isPlaying = true;
         playButton.setDisable(true);
@@ -232,18 +207,18 @@ public class LottieViewer extends Application {
         }
 
         // Create animation timeline
-        double frameDuration = 1000.0 / currentAnimation.frameRate; // milliseconds per frame
+        double frameDuration = 1000.0 / animation.framesPerSecond(); // milliseconds per frame
         timeline = new Timeline(new KeyFrame(Duration.millis(frameDuration), e -> {
             currentFrame++;
-            if (currentFrame > currentAnimation.outPoint) {
-                currentFrame = currentAnimation.inPoint; // Loop
+            if (currentFrame > animation.outPoint()) {
+                currentFrame = animation.inPoint(); // Loop
             }
             renderFrame();
             updateFrameLabel();
             frameSlider.setValue(currentFrame);
 
-            double progress = (currentFrame - currentAnimation.inPoint) /
-                    (currentAnimation.outPoint - currentAnimation.inPoint);
+            double progress = (currentFrame - animation.inPoint()) /
+                    (animation.outPoint() - animation.inPoint());
             progressBar.setProgress(progress);
         }));
 
@@ -267,8 +242,8 @@ public class LottieViewer extends Application {
             timeline.stop();
         }
 
-        if (currentAnimation != null) {
-            currentFrame = currentAnimation.inPoint;
+        if (animation != null) {
+            currentFrame = animation.inPoint();
             frameSlider.setValue(currentFrame);
             renderFrame();
             updateFrameLabel();
@@ -277,7 +252,9 @@ public class LottieViewer extends Application {
     }
 
     private void renderFrame() {
-        if (currentAnimation == null) return;
+        if (animation == null) {
+            return;
+        }
 
         // Clear canvas
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -287,23 +264,23 @@ public class LottieViewer extends Application {
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         // Scale to fit canvas while maintaining aspect ratio
-        double scaleX = canvas.getWidth() / currentAnimation.width;
-        double scaleY = canvas.getHeight() / currentAnimation.height;
+        double scaleX = canvas.getWidth() / animation.width();
+        double scaleY = canvas.getHeight() / animation.height();
         double scale = Math.min(scaleX, scaleY);
 
-        double offsetX = (canvas.getWidth() - currentAnimation.width * scale) / 2;
-        double offsetY = (canvas.getHeight() - currentAnimation.height * scale) / 2;
+        double offsetX = (canvas.getWidth() - animation.width() * scale) / 2;
+        double offsetY = (canvas.getHeight() - animation.height() * scale) / 2;
 
         gc.save();
         gc.translate(offsetX, offsetY);
         gc.scale(scale, scale);
 
         // Render layers (simplified - just show placeholders)
-        for (int i = 0; i < currentAnimation.layers.size(); i++) {
-            LottieLayer layer = currentAnimation.layers.get(i);
+        for (int i = 0; i < animation.layers().size(); i++) {
+            Layer layer = animation.layers().get(i);
 
             // Check if layer is active at current frame
-            if (currentFrame >= layer.inPoint && currentFrame <= layer.outPoint) {
+            if (currentFrame >= layer.inPoint() && currentFrame <= layer.outPoint()) {
                 renderLayer(layer, i);
             }
         }
@@ -313,32 +290,168 @@ public class LottieViewer extends Application {
         // Draw frame border
         gc.setStroke(Color.LIGHTGRAY);
         gc.setLineWidth(2);
-        gc.strokeRect(offsetX, offsetY, currentAnimation.width * scale, currentAnimation.height * scale);
+        gc.strokeRect(offsetX, offsetY, animation.width() * scale, animation.height() * scale);
     }
 
-    private void renderLayer(LottieLayer layer, int index) {
-        // Simplified layer rendering - this would be much more complex in a real implementation
-        gc.setFill(Color.hsb(index * 60 % 360, 0.7, 0.9));
-        gc.setStroke(Color.hsb(index * 60 % 360, 0.9, 0.7));
-        gc.setLineWidth(2);
+    private void renderLayer(Layer layer, int index) {
+        if (layer.shapes() == null || layer.shapes().isEmpty()) {
+            return;
+        }
 
-        double x = 50 + (index * 20) % (currentAnimation.width - 100);
-        double y = 50 + (index * 30) % (currentAnimation.height - 100);
-        double size = 50 + (index * 10) % 100;
+        gc.save();
 
-        // Animate position based on current frame
-        double progress = (currentFrame - layer.inPoint) / (layer.outPoint - layer.inPoint);
-        double animatedX = x + Math.sin(progress * Math.PI * 2) * 50;
-        double animatedY = y + Math.cos(progress * Math.PI * 2) * 30;
+        // Apply layer transform
+        if (layer.transform() != null) {
+            // Get transform properties
+            double opacity = layer.transform().opacity() != null ?
+                    layer.transform().opacity().getValue(currentFrame) / 100.0 : 1.0;
 
-        gc.fillOval(animatedX, animatedY, size, size);
-        gc.strokeOval(animatedX, animatedY, size, size);
+            // Calculate position
+            double x = layer.transform().position() != null ?
+                    layer.transform().position().getXValue(currentFrame) : 0;
+            double y = layer.transform().position() != null ?
+                    layer.transform().position().getYValue(currentFrame) : 0;
 
-        // Draw layer name
-        gc.setFill(Color.BLACK);
-        gc.fillText(layer.name != null ? layer.name : "Layer " + index,
-                animatedX + 5, animatedY + size + 15);
+            // Calculate scale
+            double scaleX = layer.transform().scale() != null ?
+                    layer.transform().scale().getXValue(currentFrame) / 100.0 : 1.0;
+            double scaleY = layer.transform().scale() != null ?
+                    layer.transform().scale().getYValue(currentFrame) / 100.0 : 1.0;
+
+            // Calculate rotation (in radians)
+            double rotation = layer.transform().rotation() != null ?
+                    Math.toRadians(layer.transform().rotation().getValue(currentFrame)) : 0;
+
+            // Apply transforms in correct order
+            gc.translate(x, y);
+            gc.rotate(rotation);
+            gc.scale(scaleX, scaleY);
+            gc.setGlobalAlpha(opacity);
+        }
+
+        // Render all shapes in the layer
+        for (BaseShape shape : layer.shapes()) {
+            renderShape(shape);
+        }
+
+        gc.restore();
     }
+
+    private void renderShape(BaseShape shape) {
+        if (shape == null) {
+            return;
+        }
+
+        if (shape instanceof Rectangle rectangle) {
+            renderRectangle(rectangle);
+        } else if (shape instanceof Ellipse ellipse) {
+            renderEllipse(ellipse);
+        } else if (shape instanceof Path path) {
+            renderPath(path);
+        } else if (shape instanceof Fill fill) {
+            applyFill(fill);
+        } else if (shape instanceof Stroke stroke) {
+            applyStroke(stroke);
+        }
+
+    }
+
+    private void renderRectangle(Rectangle shape) {
+        double x = shape.rectangle().position().getXValue(currentFrame);
+        double y = shape.rectangle().position().getYValue(currentFrame);
+        double width = shape.rectangle().size().getXValue(currentFrame);
+        double height = shape.rectangle().size().getYValue(currentFrame);
+        double roundness = shape.rectangle().roundness() != null ?
+                shape.rectangle().roundness().getValue(currentFrame) : 0;
+
+        if (roundness > 0) {
+            gc.fillRoundRect(x - width / 2, y - height / 2, width, height, roundness, roundness);
+            gc.strokeRoundRect(x - width / 2, y - height / 2, width, height, roundness, roundness);
+        } else {
+            gc.fillRect(x - width / 2, y - height / 2, width, height);
+            gc.strokeRect(x - width / 2, y - height / 2, width, height);
+        }
+    }
+
+    private void renderEllipse(Ellipse shape) {
+        double x = shape.ellipse().position().getXValue(currentFrame);
+        double y = shape.ellipse().position().getYValue(currentFrame);
+        double width = shape.ellipse().size().getXValue(currentFrame);
+        double height = shape.ellipse().size().getYValue(currentFrame);
+
+        gc.fillOval(x - width / 2, y - height / 2, width, height);
+        gc.strokeOval(x - width / 2, y - height / 2, width, height);
+    }
+
+    private void renderPath(Path shape) {
+        if (shape.path() == null || shape.path().vertices() == null) return;
+
+        gc.beginPath();
+        boolean first = true;
+
+        for (Vertex vertex : shape.path().vertices()) {
+            double x = vertex.x().getValue(currentFrame);
+            double y = vertex.y().getValue(currentFrame);
+
+            if (first) {
+                gc.moveTo(x, y);
+                first = false;
+            } else {
+                if (vertex.bezierIn() != null && vertex.bezierOut() != null) {
+                    // Handle bezier curves
+                    double cp1x = vertex.bezierIn().x().getValue(currentFrame);
+                    double cp1y = vertex.bezierIn().y().getValue(currentFrame);
+                    double cp2x = vertex.bezierOut().x().getValue(currentFrame);
+                    double cp2y = vertex.bezierOut().y().getValue(currentFrame);
+                    gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+                } else {
+                    gc.lineTo(x, y);
+                }
+            }
+        }
+
+        if (shape.path().closed()) {
+            gc.closePath();
+        }
+
+        gc.fill();
+        gc.stroke();
+    }
+
+    private void applyFill(Fill shape) {
+        Color fillColor = getFillColor(shape.fill(), currentFrame);
+        gc.setFill(fillColor);
+    }
+
+    private void applyStroke(Stroke shape) {
+        Color strokeColor = getStrokeColor(shape.stroke(), currentFrame);
+        double width = shape.stroke().width().getValue(currentFrame);
+
+        gc.setStroke(strokeColor);
+        gc.setLineWidth(width);
+    }
+
+    private Color getFillColor(Fill fill, double frame) {
+        // Convert color values from 0-1 range
+        double r = fill.color().red().getValue(frame) / 255.0;
+        double g = fill.color().green().getValue(frame) / 255.0;
+        double b = fill.color().blue().getValue(frame) / 255.0;
+        double a = fill.opacity() != null ?
+                fill.opacity().getValue(frame) / 100.0 : 1.0;
+
+        return new Color(r, g, b, a);
+    }
+
+    private Color getStrokeColor(Stroke stroke, double frame) {
+        double r = stroke.color().red().getValue(frame) / 255.0;
+        double g = stroke.color().green().getValue(frame) / 255.0;
+        double b = stroke.color().blue().getValue(frame) / 255.0;
+        double a = stroke.opacity() != null ?
+                stroke.opacity().getValue(frame) / 100.0 : 1.0;
+
+        return new Color(r, g, b, a);
+    }
+
 
     private void clearCanvas() {
         gc.setFill(Color.LIGHTGRAY);
@@ -350,9 +463,9 @@ public class LottieViewer extends Application {
     }
 
     private void updateFrameLabel() {
-        if (currentAnimation != null) {
-            frameLabel.setText(String.format("Frame: %.0f / %.0f",
-                    currentFrame, currentAnimation.outPoint));
+        if (animation != null) {
+            frameLabel.setText(String.format("Frame: %.0f / %d",
+                    currentFrame, animation.outPoint()));
         }
     }
 
@@ -376,30 +489,11 @@ public class LottieViewer extends Application {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
         alert.setHeaderText("Lottie4J Animation Viewer");
-        alert.setContentText("A JavaFX viewer for Lottie animations\n" +
-                "Built with lottie4j data model\n" +
-                "Version 1.0");
+        alert.setContentText("""
+                A JavaFX viewer for Lottie animations.
+                Built with Lottie4J data model.
+                Version 1.0
+                """);
         alert.showAndWait();
-    }
-
-    // Data model classes (simplified representation of lottie4j model)
-    public static class LottieAnimation {
-        public String version;
-        public double frameRate;
-        public double inPoint;
-        public double outPoint;
-        public int width;
-        public int height;
-        public String name;
-        public List<LottieLayer> layers;
-    }
-
-    public static class LottieLayer {
-        public String name;
-        public int type; // 0: precomp, 1: solid, 2: image, 3: null, 4: shape, 5: text
-        public double startTime;
-        public double inPoint;
-        public double outPoint;
-        public boolean visible = true;
     }
 }
