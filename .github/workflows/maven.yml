@@ -44,4 +44,3 @@ jobs:
             fxdemo/target/*.jar
             fxfileviewer/target/*.jar
             fxplayer/target/*.jar
-          flatten: true
