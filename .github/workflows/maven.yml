@@ -38,6 +38,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: lottie4j
+          retention-days: 30
           path: |
             core/target/*.jar
+            fxdemo/target/*.jar
+            fxfileviewer/target/*.jar
             fxplayer/target/*.jar
+          flatten: true
