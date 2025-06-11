@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Top level object, describing the
- * <a href="https://lottiefiles.github.io/lottie-docs/animation/">Lottie Docs: Animation</a>
+ * <a href="https://lottiefiles.github.io/lottie-docs/composition/#animation">Lottie Docs: Animation</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

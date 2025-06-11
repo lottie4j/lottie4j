@@ -8,6 +8,7 @@ import com.lottie4j.core.info.PropertyListingList;
 
 import java.util.List;
 
+// https://lottiefiles.github.io/lottie-docs/values/#bezier
 public record BezierDefinition(
         @JsonProperty("c") Boolean closed,
 
