@@ -49,6 +49,11 @@ public record Animated(
         return list;
     }
 
+    // TODO should not be needed
+    public Double getValue(int value, long timestamp) {
+        return (double) value;
+    }
+
     public Double getValue(ValueType valueType, long timestamp) {
         if (keyframes == null || keyframes.isEmpty()) {
             return 0D;
@@ -86,7 +91,9 @@ public record Animated(
         RED(0),
         GREEN(1),
         BLEU(2),
-        OPACITY(3);
+        OPACITY(3),
+        COLOR(0) // TODO
+        ;
 
         final int index;
 

@@ -1,6 +1,5 @@
 package com.lottie4j.core.model.shape;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.lottie4j.core.definition.BlendMode;
@@ -44,4 +43,8 @@ public interface BaseShape {
     Integer cix = 0;
 
     PropertyListingList getList();
+
+    default String getName() {
+        return name;
+    }
 }
