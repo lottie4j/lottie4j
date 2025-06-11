@@ -12,6 +12,9 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
+        <!-- Dependencies -->
+        <javafx.version>21.0.7</javafx.version>
+
         <!-- Test dependencies -->
         <junit.version>5.9.2</junit.version>
     </properties>

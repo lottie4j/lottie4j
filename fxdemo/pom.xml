@@ -16,16 +16,6 @@
     <name>Lottie4J JavaFX Demo</name>
     <url>http://www.lottie4j.com</url>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- Dependencies -->
-        <javafx.version>24.0.1</javafx.version>
-
-        <!-- Test dependencies -->
-
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.lottie4j</groupId>
