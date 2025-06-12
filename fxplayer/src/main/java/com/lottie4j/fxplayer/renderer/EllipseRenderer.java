@@ -1,19 +1,21 @@
 package com.lottie4j.fxplayer.renderer;
 
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.Ellipse;
+import com.lottie4j.core.model.shape.Group;
+import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
 public class EllipseRenderer implements ShapeRenderer<Ellipse> {
 
     @Override
-    public void render(GraphicsContext gc, Ellipse shape, double frame) {
+    public void render(LottieRenderEngine engine, GraphicsContext gc, Ellipse shape, Group parentGroup, double frame) {
         if (shape.position() == null || shape.size() == null) return;
 
-        double x = shape.position().getValue(Animated.ValueType.X, (long) frame);
-        double y = shape.position().getValue(Animated.ValueType.Y, (long)frame);
-        double width = shape.size().getValue(Animated.ValueType.X, (long)frame);
-        double height = shape.size().getValue(Animated.ValueType.Y, (long) frame);
+        double x = shape.position().getValue(AnimatedValueType.X, (long) frame);
+        double y = shape.position().getValue(AnimatedValueType.Y, (long) frame);
+        double width = shape.size().getValue(AnimatedValueType.X, (long) frame);
+        double height = shape.size().getValue(AnimatedValueType.Y, (long) frame);
 
         gc.save();
 

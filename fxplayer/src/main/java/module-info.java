@@ -5,9 +5,9 @@ module com.lottie4j.fxplayer {
     requires javafx.graphics;
     requires javafx.controls;
     requires java.logging;
+    requires java.desktop;
 
-    exports com.lottie4j.fxplayer.player;
-    exports com.lottie4j.fxplayer.element;
     exports com.lottie4j.fxplayer;
+    exports com.lottie4j.fxplayer.renderer;
 }
 

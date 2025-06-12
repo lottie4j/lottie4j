@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.element;
 
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.Fill;
 import javafx.scene.paint.Color;
 
@@ -17,10 +17,10 @@ public class FillStyle {
             return Color.BLACK;
         }
         return Color.color(
-                fill.color().getValue(Animated.ValueType.RED, timestamp),
-                fill.color().getValue(Animated.ValueType.GREEN, timestamp),
-                fill.color().getValue(Animated.ValueType.BLEU, timestamp),
-                fill.color().getValue(Animated.ValueType.OPACITY, timestamp)
+                fill.color().getValue(AnimatedValueType.RED, timestamp),
+                fill.color().getValue(AnimatedValueType.GREEN, timestamp),
+                fill.color().getValue(AnimatedValueType.BLEU, timestamp),
+                fill.color().getValue(AnimatedValueType.OPACITY, timestamp)
         ); // value 0-1.0
     }
 }

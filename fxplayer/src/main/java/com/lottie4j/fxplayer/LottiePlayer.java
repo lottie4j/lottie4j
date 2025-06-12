@@ -1,7 +1,6 @@
-package com.lottie4j.fxplayer.player;
+package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.fxplayer.renderer.LottieRenderEngine;
 import javafx.animation.AnimationTimer;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -25,8 +24,12 @@ public class LottiePlayer extends Canvas {
     private double currentFrame = 0;
 
     public LottiePlayer(Animation animation) {
+        this(animation, false);
+    }
+
+    public LottiePlayer(Animation animation, boolean debug) {
         this.animation = animation;
-        this.renderEngine = new LottieRenderEngine(animation);
+        this.renderEngine = new LottieRenderEngine(animation, debug);
 
         // Set canvas size to animation size
         setWidth(animation.width());
@@ -66,17 +69,11 @@ public class LottiePlayer extends Canvas {
         animationTimer.start();
     }
 
-    public void pause() {
+    public void stop() {
         if (animationTimer != null) {
             animationTimer.stop();
         }
         isPlaying = false;
-    }
-
-    public void stop() {
-        pause();
-        currentFrame = animation.inPoint();
-        renderFrame(currentFrame);
     }
 
     public void seekToFrame(double frame) {

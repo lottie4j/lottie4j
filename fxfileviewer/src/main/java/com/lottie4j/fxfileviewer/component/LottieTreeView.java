@@ -1,4 +1,4 @@
-package com.lottie4j.fxfileviewer;
+package com.lottie4j.fxfileviewer.component;
 
 import com.lottie4j.core.info.PropertyLabelValue;
 import com.lottie4j.core.info.PropertyListingList;

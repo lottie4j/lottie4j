@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.element;
 
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.Stroke;
 import javafx.scene.paint.Color;
 
@@ -17,10 +17,10 @@ public class StrokeStyle {
             return Color.BLACK;
         }
         return Color.color(
-                stroke.color().getValue(Animated.ValueType.RED, timestamp),
-                stroke.color().getValue(Animated.ValueType.GREEN, timestamp),
-                stroke.color().getValue(Animated.ValueType.BLEU, timestamp),
-                stroke.color().getValue(Animated.ValueType.OPACITY, timestamp)
+                stroke.color().getValue(AnimatedValueType.RED, timestamp),
+                stroke.color().getValue(AnimatedValueType.GREEN, timestamp),
+                stroke.color().getValue(AnimatedValueType.BLEU, timestamp),
+                stroke.color().getValue(AnimatedValueType.OPACITY, timestamp)
         ); // value 0-1.0
     }
 
@@ -28,6 +28,6 @@ public class StrokeStyle {
         if (stroke.strokeWidth() == null) {
             return 0D;
         }
-        return stroke.strokeWidth().getValue(Animated.ValueType.WIDTH, timestamp);
+        return stroke.strokeWidth().getValue(AnimatedValueType.WIDTH, timestamp);
     }
 }

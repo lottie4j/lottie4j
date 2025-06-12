@@ -1,6 +1,8 @@
 package com.lottie4j.fxplayer.renderer;
 
 import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.shape.Group;
+import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
 /**
@@ -10,11 +12,12 @@ public interface ShapeRenderer<T extends BaseShape> {
 
     /**
      * Renders the given shape at the specified frame
-     * @param gc Graphics context to render to
+     *
+     * @param gc    Graphics context to render to
      * @param shape The shape to render
      * @param frame Current animation frame
      */
-    void render(GraphicsContext gc, T shape, double frame);
+    void render(LottieRenderEngine engine, GraphicsContext gc, T shape, Group parentGroup, double frame);
 
     /**
      * Returns the shape type this renderer handles

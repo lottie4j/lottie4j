@@ -7,4 +7,5 @@ module com.lottie4j.fxdemo {
     requires com.lottie4j.fxplayer;
 
     exports com.lottie4j.fxfileviewer to javafx.scene, javafx.graphics, javafx.application;
+    exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene;
 }

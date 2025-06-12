@@ -54,7 +54,7 @@ public record Animated(
         return (double) value;
     }
 
-    public Double getValue(ValueType valueType, long timestamp) {
+    public Double getValue(AnimatedValueType valueType, long timestamp) {
         if (keyframes == null || keyframes.isEmpty()) {
             return 0D;
         }
@@ -73,7 +73,7 @@ public record Animated(
     }
 
     public Double getValue(int idx) {
-        if (keyframes == null || keyframes.isEmpty() || keyframes.size() < idx) {
+        if (keyframes == null || keyframes.isEmpty() || keyframes.size() <= idx) {
             return 0D;
         }
         var keyframe = keyframes.get(idx);
@@ -81,28 +81,5 @@ public record Animated(
             return numberKeyframe.doubleValue();
         }
         return 0D;
-    }
-
-    public enum ValueType {
-        X(0),
-        Y(1),
-        WIDTH(0),
-        HEIGHT(1),
-        RED(0),
-        GREEN(1),
-        BLEU(2),
-        OPACITY(3),
-        COLOR(0) // TODO
-        ;
-
-        final int index;
-
-        ValueType(int index) {
-            this.index = index;
-        }
-
-        public int getIndex() {
-            return index;
-        }
     }
 }

@@ -1,8 +1,10 @@
 package com.lottie4j.fxplayer.renderer;
 
 import com.lottie4j.core.definition.StarType;
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.model.shape.Group;
 import com.lottie4j.core.model.shape.Polystar;
+import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.logging.Logger;
@@ -12,7 +14,7 @@ public class PolystarRenderer implements ShapeRenderer<Polystar> {
     private static final Logger logger = Logger.getLogger(PolystarRenderer.class.getName());
 
     @Override
-    public void render(GraphicsContext gc, Polystar polystar, double frame) {
+    public void render(LottieRenderEngine engine, GraphicsContext gc, Polystar polystar, Group parentGroup, double frame) {
         if (polystar.points() == null) {
             logger.warning("Polystar has no points defined");
             return;
@@ -20,9 +22,9 @@ public class PolystarRenderer implements ShapeRenderer<Polystar> {
 
         // Get animated values at current frame
         double centerX = polystar.position() != null ?
-                polystar.position().getValue(Animated.ValueType.X, (long) frame) : 0;
+                polystar.position().getValue(AnimatedValueType.X, (long) frame) : 0;
         double centerY = polystar.position() != null ?
-                polystar.position().getValue(Animated.ValueType.Y, (long) frame) : 0;
+                polystar.position().getValue(AnimatedValueType.Y, (long) frame) : 0;
 
         double outerRadius = polystar.outerRadius() != null ?
                 polystar.outerRadius().getValue(0, (long) frame) : 50;

@@ -1,15 +1,19 @@
-package com.lottie4j.fxplayer;
+package com.lottie4j.fxfileviewer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.fxplayer.player.LottiePlayer;
+import com.lottie4j.fxfileviewer.component.LottieTreeView;
+import com.lottie4j.fxfileviewer.util.CompactFormatter;
+import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -19,24 +23,30 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 /**
  * JavaFX Lottie Animation Viewer
  * This viewer can load and play Lottie animations using a basic rendering engine
  * that works with the lottie4j data model structure.
  */
-public class LottieViewer extends Application {
+public class LottieFileViewer extends Application {
+
+    static {
+        Logger rootLogger = LogManager.getLogManager().getLogger("");
+        rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
+    }
 
     private Canvas canvas;
     private GraphicsContext gc;
     private Animation animation;
     private int currentFrame = 0;
-    private boolean isPlaying = false;
     private BorderPane root;
 
     // UI Controls
-    private Button playButton;
-    private Button pauseButton;
+    private Button startButton;
+    private Button stopButton;
     private Slider frameSlider;
     private Label frameLabel;
     private Label fpsLabel;
@@ -80,8 +90,7 @@ public class LottieViewer extends Application {
     public void stop() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
-            isPlaying = false;
-            playButton.setDisable(false);
+            startButton.setDisable(false);
             currentFrame = animation.inPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
@@ -113,24 +122,24 @@ public class LottieViewer extends Application {
 
         // Playback controls
         HBox playbackControls = new HBox(5);
-        playButton = new Button("▶ Play");
-        pauseButton = new Button("⏸ Pause");
+        startButton = new Button("▶ Start");
+        stopButton = new Button("⏹ Stop");
 
-        playButton.setOnAction(e -> play());
-        pauseButton.setOnAction(e -> pause());
+        startButton.setOnAction(e -> startAnimation());
+        stopButton.setOnAction(e -> stopAnimation());
 
         // Initially disable controls
-        playButton.setDisable(true);
-        pauseButton.setDisable(true);
+        startButton.setDisable(true);
+        stopButton.setDisable(true);
 
-        playbackControls.getChildren().addAll(playButton, pauseButton);
+        playbackControls.getChildren().addAll(startButton, stopButton);
 
         // Frame controls
         HBox frameControls = new HBox(10);
         frameSlider = new Slider();
         frameSlider.setDisable(true);
         frameSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (!isPlaying) {
+            if (!lottiePlayer.isPlaying()) {
                 currentFrame = newVal.intValue();
                 //renderFrame();
             }
@@ -167,8 +176,8 @@ public class LottieViewer extends Application {
         if (animation == null) return;
 
         // Enable controls
-        playButton.setDisable(false);
-        pauseButton.setDisable(false);
+        startButton.setDisable(false);
+        stopButton.setDisable(false);
         frameSlider.setDisable(false);
 
         // Setup frame slider
@@ -182,6 +191,8 @@ public class LottieViewer extends Application {
     }
 
     private void loadAnimation(File file) {
+        stopAnimation();
+
         try {
             var jsonFromFile = FileLoader.loadFileAsString(file);
             animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
@@ -197,7 +208,24 @@ public class LottieViewer extends Application {
             // Replace canvas with LottiePlayer - use the stored root reference
             root.setCenter(lottiePlayer);
 
-            // Update UI
+            // Show preview image (if available)
+            String imagePath = file.getAbsolutePath().replaceFirst("\\.[^.]+$", ".png");
+            try {
+                Image image = new Image(new File(imagePath).toURI().toString());
+                ImageView imageView = new ImageView(image);
+                imageView.setFitWidth(200);
+                imageView.setPreserveRatio(true);
+                root.setLeft(imageView);
+            } catch (Exception e) {
+                Label noImageLabel = new Label("no image available");
+                noImageLabel.setPadding(new Insets(10));
+                root.setLeft(noImageLabel);
+            }
+
+            // Show the lottie file structure
+            root.setRight(new LottieTreeView(file.getName(), animation));
+
+            // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();
 
@@ -212,19 +240,17 @@ public class LottieViewer extends Application {
     }
 
     // Update play/pause/stop methods:
-    private void play() {
+    private void startAnimation() {
         if (lottiePlayer != null) {
             lottiePlayer.play();
-            isPlaying = true;
-            playButton.setDisable(true);
+            startButton.setDisable(true);
         }
     }
 
-    private void pause() {
+    private void stopAnimation() {
         if (lottiePlayer != null) {
-            lottiePlayer.pause();
-            isPlaying = false;
-            playButton.setDisable(false);
+            lottiePlayer.stop();
+            startButton.setDisable(false);
         }
     }
 

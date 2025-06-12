@@ -1,9 +1,11 @@
-package com.lottie4j.fxplayer.renderer;
+package com.lottie4j.fxplayer;
 
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.shape.Group;
+import com.lottie4j.fxplayer.renderer.*;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
@@ -16,10 +18,16 @@ public class LottieRenderEngine {
     private static final Logger logger = Logger.getLogger(LottieRenderEngine.class.getName());
 
     private final Animation animation;
+    private final boolean debug;
     private final Map<Class<?>, ShapeRenderer> renderers;
 
     public LottieRenderEngine(Animation animation) {
+        this(animation, false);
+    }
+
+    public LottieRenderEngine(Animation animation, boolean debug) {
         this.animation = animation;
+        this.debug = debug;
         this.renderers = new HashMap<>();
 
         // Register shape renderers
@@ -97,11 +105,12 @@ public class LottieRenderEngine {
 
         gc.restore();
 
-        // Draw debug info
-        gc.setFill(Color.BLACK);
-        gc.fillText("Frame: " + String.format("%.1f", frame), 10, gc.getCanvas().getHeight() - 30);
-        gc.fillText("Scale: " + String.format("%.2f", scale), 10, gc.getCanvas().getHeight() - 10);
-
+        if (debug) {
+            // Draw debug info
+            gc.setFill(Color.BLACK);
+            gc.fillText("Frame: " + String.format("%.1f", frame), 10, gc.getCanvas().getHeight() - 30);
+            gc.fillText("Scale: " + String.format("%.2f", scale), 10, gc.getCanvas().getHeight() - 10);
+        }
     }
 
     private boolean isLayerActiveAtFrame(Layer layer, double frame) {
@@ -122,7 +131,7 @@ public class LottieRenderEngine {
             logger.info("Layer has " + layer.shapes().size() + " shapes");
 
             for (BaseShape shape : layer.shapes()) {
-                renderShape(gc, shape, frame);
+                renderShape(gc, shape, null, frame);
             }
         } else {
             logger.info("Layer has no shapes");
@@ -132,7 +141,7 @@ public class LottieRenderEngine {
     }
 
     @SuppressWarnings("unchecked")
-    private void renderShape(GraphicsContext gc, BaseShape shape, double frame) {
+    public void renderShape(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         logger.info("Rendering shape: " + shape.getClass().getSimpleName() +
                 " (name: " + (shape.getName() != null ? shape.getName() : "unnamed") + ")");
 
@@ -146,9 +155,9 @@ public class LottieRenderEngine {
             gc.fillOval(-2, -2, 4, 4);
             gc.restore();
 
-            renderer.render(gc, shape, frame);
+            renderer.render(this, gc, shape, parentGroup, frame);
         } else {
-            logger.warning("No renderer found for shape type: " + shape.getClass().getSimpleName());
+            logger.severe("No renderer found for shape type: " + shape.getClass().getSimpleName());
 
             // Draw a placeholder for unhandled shapes
             gc.save();
@@ -170,15 +179,15 @@ public class LottieRenderEngine {
 
         // Apply opacity
         if (layer.transform().opacity() != null) {
-            double opacity = layer.transform().opacity().getValue(Animated.ValueType.OPACITY, (long) frame);
+            double opacity = layer.transform().opacity().getValue(AnimatedValueType.OPACITY, (long) frame);
             logger.fine("Setting opacity: " + opacity);
             gc.setGlobalAlpha(opacity / 100.0);
         }
 
         // Apply position
         if (layer.transform().position() != null) {
-            double x = layer.transform().position().getValue(Animated.ValueType.X, (long) frame);
-            double y = layer.transform().position().getValue(Animated.ValueType.Y, (long) frame);
+            double x = layer.transform().position().getValue(AnimatedValueType.X, (long) frame);
+            double y = layer.transform().position().getValue(AnimatedValueType.Y, (long) frame);
             logger.fine("Translating by: " + x + ", " + y);
             gc.translate(x, y);
         }
@@ -192,8 +201,8 @@ public class LottieRenderEngine {
 
         // Apply scale
         if (layer.transform().scale() != null) {
-            double scaleX = layer.transform().scale().getValue(Animated.ValueType.X, (long) frame) / 100.0;
-            double scaleY = layer.transform().scale().getValue(Animated.ValueType.Y, (long) frame) / 100.0;
+            double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, (long) frame) / 100.0;
+            double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, (long) frame) / 100.0;
             logger.fine("Scaling by: " + scaleX + ", " + scaleY);
             gc.scale(scaleX, scaleY);
         }
