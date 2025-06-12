@@ -19,7 +19,7 @@ public class StrokeStyle {
         return Color.color(
                 stroke.color().getValue(AnimatedValueType.RED, timestamp),
                 stroke.color().getValue(AnimatedValueType.GREEN, timestamp),
-                stroke.color().getValue(AnimatedValueType.BLEU, timestamp),
+                stroke.color().getValue(AnimatedValueType.BLUE, timestamp),
                 stroke.color().getValue(AnimatedValueType.OPACITY, timestamp)
         ); // value 0-1.0
     }

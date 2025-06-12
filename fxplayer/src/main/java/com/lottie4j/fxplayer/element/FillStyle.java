@@ -19,7 +19,7 @@ public class FillStyle {
         return Color.color(
                 fill.color().getValue(AnimatedValueType.RED, timestamp),
                 fill.color().getValue(AnimatedValueType.GREEN, timestamp),
-                fill.color().getValue(AnimatedValueType.BLEU, timestamp),
+                fill.color().getValue(AnimatedValueType.BLUE, timestamp),
                 fill.color().getValue(AnimatedValueType.OPACITY, timestamp)
         ); // value 0-1.0
     }

@@ -33,9 +33,11 @@ public class LottieRenderEngine {
         // Register shape renderers
         registerRenderer(new RectangleRenderer());
         registerRenderer(new EllipseRenderer());
-        registerRenderer(new PathRenderer());
+        registerRenderer(new FillRenderer());
         registerRenderer(new GroupRenderer());
+        registerRenderer(new PathRenderer());
         registerRenderer(new PolystarRenderer());
+        registerRenderer(new TransformRenderer());
 
         logger.info("LottieRenderEngine initialized with " + renderers.size() + " renderers");
     }

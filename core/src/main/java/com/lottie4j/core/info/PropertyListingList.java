@@ -116,7 +116,7 @@ public class PropertyListingList {
             return;
         }
         var nestedLabelValues = new PropertyListingList(childList.get(0).getClass().getSimpleName());
-        childList.forEach(i -> nestedLabelValues.add(childList.get(0).getClass().getSimpleName(), i.getList()));
+        childList.forEach(i -> nestedLabelValues.add(i.getClass().getSimpleName(), i.getList()));
         list.add(new PropertyLabelValue(label, String.valueOf(childList.size()), Optional.of(nestedLabelValues)));
     }
 

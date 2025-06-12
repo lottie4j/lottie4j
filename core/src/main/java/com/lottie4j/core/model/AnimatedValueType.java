@@ -7,7 +7,7 @@ public enum AnimatedValueType {
     HEIGHT(1),
     RED(0),
     GREEN(1),
-    BLEU(2),
+    BLUE(2),
     OPACITY(3),
     COLOR(0) // TODO
     ;

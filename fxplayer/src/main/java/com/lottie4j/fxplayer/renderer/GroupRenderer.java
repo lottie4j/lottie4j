@@ -1,7 +1,9 @@
 package com.lottie4j.fxplayer.renderer;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.*;
+import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.shape.Group;
+import com.lottie4j.core.model.shape.Transform;
 import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
@@ -18,23 +20,10 @@ public class GroupRenderer implements ShapeRenderer<Group> {
         gc.save();
 
         // Find transform, fill and stroke styles in the group
-        Transform transform = null;
-        Fill fill = null;
-        Stroke stroke = null;
-
         for (BaseShape item : group.shapes()) {
-            if (item instanceof Transform) {
-                transform = (Transform) item;
-            } else if (item instanceof Fill) {
-                fill = (Fill) item;
-            } else if (item instanceof Stroke) {
-                stroke = (Stroke) item;
+            if (item instanceof Transform transform) {
+                //applyTransform(gc, transform, frame);
             }
-        }
-
-        // Apply group transform if it exists
-        if (transform != null) {
-            applyTransform(gc, transform, frame);
         }
 
         // Render shapes with the found styles
@@ -51,42 +40,47 @@ public class GroupRenderer implements ShapeRenderer<Group> {
     }
 
     private void applyTransform(GraphicsContext gc, Transform transform, double frame) {
-        // Apply position
-        if (transform.position() != null) {
-            double x = transform.position().getValue(AnimatedValueType.X, (long) frame);
-            double y = transform.position().getValue(AnimatedValueType.Y, (long) frame);
-            logger.info("Group transform position: " + x + ", " + y);
-            gc.translate(x, y);
-        }
+        // Get position
+        double translateX = transform.position() != null ?
+                transform.position().getValue(AnimatedValueType.X, (long) frame) : 0;
+        double translateY = transform.position() != null ?
+                transform.position().getValue(AnimatedValueType.Y, (long) frame) : 0;
 
-        // Apply anchor point offset (note: it's anchor(), not anchorPoint())
-        if (transform.anchor() != null) {
-            double ax = transform.anchor().getValue(AnimatedValueType.X, (long) frame);
-            double ay = transform.anchor().getValue(AnimatedValueType.Y, (long) frame);
-            logger.info("Group transform anchor: " + ax + ", " + ay);
-            gc.translate(-ax, -ay);
-        }
+        // Get anchor point
+        /*double anchorX = transform.anchorPoint() != null ?
+                transform.anchorPoint().getValue(AnimatedValueType.X, (long) frame) : 0;
+        double anchorY = transform.anchorPoint() != null ?
+                transform.anchorPoint().getValue(AnimatedValueType.Y, (long) frame) : 0;*/
 
-        // Apply scale
-        if (transform.scale() != null) {
-            double scaleX = transform.scale().getValue(AnimatedValueType.X, (long) frame) / 100.0;
-            double scaleY = transform.scale().getValue(AnimatedValueType.Y, (long) frame) / 100.0;
-            logger.info("Group transform scale: " + scaleX + ", " + scaleY);
-            gc.scale(scaleX, scaleY);
-        }
+        // Get scale
+        double scaleX = transform.scale() != null ?
+                transform.scale().getValue(AnimatedValueType.X, (long) frame) / 100.0 : 1.0;
+        double scaleY = transform.scale() != null ?
+                transform.scale().getValue(AnimatedValueType.Y, (long) frame) / 100.0 : 1.0;
 
-        // Apply rotation
-        if (transform.rotation() != null) {
-            double rotation = Math.toRadians(transform.rotation().getValue(0, (long) frame));
-            logger.info("Group transform rotation: " + Math.toDegrees(rotation) + " degrees");
-            gc.rotate(rotation);
-        }
+        // Get rotation
+        double rotation = transform.rotation() != null ?
+                transform.rotation().getValue(0, (long) frame) : 0;
 
-        // Apply opacity
-        if (transform.opacity() != null) {
-            double opacity = transform.opacity().getValue(AnimatedValueType.OPACITY, (long) frame);
-            logger.info("Group transform opacity: " + opacity);
-            gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));
-        }
+        // Get opacity - IMPORTANT: Divide by 100 to convert from percentage to decimal
+        double opacity = transform.opacity() != null ?
+                Math.max(0, Math.min(1, transform.opacity().getValue(0, (long) frame) / 100.0)) : 1.0;
+        opacity = 1;
+
+        // Apply transformations in the correct order
+        gc.translate(translateX, translateY);
+        //gc.translate(-anchorX, -anchorY);
+        gc.scale(scaleX, scaleY);
+        gc.rotate(rotation);
+
+        // Set opacity
+        gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
+
+        // Log the transform values for debugging
+        logger.info("Group transform position: " + translateX + ", " + translateY);
+        //logger.info("Group transform anchor: " + anchorX + ", " + anchorY);
+        logger.info("Group transform scale: " + scaleX + ", " + scaleY);
+        logger.info("Group transform rotation: " + rotation + " degrees");
+        logger.info("Group transform opacity: " + opacity);
     }
 }

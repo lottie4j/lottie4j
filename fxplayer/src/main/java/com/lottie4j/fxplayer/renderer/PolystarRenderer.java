@@ -61,6 +61,12 @@ public class PolystarRenderer implements ShapeRenderer<Polystar> {
         double innerRadius = polystar.innerRadius() != null ?
                 polystar.innerRadius().getValue(0, (long) frame) : outerRadius * 0.5;
 
+        double outerRoundness = polystar.outerRoundness() != null ?
+                polystar.outerRoundness().getValue(0, (long) frame) : 0;
+
+        double innerRoundness = polystar.innerRoundness() != null ?
+                polystar.innerRoundness().getValue(0, (long) frame) : 0;
+
         // Calculate points for star (alternating outer and inner points)
         double[] xPoints = new double[numPoints * 2];
         double[] yPoints = new double[numPoints * 2];
@@ -80,6 +86,13 @@ public class PolystarRenderer implements ShapeRenderer<Polystar> {
         }
 
         drawPolygonPath(gc, xPoints, yPoints);
+
+        // If roundness is applied, use quadratic curves instead of straight lines
+        if (outerRoundness > 0 || innerRoundness > 0) {
+            // Implement quadratic curve drawing for rounded corners
+            // Use gc.quadraticCurveTo() for rounded corners
+            // TODO
+        }
     }
 
     private void renderPolygon(GraphicsContext gc, double centerX, double centerY,
