@@ -1,20 +1,16 @@
 package com.lottie4j.fxplayer.renderer.style;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.style.Fill;
-import com.lottie4j.fxplayer.LottieRenderEngine;
-import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 import java.util.logging.Logger;
 
-public class FillRenderer implements ShapeRenderer<Fill> {
+public class FillRenderer {
     private static final Logger logger = Logger.getLogger(FillRenderer.class.getName());
 
-    @Override
-    public void render(LottieRenderEngine engine, GraphicsContext gc, Fill fill, Group parentGroup, double frame) {
+    public void render(GraphicsContext gc, Fill fill, double frame) {
         if (fill.color() != null) {
             // Get RGB components individually
             double r = fill.color().getValue(AnimatedValueType.RED, (long) frame) / 255.0;
@@ -27,10 +23,5 @@ public class FillRenderer implements ShapeRenderer<Fill> {
 
             gc.setFill(Color.color(r, g, b, opacity));
         }
-    }
-
-    @Override
-    public Class<Fill> getShapeType() {
-        return Fill.class;
     }
 }

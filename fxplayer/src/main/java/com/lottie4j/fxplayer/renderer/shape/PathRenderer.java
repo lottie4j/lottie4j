@@ -5,18 +5,16 @@ import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Path;
-import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.List;
 
-public class PathRenderer implements ShapeRenderer<Path> {
+public class PathRenderer implements ShapeRenderer {
 
-    @Override
-    public void render(LottieRenderEngine engine, GraphicsContext gc, Path shape, Group parentGroup, double frame) {
-        if (shape.bezier() == null) return;
+    public void render(GraphicsContext gc, Path path, Group parentGroup, double frame) {
+        if (path.bezier() == null) return;
 
-        BezierDefinition bezierDef = getBezierDefinition(shape, frame);
+        BezierDefinition bezierDef = getBezierDefinition(path, frame);
         if (bezierDef == null || bezierDef.vertices() == null || bezierDef.vertices().isEmpty()) return;
 
         gc.save();
@@ -71,11 +69,6 @@ public class PathRenderer implements ShapeRenderer<Path> {
         gc.stroke();
 
         gc.restore();
-    }
-
-    @Override
-    public Class<Path> getShapeType() {
-        return Path.class;
     }
 
     private BezierDefinition getBezierDefinition(Path shape, double frame) {

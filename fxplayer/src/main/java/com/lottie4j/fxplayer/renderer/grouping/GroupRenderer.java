@@ -4,18 +4,15 @@ import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
-import com.lottie4j.fxplayer.LottieRenderEngine;
-import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.logging.Logger;
 
-public class GroupRenderer implements ShapeRenderer<Group> {
+public class GroupRenderer {
 
     private static final Logger logger = Logger.getLogger(GroupRenderer.class.getName());
 
-    @Override
-    public void render(LottieRenderEngine engine, GraphicsContext gc, Group group, Group parentGroup, double frame) {
+    public void render(GraphicsContext gc, Group group, double frame) {
         logger.info("GroupRenderer.render called for group with " + group.shapes().size() + " items");
 
         gc.save();
@@ -29,15 +26,10 @@ public class GroupRenderer implements ShapeRenderer<Group> {
 
         // Render shapes with the found styles
         for (BaseShape shape : group.shapes()) {
-            engine.renderShape(gc, shape, group, frame);
+            // engine.renderShape(gc, shape, group, frame);
         }
 
         gc.restore();
-    }
-
-    @Override
-    public Class<Group> getShapeType() {
-        return Group.class;
     }
 
     private void applyTransform(GraphicsContext gc, Transform transform, double frame) {

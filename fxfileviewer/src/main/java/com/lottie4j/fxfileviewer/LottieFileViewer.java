@@ -203,12 +203,6 @@ public class LottieFileViewer extends Application {
                 root.getChildren().remove(lottiePlayer);
             }
 
-            // Create new LottiePlayer
-            lottiePlayer = new LottiePlayer(animation);
-
-            // Replace canvas with LottiePlayer - use the stored root reference
-            root.setCenter(lottiePlayer);
-
             // Show preview image (if available)
             String imagePath = file.getAbsolutePath().replaceFirst("\\.[^.]+$", ".png");
             try {
@@ -228,6 +222,10 @@ public class LottieFileViewer extends Application {
             treeViewer.setPrefWidth(420);
             root.setRight(treeViewer);
 
+            // Show new LottiePlayer
+            lottiePlayer = new LottiePlayer(animation);
+            root.setCenter(lottiePlayer);
+            
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();

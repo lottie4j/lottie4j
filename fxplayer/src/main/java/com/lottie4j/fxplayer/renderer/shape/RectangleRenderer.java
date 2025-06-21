@@ -6,7 +6,6 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Rectangle;
 import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.core.model.shape.style.Stroke;
-import com.lottie4j.fxplayer.LottieRenderEngine;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
@@ -15,12 +14,11 @@ import javafx.scene.paint.Color;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-public class RectangleRenderer implements ShapeRenderer<Rectangle> {
+public class RectangleRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(RectangleRenderer.class.getName());
 
-    @Override
-    public void render(LottieRenderEngine engine, GraphicsContext gc, Rectangle rectangle, Group parentGroup, double frame) {
+    public void render(GraphicsContext gc, Rectangle rectangle, Group parentGroup, double frame) {
         logger.info("RectangleRenderer.render called for: " + rectangle.name());
 
         if (rectangle.size() == null || rectangle.position() == null) {
@@ -60,11 +58,6 @@ public class RectangleRenderer implements ShapeRenderer<Rectangle> {
                 rectangle.position().getValue(AnimatedValueType.X, 0L),
                 rectangle.size().getValue(AnimatedValueType.WIDTH, 0L),
                 rectangle.size().getValue(AnimatedValueType.HEIGHT, 0L));
-    }
-
-    @Override
-    public Class<Rectangle> getShapeType() {
-        return Rectangle.class;
     }
 
     private Optional<FillStyle> getFillStyle(Group group) {

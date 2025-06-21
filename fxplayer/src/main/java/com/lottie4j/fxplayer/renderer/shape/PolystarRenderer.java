@@ -4,17 +4,15 @@ import com.lottie4j.core.definition.StarType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Polystar;
-import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.logging.Logger;
 
-public class PolystarRenderer implements ShapeRenderer<Polystar> {
+public class PolystarRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(PolystarRenderer.class.getName());
 
-    @Override
-    public void render(LottieRenderEngine engine, GraphicsContext gc, Polystar polystar, Group parentGroup, double frame) {
+    public void render(GraphicsContext gc, Polystar polystar, Group parentGroup, double frame) {
         if (polystar.points() == null) {
             logger.warning("Polystar has no points defined");
             return;
@@ -47,11 +45,6 @@ public class PolystarRenderer implements ShapeRenderer<Polystar> {
         } else {
             renderPolygon(gc, centerX, centerY, outerRadius, rotation, numPoints);
         }
-    }
-
-    @Override
-    public Class<Polystar> getShapeType() {
-        return Polystar.class;
     }
 
     private void renderStar(GraphicsContext gc, double centerX, double centerY,
