@@ -18,4 +18,12 @@ module com.lottie4j.core {
     opens com.lottie4j.core.model.shape to com.fasterxml.jackson.databind;
     opens com.lottie4j.core.model.bezier to com.fasterxml.jackson.databind;
     opens com.lottie4j.core.info to com.fasterxml.jackson.databind;
+    exports com.lottie4j.core.model.shape.shape;
+    opens com.lottie4j.core.model.shape.shape to com.fasterxml.jackson.databind;
+    exports com.lottie4j.core.model.shape.style;
+    opens com.lottie4j.core.model.shape.style to com.fasterxml.jackson.databind;
+    exports com.lottie4j.core.model.shape.grouping;
+    opens com.lottie4j.core.model.shape.grouping to com.fasterxml.jackson.databind;
+    exports com.lottie4j.core.model.shape.modifier;
+    opens com.lottie4j.core.model.shape.modifier to com.fasterxml.jackson.databind;
 }

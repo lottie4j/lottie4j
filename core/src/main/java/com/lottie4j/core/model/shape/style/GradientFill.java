@@ -1,4 +1,4 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.style;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -10,6 +10,7 @@ import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.shape.BaseShape;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#gradients">Lottie Docs: Gradient Fill</a>

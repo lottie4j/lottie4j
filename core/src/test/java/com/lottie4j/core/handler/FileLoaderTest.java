@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
-import com.lottie4j.core.model.shape.Path;
+import com.lottie4j.core.model.shape.shape.Path;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

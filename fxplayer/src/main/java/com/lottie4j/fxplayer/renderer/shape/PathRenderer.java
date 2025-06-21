@@ -1,10 +1,10 @@
-package com.lottie4j.fxplayer.renderer;
+package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
-import com.lottie4j.core.model.shape.Group;
-import com.lottie4j.core.model.shape.Path;
+import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.core.model.shape.shape.Path;
 import com.lottie4j.fxplayer.LottieRenderEngine;
 import javafx.scene.canvas.GraphicsContext;
 
@@ -73,6 +73,11 @@ public class PathRenderer implements ShapeRenderer<Path> {
         gc.restore();
     }
 
+    @Override
+    public Class<Path> getShapeType() {
+        return Path.class;
+    }
+
     private BezierDefinition getBezierDefinition(Path shape, double frame) {
         if (shape.bezier() instanceof FixedBezier fixedBezier) {
             return fixedBezier.bezier();
@@ -87,11 +92,5 @@ public class PathRenderer implements ShapeRenderer<Path> {
             }
         }
         return null;
-    }
-
-
-    @Override
-    public Class<Path> getShapeType() {
-        return Path.class;
     }
 }

@@ -1,11 +1,13 @@
 package com.lottie4j.fxplayer;
 
+import com.lottie4j.core.definition.ShapeGroup;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
-import com.lottie4j.core.model.shape.Group;
-import com.lottie4j.fxplayer.renderer.*;
+import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.fxplayer.renderer.grouping.TransformRenderer;
+import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
@@ -33,8 +35,6 @@ public class LottieRenderEngine {
         // Register shape renderers
         registerRenderer(new RectangleRenderer());
         registerRenderer(new EllipseRenderer());
-        registerRenderer(new FillRenderer());
-        registerRenderer(new GroupRenderer());
         registerRenderer(new PathRenderer());
         registerRenderer(new PolystarRenderer());
         registerRenderer(new TransformRenderer());
@@ -132,7 +132,9 @@ public class LottieRenderEngine {
         if (layer.shapes() != null && !layer.shapes().isEmpty()) {
             logger.info("Layer has " + layer.shapes().size() + " shapes");
 
-            for (BaseShape shape : layer.shapes()) {
+            for (BaseShape shape : layer.shapes().stream()
+                    .filter(s -> s.type().shapeGroup() == ShapeGroup.SHAPE)
+                    .toList()) {
                 renderShape(gc, shape, null, frame);
             }
         } else {
@@ -145,7 +147,7 @@ public class LottieRenderEngine {
     @SuppressWarnings("unchecked")
     public void renderShape(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         logger.info("Rendering shape: " + shape.getClass().getSimpleName() +
-                " (name: " + (shape.getName() != null ? shape.getName() : "unnamed") + ")");
+                " (name: " + (shape.name() != null ? shape.name() : "unnamed") + ")");
 
         ShapeRenderer renderer = renderers.get(shape.getClass());
         if (renderer != null) {

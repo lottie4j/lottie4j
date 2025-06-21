@@ -5,6 +5,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
+import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.core.model.shape.grouping.Transform;
+import com.lottie4j.core.model.shape.modifier.*;
+import com.lottie4j.core.model.shape.shape.Ellipse;
+import com.lottie4j.core.model.shape.shape.Path;
+import com.lottie4j.core.model.shape.shape.Polystar;
+import com.lottie4j.core.model.shape.shape.Rectangle;
+import com.lottie4j.core.model.shape.style.*;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty")
 @JsonSubTypes({
@@ -44,7 +52,11 @@ public interface BaseShape {
 
     PropertyListingList getList();
 
-    default String getName() {
+    default String name() {
         return name;
+    }
+
+    default ShapeType type() {
+        return type;
     }
 }

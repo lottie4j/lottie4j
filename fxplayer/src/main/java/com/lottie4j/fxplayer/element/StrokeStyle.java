@@ -1,7 +1,7 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.Stroke;
+import com.lottie4j.core.model.shape.style.Stroke;
 import javafx.scene.paint.Color;
 
 public class StrokeStyle {

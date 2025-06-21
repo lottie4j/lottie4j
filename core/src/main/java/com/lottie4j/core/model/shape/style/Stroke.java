@@ -1,20 +1,25 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.style;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.FillRule;
+import com.lottie4j.core.definition.LineCap;
+import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.StrokeDash;
+import com.lottie4j.core.model.shape.BaseShape;
+
+import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#fill">Lottie Docs: Fill</a>
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record Fill(
+public record Stroke(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
@@ -27,17 +32,22 @@ public record Fill(
 
         // Undefined
 
-        @JsonProperty("d") Integer d,
+        //@JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
-        // Fill
-        @JsonProperty("r") FillRule fillRule,
+        // Stroke
+        @JsonProperty("lc") LineCap lineCap,
+        @JsonProperty("lj") LineJoin lineJoin,
+        @JsonProperty("ml") Integer miterLimit,
+        @JsonProperty("ml2") Animated miterLimitAlternative,
+        @JsonProperty("w") Animated strokeWidth,
+        @JsonProperty("d") List<StrokeDash> strokeDashes,
         @JsonProperty("o") Animated opacity,
         @JsonProperty("c") Animated color
 ) implements BaseShape {
     @Override
     public PropertyListingList getList() {
-        var list = new PropertyListingList("Fill");
+        var list = new PropertyListingList("Stroke");
         list.add("Match name", matchName);
         list.add("Type", type);
         list.add("Hidden", hidden);
@@ -47,9 +57,14 @@ public record Fill(
         list.add("ID", id);
         list.add("d", d);
         list.add("cix", cix);
-        list.add("FillRule", fillRule);
+        list.add("Line cap", lineCap);
+        list.add("Line join", lineJoin);
+        list.add("Miter limit", miterLimit);
+        list.add("Miter limit alternative", miterLimitAlternative);
+        list.add("Stroke width", strokeWidth);
         list.add("Opacity", opacity);
         list.add("Color", color);
+        list.addList("Stroke dashes", strokeDashes);
         return list;
     }
 }

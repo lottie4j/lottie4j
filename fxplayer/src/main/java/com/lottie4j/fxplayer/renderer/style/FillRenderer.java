@@ -1,9 +1,10 @@
-package com.lottie4j.fxplayer.renderer;
+package com.lottie4j.fxplayer.renderer.style;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.Fill;
-import com.lottie4j.core.model.shape.Group;
+import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.fxplayer.LottieRenderEngine;
+import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 

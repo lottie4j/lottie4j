@@ -29,7 +29,7 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
 
         TreeTableColumn<LottieProperty, String> treeTableColumn2 = new TreeTableColumn<>("Value");
         treeTableColumn2.setCellValueFactory(cellData -> cellData.getValue().getValue().getValueProperty());
-        treeTableColumn2.setMinWidth(250);
+        treeTableColumn2.setMinWidth(150);
         this.getColumns().add(treeTableColumn2);
 
         buildTree();

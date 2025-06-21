@@ -1,7 +1,11 @@
-package com.lottie4j.fxplayer.renderer;
+package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.*;
+import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.core.model.shape.shape.Rectangle;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.LottieRenderEngine;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
@@ -58,6 +62,11 @@ public class RectangleRenderer implements ShapeRenderer<Rectangle> {
                 rectangle.size().getValue(AnimatedValueType.HEIGHT, 0L));
     }
 
+    @Override
+    public Class<Rectangle> getShapeType() {
+        return Rectangle.class;
+    }
+
     private Optional<FillStyle> getFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -80,10 +89,5 @@ public class RectangleRenderer implements ShapeRenderer<Rectangle> {
             }
         }
         return Optional.empty();
-    }
-
-    @Override
-    public Class<Rectangle> getShapeType() {
-        return Rectangle.class;
     }
 }

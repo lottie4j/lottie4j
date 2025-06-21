@@ -1,24 +1,20 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.grouping;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.LineCap;
-import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.StrokeDash;
-
-import java.util.List;
+import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
+ * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record Stroke(
+public record Transform(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
@@ -31,22 +27,25 @@ public record Stroke(
 
         // Undefined
 
-        //@JsonProperty("d") Integer d,
+        @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
-        // Stroke
-        @JsonProperty("lc") LineCap lineCap,
-        @JsonProperty("lj") LineJoin lineJoin,
-        @JsonProperty("ml") Integer miterLimit,
-        @JsonProperty("ml2") Animated miterLimitAlternative,
-        @JsonProperty("w") Animated strokeWidth,
-        @JsonProperty("d") List<StrokeDash> strokeDashes,
+        // Transform
+        @JsonProperty("a") Animated anchor,
+        @JsonProperty("p") Animated position,
+        @JsonProperty("s") Animated scale,
+        @JsonProperty("r") Animated rotation,
+        @JsonProperty("rx") Animated rx,
+        @JsonProperty("ry") Animated ry,
+        @JsonProperty("rz") Animated rz,
+        @JsonProperty("sk") Animated skew,
+        @JsonProperty("sa") Animated skewAxis,
         @JsonProperty("o") Animated opacity,
-        @JsonProperty("c") Animated color
+        @JsonProperty("or") Animated unknown
 ) implements BaseShape {
     @Override
     public PropertyListingList getList() {
-        var list = new PropertyListingList("Stroke");
+        var list = new PropertyListingList("Transform");
         list.add("Match name", matchName);
         list.add("Type", type);
         list.add("Hidden", hidden);
@@ -56,14 +55,17 @@ public record Stroke(
         list.add("ID", id);
         list.add("d", d);
         list.add("cix", cix);
-        list.add("Line cap", lineCap);
-        list.add("Line join", lineJoin);
-        list.add("Miter limit", miterLimit);
-        list.add("Miter limit alternative", miterLimitAlternative);
-        list.add("Stroke width", strokeWidth);
+        list.add("Anchor", anchor);
+        list.add("Position", position);
+        list.add("Scale", scale);
+        list.add("Rotation", rotation);
+        list.add("RX", rx);
+        list.add("RY", ry);
+        list.add("RZ", rz);
+        list.add("Skew", skew);
+        list.add("Skew axis", skewAxis);
         list.add("Opacity", opacity);
-        list.add("Color", color);
-        list.addList("Stroke dashes", strokeDashes);
+        list.add("Unknown", unknown);
         return list;
     }
 }

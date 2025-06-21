@@ -1,4 +1,4 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.style;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -7,6 +7,7 @@ import com.lottie4j.core.definition.*;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.StrokeDash;
+import com.lottie4j.core.model.shape.BaseShape;
 
 import java.util.List;
 

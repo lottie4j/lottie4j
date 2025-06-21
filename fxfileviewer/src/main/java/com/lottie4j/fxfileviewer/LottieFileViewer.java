@@ -8,6 +8,7 @@ import com.lottie4j.fxfileviewer.util.CompactFormatter;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -65,7 +66,7 @@ public class LottieFileViewer extends Application {
         root = new BorderPane();
 
         // Create canvas for animation rendering
-        canvas = new Canvas(800, 600);
+        canvas = new Canvas(500, 500);
         gc = canvas.getGraphicsContext2D();
         root.setCenter(canvas);
 
@@ -78,7 +79,7 @@ public class LottieFileViewer extends Application {
         root.setTop(menuBar);
 
         // Set up scene
-        Scene scene = new Scene(root, 1000, 700);
+        Scene scene = new Scene(root, 1400, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -223,7 +224,9 @@ public class LottieFileViewer extends Application {
             }
 
             // Show the lottie file structure
-            root.setRight(new LottieTreeView(file.getName(), animation));
+            var treeViewer = new LottieTreeView(file.getName(), animation);
+            treeViewer.setPrefWidth(420);
+            root.setRight(treeViewer);
 
             // Reset the animation UI
             setupAnimationControls();
@@ -289,12 +292,32 @@ public class LottieFileViewer extends Application {
     private void showAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
-        alert.setHeaderText("Lottie4J Animation Viewer");
-        alert.setContentText("""
-                A JavaFX viewer for Lottie animations.
-                Built with Lottie4J data model.
-                Version 1.0
-                """);
+        alert.setHeaderText("Lottie4J File Viewer");
+        VBox content = new VBox(5);
+        content.getChildren().addAll(
+                new Label("A JavaFX viewer for Lottie animations."),
+                new Label("Built with the Lottie4J library."),
+                createClickableLink()
+        );
+
+        alert.getDialogPane().setContent(content);
         alert.showAndWait();
+    }
+
+    private HBox createClickableLink() {
+        Hyperlink link = new Hyperlink("https://lottie4j.com/");
+        link.setOnAction(e -> {
+            try {
+                // Use JavaFX HostServices to open URL
+                getHostServices().showDocument("https://lottie4j.com/");
+            } catch (Exception ex) {
+                showError("Could not open browser: " + ex.getMessage());
+            }
+        });
+
+        HBox linkBox = new HBox(new Label("More info on:"), link);
+        linkBox.setAlignment(Pos.BASELINE_LEFT);
+        return linkBox;
+
     }
 }

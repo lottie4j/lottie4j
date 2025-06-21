@@ -2,7 +2,17 @@ package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
-import com.lottie4j.core.model.shape.*;
+import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.shape.modifier.Pucker;
+import com.lottie4j.core.model.shape.modifier.Repeater;
+import com.lottie4j.core.model.shape.modifier.RoundedCorners;
+import com.lottie4j.core.model.shape.modifier.TrimPath;
+import com.lottie4j.core.model.shape.shape.Ellipse;
+import com.lottie4j.core.model.shape.shape.Polystar;
+import com.lottie4j.core.model.shape.shape.Rectangle;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.GradientFill;
+import com.lottie4j.core.model.shape.style.Stroke;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;

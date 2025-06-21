@@ -1,7 +1,7 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.AnimatedValueType;
-import com.lottie4j.core.model.shape.Fill;
+import com.lottie4j.core.model.shape.style.Fill;
 import javafx.scene.paint.Color;
 
 public class FillStyle {

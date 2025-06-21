@@ -1,21 +1,20 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.modifier;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.Composite;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.RepeaterTransform;
+import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#repeater">Lottie Docs: Repeater</a>
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#twist">Lottie Docs: Twist</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record Repeater(
+public record Twist(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
@@ -31,16 +30,13 @@ public record Repeater(
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
-        // Repeater
-        @JsonProperty("c") Animated copies,
-        @JsonProperty("o") Animated offset,
-        @JsonProperty("m") Composite stackingOrder,
-
-        @JsonProperty("tr") RepeaterTransform repeaterTransform
+        // Twist
+        @JsonProperty("a") Animated angle,
+        @JsonProperty("c") Animated center
 ) implements BaseShape {
     @Override
     public PropertyListingList getList() {
-        var list = new PropertyListingList("Repeater");
+        var list = new PropertyListingList("Twist");
         list.add("Match name", matchName);
         list.add("Type", type);
         list.add("Hidden", hidden);
@@ -50,10 +46,8 @@ public record Repeater(
         list.add("ID", id);
         list.add("d", d);
         list.add("cix", cix);
-        list.add("Copies", copies);
-        list.add("Offset", offset);
-        list.add("Stacking order", stackingOrder);
-        list.add("Repeater transform", repeaterTransform);
+        list.add("Angle", angle);
+        list.add("Center", center);
         return list;
     }
 }

@@ -1,20 +1,21 @@
-package com.lottie4j.core.model.shape;
+package com.lottie4j.core.model.shape.grouping;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.BlendMode;
-import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.shape.BaseShape;
+
+import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#zig-zag">Lottie Docs: ZigZag</a>
+ * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#group">Lottie Docs: Group</a>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ZigZag(
+public record Group(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
@@ -30,14 +31,13 @@ public record ZigZag(
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
-        // ZigZag
-        @JsonProperty("lj") LineJoin lineJoin,
-        @JsonProperty("a") Animated amount,
-        @JsonProperty("ml") Animated miterLimit
+        // Group
+        @JsonProperty("np") Integer numberOfProperties,
+        @JsonProperty("it") List<BaseShape> shapes
 ) implements BaseShape {
     @Override
     public PropertyListingList getList() {
-        var list = new PropertyListingList("Zig Zag");
+        var list = new PropertyListingList("Group");
         list.add("Match name", matchName);
         list.add("Type", type);
         list.add("Hidden", hidden);
@@ -47,9 +47,8 @@ public record ZigZag(
         list.add("ID", id);
         list.add("d", d);
         list.add("cix", cix);
-        list.add("Line join", lineJoin);
-        list.add("Amount", amount);
-        list.add("Miter limit", miterLimit);
+        list.add("Number of properties", numberOfProperties);
+        list.addShapeList("Shapes", shapes);
         return list;
     }
 }
