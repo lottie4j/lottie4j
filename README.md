@@ -8,13 +8,20 @@ Further technical information about this project can be found on [lottie4j.com](
 
 ### Implementation Libraries
 
-* `core`: Lottie data model + reading and writing of Lottie files.
-* `fxplayer`: JavaFX component to play Lottie animations, using `core`.
+* `core`
+    * Java objects for the Lottie data model.
+    * Reading and writing of Lottie files.
+* `fxplayer`
+    * JavaFX component to play Lottie animations.
+    * Uses the `core` library.
+    * Contains a simple test application `DemoApplication.java`.
 
-### Demo applications
+### Demo application
 
-* `fxdemo`: Demo application demonstrating the minimal use of `fxplayer`.
-* `fxfileviewer`: JavaFX application to visualize the structure of a Lottie file, using `fxplayer`.
+* `fxfileviewer`
+    * JavaFX application to show the Lottie animation
+    * Visualizes the structure of the Lottie file.
+    * Uses `core` and `fxplayer` libraries.
 
 ## More Info About Lottie Files
 

@@ -1,9 +1,8 @@
-package com.lottie4j.fxdemo;
+package com.lottie4j.fxplayer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
@@ -16,7 +15,7 @@ public class DemoApplication extends Application {
 
     private static final Logger logger = Logger.getLogger(DemoApplication.class.getName());
 
-    private static final String TEST_FILE_LOTTIE = "/test/timeline-square.json";
+    private static final String TEST_FILE_LOTTIE = "/timeline-square.json";
 
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tF %1$tT] [%4$-7s] %2$s \t\t %5$s %n");

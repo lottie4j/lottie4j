@@ -175,7 +175,7 @@ public class LottiePlayer extends Canvas {
             logger.info("Layer has " + layer.shapes().size() + " shapes");
 
             for (BaseShape shape : layer.shapes().stream()
-                    .filter(s -> s.type().shapeGroup() == ShapeGroup.SHAPE)
+                    .filter(s -> s != null && s.type() != null && s.type().shapeGroup() == ShapeGroup.SHAPE)
                     .toList()) {
                 renderShape(gc, shape, null, frame);
             }
