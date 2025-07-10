@@ -1,6 +1,7 @@
 module com.lottie4j.core {
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.databind;
+    requires java.logging;
 
     exports com.lottie4j.core.model.bezier;
     exports com.lottie4j.core.definition;

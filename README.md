@@ -4,6 +4,47 @@ The aim is to create Java libraries to handle and play Lottie files with Java.
 
 Further technical information about this project can be found on [lottie4j.com](https://lottie4j.com).
 
+## Showing a Lottie Animation in a JavaFX Application
+
+This is the minimal code needed to display a Lottie animation:
+
+```java
+import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.model.Animation;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
+
+import java.io.File;
+
+public class DemoApplication extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        Animation animation = FileLoader.loadAnimation(new File("PATH_OF_LOTTIE_FILE.json"));
+
+        logger.info("Starting with W/H " + animation.width() + "/" + animation.height());
+        logger.info("Number of assets: " + (animation.assets() == null ? "0" : animation.assets().size()));
+        logger.info("Number of layers: " + (animation.layers() == null ? "0" : animation.layers().size()));
+
+        var group = new HBox();
+        group.getChildren().add(new LottiePlayer(animation));
+        group.setMinWidth(animation.width());
+        group.setMinHeight(animation.height());
+
+        var scene = new Scene(group, animation.width(), animation.height());
+        stage.setTitle(f.getName());
+        stage.setScene(scene);
+        stage.show();
+    }
+}
+```
+
 ## Structure of the sources
 
 ### Implementation Libraries

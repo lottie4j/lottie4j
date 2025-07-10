@@ -1,6 +1,5 @@
 package com.lottie4j.fxplayer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
 import javafx.application.Application;
@@ -26,7 +25,7 @@ public class DemoApplication extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage stage) throws Exception {
         var r = this.getClass().getResource(TEST_FILE_LOTTIE);
         if (r == null) {
             logger.warning("The Lottie file can not be found");
@@ -34,8 +33,7 @@ public class DemoApplication extends Application {
         }
 
         var f = new File(r.getFile());
-        var jsonFromFile = FileLoader.loadFileAsString(f);
-        var animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
+        Animation animation = FileLoader.loadAnimation(f);
 
         logger.info("Starting with W/H " + animation.width() + "/" + animation.height());
         logger.info("Number of assets: " + (animation.assets() == null ? "0" : animation.assets().size()));
@@ -47,8 +45,8 @@ public class DemoApplication extends Application {
         group.setMinHeight(animation.height());
 
         var scene = new Scene(group, animation.width(), animation.height());
-        primaryStage.setTitle(f.getName());
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        stage.setTitle(f.getName());
+        stage.setScene(scene);
+        stage.show();
     }
 }
