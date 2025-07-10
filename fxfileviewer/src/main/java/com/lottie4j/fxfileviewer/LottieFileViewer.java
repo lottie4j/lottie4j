@@ -1,6 +1,5 @@
 package com.lottie4j.fxfileviewer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.handler.FileLoader;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.component.LottieTreeView;
@@ -33,6 +32,7 @@ import java.util.logging.Logger;
  * that works with the lottie4j data model structure.
  */
 public class LottieFileViewer extends Application {
+    private static final Logger logger = Logger.getLogger(LottieFileViewer.class.getName());
 
     static {
         Logger rootLogger = LogManager.getLogManager().getLogger("");
@@ -53,10 +53,6 @@ public class LottieFileViewer extends Application {
     private Label fpsLabel;
     private ProgressBar progressBar;
     private LottiePlayer lottiePlayer;
-
-    public static void main(String[] args) {
-        launch(args);
-    }
 
     @Override
     public void start(Stage primaryStage) {
@@ -85,6 +81,18 @@ public class LottieFileViewer extends Application {
 
         // Initialize canvas
         clearCanvas();
+
+        // Handle command-line arguments
+        Parameters args = getParameters();
+        if (!args.getUnnamed().isEmpty()) {
+            var fileName = args.getUnnamed().get(0);
+            var r = this.getClass().getResource(fileName);
+            if (r == null) {
+                logger.warning("The Lottie file can not be found: " + fileName);
+                return;
+            }
+            loadAnimation(new File(r.getFile()));
+        }
     }
 
     @Override
@@ -195,8 +203,7 @@ public class LottieFileViewer extends Application {
         stopAnimation();
 
         try {
-            var jsonFromFile = FileLoader.loadFileAsString(file);
-            animation = (new ObjectMapper()).readValue(jsonFromFile, Animation.class);
+            animation = FileLoader.loadAnimation(file);
 
             // Remove existing LottiePlayer if any
             if (lottiePlayer != null) {
@@ -225,7 +232,7 @@ public class LottieFileViewer extends Application {
             // Show new LottiePlayer
             lottiePlayer = new LottiePlayer(animation);
             root.setCenter(lottiePlayer);
-            
+
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();
@@ -316,6 +323,5 @@ public class LottieFileViewer extends Application {
         HBox linkBox = new HBox(new Label("More info on:"), link);
         linkBox.setAlignment(Pos.BASELINE_LEFT);
         return linkBox;
-
     }
 }
