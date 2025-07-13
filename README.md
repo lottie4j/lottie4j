@@ -9,7 +9,7 @@ Further technical information about this project can be found on [lottie4j.com](
 This is the minimal code needed to display a Lottie animation:
 
 ```java
-import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.handler.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -26,7 +26,7 @@ public class DemoApplication extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        Animation animation = FileLoader.loadAnimation(new File("PATH_OF_LOTTIE_FILE.json"));
+        Animation animation = LottieFileLoader.load(new File("PATH_OF_LOTTIE_FILE.json"));
 
         logger.info("Starting with W/H " + animation.width() + "/" + animation.height());
         logger.info("Number of assets: " + (animation.assets() == null ? "0" : animation.assets().size()));

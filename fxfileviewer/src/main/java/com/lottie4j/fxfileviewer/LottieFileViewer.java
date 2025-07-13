@@ -1,6 +1,6 @@
 package com.lottie4j.fxfileviewer;
 
-import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.handler.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.component.LottieTreeView;
 import com.lottie4j.fxfileviewer.util.CompactFormatter;
@@ -203,7 +203,7 @@ public class LottieFileViewer extends Application {
         stopAnimation();
 
         try {
-            animation = FileLoader.loadAnimation(file);
+            animation = LottieFileLoader.load(file);
 
             // Remove existing LottiePlayer if any
             if (lottiePlayer != null) {
