@@ -1,6 +1,7 @@
 package com.lottie4j.fxplayer.util;
 
 import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.model.shape.shape.Ellipse;
 import com.lottie4j.core.model.shape.shape.Rectangle;
 
 /**
@@ -41,22 +42,42 @@ public class LottieCoordinateHelper {
      * @param frame     The animation frame to get values for
      * @return RectanglePosition with both original and converted coordinates
      */
-    public static RectanglePosition getRectanglePosition(Rectangle rectangle, double frame) {
+    public static LottiePosition getRectanglePosition(Rectangle rectangle, double frame) {
         if (rectangle.size() == null || rectangle.position() == null) {
             throw new IllegalArgumentException("Rectangle missing size or position data");
         }
 
-        // Get animated values at current frame - these are center-based coordinates
-        double centerX = rectangle.position().getValue(AnimatedValueType.X, frame);
-        double centerY = rectangle.position().getValue(AnimatedValueType.Y, frame);
-        double width = rectangle.size().getValue(AnimatedValueType.WIDTH, frame);
-        double height = rectangle.size().getValue(AnimatedValueType.HEIGHT, frame);
+        return calculate(rectangle.position().getValue(AnimatedValueType.X, frame),
+                rectangle.position().getValue(AnimatedValueType.Y, frame),
+                rectangle.size().getValue(AnimatedValueType.WIDTH, frame),
+                rectangle.size().getValue(AnimatedValueType.HEIGHT, frame));
+    }
+
+    /**
+     * Extracts position and size data from a Lottie Rectangle and converts coordinates
+     * from center-based (Lottie) to top-left based (JavaFX).
+     *
+     * @param ellipse The Lottie Ellipse shape
+     * @param frame   The animation frame to get values for
+     * @return RectanglePosition with both original and converted coordinates
+     */
+    public static LottiePosition getRectanglePosition(Ellipse ellipse, double frame) {
+        if (ellipse.size() == null || ellipse.position() == null) {
+            throw new IllegalArgumentException("Ellipse missing size or position data");
+        }
 
         // Convert from center-based to top-left based coordinates
+        return calculate(ellipse.position().getValue(AnimatedValueType.X, frame),
+                ellipse.position().getValue(AnimatedValueType.Y, frame),
+                ellipse.size().getValue(AnimatedValueType.WIDTH, frame),
+                ellipse.size().getValue(AnimatedValueType.HEIGHT, frame));
+    }
+
+    private static LottiePosition calculate(double centerX, double centerY, double width, double height) {
         double topLeftX = centerX - (width / 2.0);
         double topLeftY = centerY - (height / 2.0);
 
-        return new RectanglePosition(centerX, centerY, width, height, topLeftX, topLeftY);
+        return new LottiePosition(centerX, centerY, width, height, topLeftX, topLeftY);
     }
 
     /**
@@ -92,9 +113,9 @@ public class LottieCoordinateHelper {
     }
 
     /**
-     * Rectangle positioning data extracted from Lottie format
+     * Lottie positioning data extracted from Lottie format.
      */
-    public record RectanglePosition(
+    public record LottiePosition(
             double x,           // Center x position in Lottie coordinates
             double y,           // Center y position in Lottie coordinates
             double width,       // Rectangle width
