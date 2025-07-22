@@ -18,7 +18,6 @@ public record Ellipse(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -26,7 +25,6 @@ public record Ellipse(
         @JsonProperty("ln") String id,
 
         // Undefined
-
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
@@ -34,6 +32,12 @@ public record Ellipse(
         @JsonProperty("p") Animated position,
         @JsonProperty("s") Animated size
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.ELLIPSE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Ellipse");

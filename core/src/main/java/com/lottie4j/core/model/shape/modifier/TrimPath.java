@@ -19,7 +19,6 @@ public record TrimPath(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -27,7 +26,6 @@ public record TrimPath(
         @JsonProperty("ln") String id,
 
         // Undefined
-
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
@@ -37,6 +35,12 @@ public record TrimPath(
         @JsonProperty("o") Animated offset,
         @JsonProperty("m") TrimMultipleShapes trimMultipleShapes
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.TRIM;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Trim Path");

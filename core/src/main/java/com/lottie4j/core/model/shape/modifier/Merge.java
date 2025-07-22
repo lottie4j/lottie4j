@@ -18,7 +18,6 @@ public record Merge(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -26,13 +25,18 @@ public record Merge(
         @JsonProperty("ln") String id,
 
         // Undefined
-
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
         // Merge
         @JsonProperty("mm") MergeMode mergeMode
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.MERGE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Merge");

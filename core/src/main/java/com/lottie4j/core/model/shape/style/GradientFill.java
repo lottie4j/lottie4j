@@ -21,7 +21,6 @@ public record GradientFill(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -43,6 +42,11 @@ public record GradientFill(
         @JsonProperty("h") Animated highlightLength,
         @JsonProperty("a") Animated highlightAngle
 ) implements BaseShape {
+    @Override
+    public ShapeType type() {
+        return ShapeType.GRADIENT_FILL;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Gradient Fill");

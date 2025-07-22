@@ -17,7 +17,6 @@ public record NoStyle(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -29,6 +28,11 @@ public record NoStyle(
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix
 ) implements BaseShape {
+    @Override
+    public ShapeType type() {
+        return ShapeType.NO_STYLE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("No Style");

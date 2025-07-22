@@ -19,7 +19,6 @@ public record ZigZag(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -36,6 +35,12 @@ public record ZigZag(
         @JsonProperty("a") Animated amount,
         @JsonProperty("ml") Animated miterLimit
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.ZIG_ZAG;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Zig Zag");

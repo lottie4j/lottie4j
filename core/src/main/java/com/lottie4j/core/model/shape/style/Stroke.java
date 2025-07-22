@@ -23,7 +23,6 @@ public record Stroke(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -45,6 +44,11 @@ public record Stroke(
         @JsonProperty("o") Animated opacity,
         @JsonProperty("c") Animated color
 ) implements BaseShape {
+    @Override
+    public ShapeType type() {
+        return ShapeType.STROKE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Stroke");

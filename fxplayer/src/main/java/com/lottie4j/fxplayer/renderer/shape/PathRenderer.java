@@ -3,15 +3,25 @@ package com.lottie4j.fxplayer.renderer.shape;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
+import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Path;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 public class PathRenderer implements ShapeRenderer {
 
-    public void render(GraphicsContext gc, Path path, Group parentGroup, double frame) {
+    private static final Logger logger = Logger.getLogger(PathRenderer.class.getName());
+
+    @Override
+    public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
+        if (!(shape instanceof Path path)) {
+            logger.warning("PathRenderer called with non-Path shape: " + shape.getClass().getSimpleName());
+            return;
+        }
+
         if (path.bezier() == null) return;
 
         BezierDefinition bezierDef = getBezierDefinition(path, frame);

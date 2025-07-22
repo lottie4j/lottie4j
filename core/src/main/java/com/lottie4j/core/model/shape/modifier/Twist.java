@@ -18,7 +18,6 @@ public record Twist(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -34,6 +33,12 @@ public record Twist(
         @JsonProperty("a") Animated angle,
         @JsonProperty("c") Animated center
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.TWIST;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Twist");

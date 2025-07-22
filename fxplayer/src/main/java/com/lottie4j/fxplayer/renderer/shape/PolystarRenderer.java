@@ -2,6 +2,7 @@ package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.definition.StarType;
 import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Polystar;
 import javafx.scene.canvas.GraphicsContext;
@@ -12,7 +13,13 @@ public class PolystarRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(PolystarRenderer.class.getName());
 
-    public void render(GraphicsContext gc, Polystar polystar, Group parentGroup, double frame) {
+    @Override
+    public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
+        if (!(shape instanceof Polystar polystar)) {
+            logger.warning("PolystarRenderer called with non-Polystar shape: " + shape.getClass().getSimpleName());
+            return;
+        }
+
         if (polystar.points() == null) {
             logger.warning("Polystar has no points defined");
             return;
@@ -20,18 +27,18 @@ public class PolystarRenderer implements ShapeRenderer {
 
         // Get animated values at current frame
         double centerX = polystar.position() != null ?
-                polystar.position().getValue(AnimatedValueType.X, (long) frame) : 0;
+                polystar.position().getValue(AnimatedValueType.X, frame) : 0;
         double centerY = polystar.position() != null ?
-                polystar.position().getValue(AnimatedValueType.Y, (long) frame) : 0;
+                polystar.position().getValue(AnimatedValueType.Y, frame) : 0;
 
         double outerRadius = polystar.outerRadius() != null ?
-                polystar.outerRadius().getValue(0, (long) frame) : 50;
+                polystar.outerRadius().getValue(0, frame) : 50;
 
         double rotation = polystar.rotation() != null ?
-                Math.toRadians(polystar.rotation().getValue(0, (long) frame)) : 0;
+                Math.toRadians(polystar.rotation().getValue(0, frame)) : 0;
 
         int numPoints = polystar.points() != null ?
-                (int) Math.round(polystar.points().getValue(0, (long) frame)) : 5;
+                (int) Math.round(polystar.points().getValue(0, frame)) : 5;
 
         if (numPoints < 3) {
             logger.warning("Polystar must have at least 3 points, got: " + numPoints);
@@ -52,13 +59,13 @@ public class PolystarRenderer implements ShapeRenderer {
                             Polystar polystar, double frame) {
 
         double innerRadius = polystar.innerRadius() != null ?
-                polystar.innerRadius().getValue(0, (long) frame) : outerRadius * 0.5;
+                polystar.innerRadius().getValue(0, frame) : outerRadius * 0.5;
 
         double outerRoundness = polystar.outerRoundness() != null ?
-                polystar.outerRoundness().getValue(0, (long) frame) : 0;
+                polystar.outerRoundness().getValue(0, frame) : 0;
 
         double innerRoundness = polystar.innerRoundness() != null ?
-                polystar.innerRoundness().getValue(0, (long) frame) : 0;
+                polystar.innerRoundness().getValue(0, frame) : 0;
 
         // Calculate points for star (alternating outer and inner points)
         double[] xPoints = new double[numPoints * 2];

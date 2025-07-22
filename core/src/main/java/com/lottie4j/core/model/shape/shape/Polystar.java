@@ -19,7 +19,6 @@ public record Polystar(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -41,6 +40,12 @@ public record Polystar(
         @JsonProperty("ir") Animated innerRadius,
         @JsonProperty("is") Animated innerRoundness
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.POLYSTAR;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Polystar");

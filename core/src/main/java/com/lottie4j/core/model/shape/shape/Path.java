@@ -20,7 +20,6 @@ public record Path(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -28,7 +27,6 @@ public record Path(
         @JsonProperty("ln") String id,
 
         // Undefined
-
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
         @JsonProperty("ind") Double ind,
@@ -38,6 +36,12 @@ public record Path(
         @JsonDeserialize(using = BezierDeserializer.class)
         Bezier bezier
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.PATH;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Path");

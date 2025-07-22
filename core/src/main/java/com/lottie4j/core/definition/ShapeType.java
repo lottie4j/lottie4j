@@ -44,7 +44,7 @@ public enum ShapeType implements DefinitionWithLabel {
     @JsonCreator
     public static ShapeType fromValue(String value) throws LottieModelDefinitionException {
         for (ShapeType shapeType : ShapeType.values()) {
-            if (shapeType.value.equals(value)) {
+            if (shapeType.value.equalsIgnoreCase(value)) {
                 return shapeType;
             }
         }

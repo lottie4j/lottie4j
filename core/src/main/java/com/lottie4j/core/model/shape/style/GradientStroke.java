@@ -20,7 +20,6 @@ public record GradientStroke(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -45,6 +44,11 @@ public record GradientStroke(
         @JsonProperty("g") List<Double> colors,
         @JsonProperty("d") List<StrokeDash> strokeDashes
 ) implements BaseShape {
+    @Override
+    public ShapeType type() {
+        return ShapeType.GRADIENT_STROKE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Gradient Stroke");

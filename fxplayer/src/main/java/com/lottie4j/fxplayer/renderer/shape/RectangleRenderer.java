@@ -1,6 +1,5 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Rectangle;
@@ -8,8 +7,8 @@ import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
+import com.lottie4j.fxplayer.util.LottieCoordinateHelper;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
 
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -18,7 +17,13 @@ public class RectangleRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(RectangleRenderer.class.getName());
 
-    public void render(GraphicsContext gc, Rectangle rectangle, Group parentGroup, double frame) {
+    @Override
+    public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
+        if (!(shape instanceof Rectangle rectangle)) {
+            logger.warning("RectangleRenderer called with non-Rectangle shape: " + shape.getClass().getSimpleName());
+            return;
+        }
+
         logger.info("RectangleRenderer.render called for: " + rectangle.name());
 
         if (rectangle.size() == null || rectangle.position() == null) {
@@ -26,38 +31,37 @@ public class RectangleRenderer implements ShapeRenderer {
             return;
         }
 
-        // Get animated values at current frame
-        double x = rectangle.position().getValue(AnimatedValueType.X, (long) frame);
-        double y = rectangle.position().getValue(AnimatedValueType.Y, (long) frame);
-        double width = rectangle.size().getValue(AnimatedValueType.WIDTH, (long) frame);
-        double height = rectangle.size().getValue(AnimatedValueType.HEIGHT, (long) frame);
+        // Use helper to get position data with coordinate conversion
+        var position = LottieCoordinateHelper.getRectanglePosition(rectangle, frame);
 
-        logger.info("Rectangle dimensions: x=" + x + ", y=" + y + ", w=" + width + ", h=" + height);
+        logger.info("Rectangle Lottie center coordinates: x=" + position.x() + ", y=" + position.y());
+        logger.info("Rectangle dimensions: w=" + position.width() + ", h=" + position.height());
+        logger.info("Rectangle JavaFX top-left coordinates: x=" + position.topLeftX() + ", y=" + position.topLeftY());
 
-        // For debugging, use bright visible colors
-        gc.setFill(Color.CYAN);
-        gc.setStroke(Color.DARKBLUE);
-        gc.setLineWidth(2);
-
-        // Draw rectangle (center it on the position)
-        double rectX = x - width / 2;
-        double rectY = y - height / 2;
-
-        logger.info("Drawing rectangle at: " + rectX + ", " + rectY);
+        // Use the converted top-left coordinates for JavaFX rendering
+        double renderX = position.topLeftX();
+        double renderY = position.topLeftY();
+        double width = position.width();
+        double height = position.height();
 
         var fillStyle = getFillStyle(parentGroup);
         if (fillStyle.isPresent()) {
-            gc.setFill(fillStyle.get().getColor(0));
+            var fillColor = fillStyle.get().getColor(frame);
+            logger.info("Drawing rectangle, filled with color: " + fillColor);
+            gc.setFill(fillColor);
+            gc.fillRect(renderX, renderY, width, height);
+            gc.restore();
         }
+
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            gc.setStroke(strokeStyle.get().getColor(0));
-            gc.setLineWidth(strokeStyle.get().getStrokeWidth(0));
+            logger.info("Drawing rectangle stroke with color and width: "
+                    + strokeStyle.get().getColor(frame)
+                    + strokeStyle.get().getStrokeWidth(frame));
+            gc.setStroke(strokeStyle.get().getColor(frame));
+            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+            gc.strokeRect(renderX, renderY, width, height);
         }
-        gc.strokeRect(rectangle.position().getValue(AnimatedValueType.X, 0L),
-                rectangle.position().getValue(AnimatedValueType.X, 0L),
-                rectangle.size().getValue(AnimatedValueType.WIDTH, 0L),
-                rectangle.size().getValue(AnimatedValueType.HEIGHT, 0L));
     }
 
     private Optional<FillStyle> getFillStyle(Group group) {

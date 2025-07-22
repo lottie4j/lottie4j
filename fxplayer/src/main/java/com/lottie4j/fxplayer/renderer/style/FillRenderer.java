@@ -13,13 +13,13 @@ public class FillRenderer {
     public void render(GraphicsContext gc, Fill fill, double frame) {
         if (fill.color() != null) {
             // Get RGB components individually
-            double r = fill.color().getValue(AnimatedValueType.RED, (long) frame) / 255.0;
-            double g = fill.color().getValue(AnimatedValueType.GREEN, (long) frame) / 255.0;
-            double b = fill.color().getValue(AnimatedValueType.BLUE, (long) frame) / 255.0;
+            double r = fill.color().getValue(AnimatedValueType.RED, frame) / 255.0;
+            double g = fill.color().getValue(AnimatedValueType.GREEN, frame) / 255.0;
+            double b = fill.color().getValue(AnimatedValueType.BLUE, frame) / 255.0;
 
             // Get opacity
             double opacity = fill.opacity() != null ?
-                    fill.opacity().getValue(0, (long) frame) / 100.0 : 1.0;
+                    fill.opacity().getValue(0, frame) / 100.0 : 1.0;
 
             gc.setFill(Color.color(r, g, b, opacity));
         }

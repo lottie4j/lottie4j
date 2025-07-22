@@ -230,18 +230,12 @@ public class LottieFileViewer extends Application {
             root.setRight(treeViewer);
 
             // Show new LottiePlayer
-            lottiePlayer = new LottiePlayer(animation);
+            lottiePlayer = new LottiePlayer(animation, true);
             root.setCenter(lottiePlayer);
 
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();
-
-            showInfo("Animation loaded successfully!\n" +
-                    "Name: " + animation.name() + "\n" +
-                    "Duration: " + (animation.outPoint() - animation.inPoint()) / animation.framesPerSecond() + "s\n" +
-                    "Size: " + animation.width() + "x" + animation.height() + "\n" +
-                    "Layers: " + animation.layers().size());
         } catch (IOException e) {
             showError("Failed to load animation: " + e.getMessage());
         }

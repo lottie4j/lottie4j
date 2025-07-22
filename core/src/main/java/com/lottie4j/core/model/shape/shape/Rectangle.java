@@ -18,7 +18,6 @@ public record Rectangle(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
@@ -35,6 +34,12 @@ public record Rectangle(
         @JsonProperty("s") Animated size,
         @JsonProperty("r") Animated roundedCornerRadius
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.RECTANGLE;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Rectangle");

@@ -35,9 +35,9 @@ public class GroupRenderer {
     private void applyTransform(GraphicsContext gc, Transform transform, double frame) {
         // Get position
         double translateX = transform.position() != null ?
-                transform.position().getValue(AnimatedValueType.X, (long) frame) : 0;
+                transform.position().getValue(AnimatedValueType.X, frame) : 0;
         double translateY = transform.position() != null ?
-                transform.position().getValue(AnimatedValueType.Y, (long) frame) : 0;
+                transform.position().getValue(AnimatedValueType.Y, frame) : 0;
 
         // Get anchor point
         /*double anchorX = transform.anchorPoint() != null ?
@@ -47,17 +47,17 @@ public class GroupRenderer {
 
         // Get scale
         double scaleX = transform.scale() != null ?
-                transform.scale().getValue(AnimatedValueType.X, (long) frame) / 100.0 : 1.0;
+                transform.scale().getValue(AnimatedValueType.X, frame) / 100.0 : 1.0;
         double scaleY = transform.scale() != null ?
-                transform.scale().getValue(AnimatedValueType.Y, (long) frame) / 100.0 : 1.0;
+                transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0 : 1.0;
 
         // Get rotation
         double rotation = transform.rotation() != null ?
-                transform.rotation().getValue(0, (long) frame) : 0;
+                transform.rotation().getValue(0, frame) : 0;
 
         // Get opacity - IMPORTANT: Divide by 100 to convert from percentage to decimal
         double opacity = transform.opacity() != null ?
-                Math.max(0, Math.min(1, transform.opacity().getValue(0, (long) frame) / 100.0)) : 1.0;
+                Math.max(0, Math.min(1, transform.opacity().getValue(0, frame) / 100.0)) : 1.0;
         opacity = 1;
 
         // Apply transformations in the correct order

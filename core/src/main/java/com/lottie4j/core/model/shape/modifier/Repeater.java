@@ -20,13 +20,11 @@ public record Repeater(
         // Generic for all Shapes
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("ty") ShapeType type,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("bm") BlendMode blendMode,
         @JsonProperty("ix") Integer index,
         @JsonProperty("cl") String clazz,
         @JsonProperty("ln") String id,
-
         // Undefined
 
         @JsonProperty("d") Integer d,
@@ -39,6 +37,12 @@ public record Repeater(
 
         @JsonProperty("tr") RepeaterTransform repeaterTransform
 ) implements BaseShape {
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.REPEATER;
+    }
+
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Repeater");

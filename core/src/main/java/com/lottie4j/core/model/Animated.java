@@ -50,11 +50,11 @@ public record Animated(
     }
 
     // TODO should not be needed
-    public Double getValue(int value, long timestamp) {
+    public Double getValue(int value, double frame) {
         return (double) value;
     }
 
-    public Double getValue(AnimatedValueType valueType, long timestamp) {
+    public Double getValue(AnimatedValueType valueType, double frame) {
         if (keyframes == null || keyframes.isEmpty()) {
             return 0D;
         }
@@ -64,7 +64,7 @@ public record Animated(
         }
         for (Keyframe keyframe : keyframes) {
             if (keyframe instanceof TimedKeyframe timedKeyframe) {
-                if (timedKeyframe.time() >= timestamp) {
+                if (timedKeyframe.time() >= frame) {
                     return 0D;
                 }
             }

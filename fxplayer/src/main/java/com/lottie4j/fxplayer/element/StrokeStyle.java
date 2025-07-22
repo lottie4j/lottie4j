@@ -12,22 +12,22 @@ public class StrokeStyle {
         this.stroke = stroke;
     }
 
-    public Color getColor(long timestamp) {
+    public Color getColor(double frame) {
         if (stroke.color() == null) {
             return Color.BLACK;
         }
         return Color.color(
-                stroke.color().getValue(AnimatedValueType.RED, timestamp),
-                stroke.color().getValue(AnimatedValueType.GREEN, timestamp),
-                stroke.color().getValue(AnimatedValueType.BLUE, timestamp),
-                stroke.color().getValue(AnimatedValueType.OPACITY, timestamp)
+                stroke.color().getValue(AnimatedValueType.RED, frame),
+                stroke.color().getValue(AnimatedValueType.GREEN, frame),
+                stroke.color().getValue(AnimatedValueType.BLUE, frame),
+                stroke.color().getValue(AnimatedValueType.OPACITY, frame)
         ); // value 0-1.0
     }
 
-    public Double getStrokeWidth(long timestamp) {
+    public Double getStrokeWidth(double frame) {
         if (stroke.strokeWidth() == null) {
             return 0D;
         }
-        return stroke.strokeWidth().getValue(AnimatedValueType.WIDTH, timestamp);
+        return stroke.strokeWidth().getValue(AnimatedValueType.WIDTH, frame);
     }
 }
