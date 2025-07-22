@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer;
 
-import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.handler.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -33,7 +33,7 @@ public class DemoApplication extends Application {
         }
 
         var f = new File(r.getFile());
-        Animation animation = FileLoader.loadAnimation(f);
+        Animation animation = LottieFileLoader.load(f);
 
         logger.info("Starting with W/H " + animation.width() + "/" + animation.height());
         logger.info("Number of assets: " + (animation.assets() == null ? "0" : animation.assets().size()));

@@ -18,7 +18,7 @@ class AnimationLoaderTest {
     @Test
     void testFileToObjectToJson() throws IOException {
         File f = new File(this.getClass().getResource("/lottie/lottie_file/timeline_animation.json").getFile());
-        String jsonFromFile = FileLoader.loadFileAsString(f);
+        String jsonFromFile = LottieFileLoader.loadAsString(f);
         var animation = mapper.readValue(jsonFromFile, Animation.class);
         ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writeValueAsString(animation);
@@ -27,7 +27,7 @@ class AnimationLoaderTest {
         System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
-                () -> assertTrue(animation instanceof Animation),
+                () -> assertInstanceOf(Animation.class, animation),
                 () -> assertEquals(0, animation.has3dLayers()),
                 () -> assertEquals(30, animation.framesPerSecond()),
                 () -> assertEquals(375, animation.height()),

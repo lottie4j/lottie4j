@@ -1,7 +1,7 @@
 package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lottie4j.core.handler.FileLoader;
+import com.lottie4j.core.handler.LottieFileLoader;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.modifier.Pucker;
 import com.lottie4j.core.model.shape.modifier.Repeater;
@@ -49,7 +49,7 @@ public class BaseShapeTest {
     void shapeFile(String file, Class clazz) throws IOException {
         System.out.println("Testing file: " + file);
         File f = new File(this.getClass().getResource(file).getFile());
-        String jsonFromFile = FileLoader.loadFileAsString(f);
+        String jsonFromFile = LottieFileLoader.loadAsString(f);
         BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
 
         String jsonFromObject = mapper.writeValueAsString(baseShape);
