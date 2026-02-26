@@ -384,6 +384,25 @@ public class LottiePlayer extends Canvas {
             gc.translate(-anchorX, -anchorY);
         }
 
+        // Apply 3D rotation approximation (rx, ry) before 2D rotation
+        // Approximate 3D rotation by scaling perpendicular axis
+        double rx3DScale = 1.0;
+        double ry3DScale = 1.0;
+
+        if (layer.transform().rx() != null) {
+            // X-axis rotation: scale Y dimension by cos(rx) for flip effect
+            double rxDegrees = layer.transform().rx().getValue(0, frame);
+            rx3DScale = Math.cos(Math.toRadians(rxDegrees));
+            logger.info("Applying 3D X-axis rotation: " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
+        }
+
+        if (layer.transform().ry() != null) {
+            // Y-axis rotation: scale X dimension by cos(ry) for flip effect
+            double ryDegrees = layer.transform().ry().getValue(0, frame);
+            ry3DScale = Math.cos(Math.toRadians(ryDegrees));
+            logger.info("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
+        }
+
         // Apply rotation
         if (layer.transform().rotation() != null) {
             double rotation = Math.toRadians(layer.transform().rotation().getValue(0, frame));
@@ -393,10 +412,15 @@ public class LottiePlayer extends Canvas {
             logger.info("No rotation transform");
         }
 
-        // Apply scale
+        // Apply scale (combine regular scale with 3D rotation scale approximation)
         if (layer.transform().scale() != null) {
             double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, frame) / 100.0;
             double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, frame) / 100.0;
+
+            // Apply 3D rotation approximation scaling
+            scaleX *= ry3DScale;
+            scaleY *= rx3DScale;
+
             logger.info("Scaling by: " + scaleX + ", " + scaleY);
 
             // Check for zero or negative scale that would make content invisible
