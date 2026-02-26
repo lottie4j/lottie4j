@@ -47,26 +47,11 @@ public class RectangleRenderer implements ShapeRenderer {
         double renderX = centerX - (width / 2.0);
         double renderY = centerY - (height / 2.0);
 
-        System.out.println("=== RECTANGLE RENDER ===");
-        System.out.println("Frame: " + frame);
-        System.out.println("Width: " + width + ", Height: " + height);
-        System.out.println("Center: (" + centerX + ", " + centerY + ")");
-        System.out.println("Top-left: (" + renderX + ", " + renderY + ")");
-
-        // Get current transform to see actual screen position
-        var transform = gc.getTransform();
-        System.out.println("Current transform: tx=" + transform.getTx() + ", ty=" + transform.getTy());
-
         var fillStyle = getFillStyle(parentGroup);
         if (fillStyle.isPresent()) {
             var fillColor = fillStyle.get().getColor(frame);
-            System.out.println("Fill color: " + fillColor);
             gc.setFill(fillColor);
             gc.fillRect(renderX, renderY, width, height);
-            System.out.println("Rectangle drawn at screen coords: (" +
-                (renderX + transform.getTx()) + ", " + (renderY + transform.getTy()) + ")");
-        } else {
-            System.out.println("No fill style found!");
         }
 
         var strokeStyle = getStrokeStyle(parentGroup);

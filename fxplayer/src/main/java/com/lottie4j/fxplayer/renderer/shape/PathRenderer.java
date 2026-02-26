@@ -6,9 +6,14 @@ import com.lottie4j.core.model.bezier.FixedBezier;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Path;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.Stroke;
+import com.lottie4j.fxplayer.element.FillStyle;
+import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class PathRenderer implements ShapeRenderer {
@@ -75,10 +80,45 @@ public class PathRenderer implements ShapeRenderer {
             gc.closePath();
         }
 
-        gc.fill();
-        gc.stroke();
+        // Apply fill and stroke from parent group
+        var fillStyle = getFillStyle(parentGroup);
+        if (fillStyle.isPresent()) {
+            gc.setFill(fillStyle.get().getColor(frame));
+            gc.fill();
+        }
+
+        var strokeStyle = getStrokeStyle(parentGroup);
+        if (strokeStyle.isPresent()) {
+            gc.setStroke(strokeStyle.get().getColor(frame));
+            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+            gc.stroke();
+        }
 
         gc.restore();
+    }
+
+    private Optional<FillStyle> getFillStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Fill fill) {
+                return Optional.of(new FillStyle(fill));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<StrokeStyle> getStrokeStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Stroke stroke) {
+                return Optional.of(new StrokeStyle(stroke));
+            }
+        }
+        return Optional.empty();
     }
 
     private BezierDefinition getBezierDefinition(Path shape, double frame) {

@@ -1,11 +1,16 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
-import com.lottie4j.core.model.shape.shape.Rectangle;
-import com.lottie4j.fxplayer.util.LottieCoordinateHelper;
+import com.lottie4j.core.model.shape.shape.Ellipse;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.Stroke;
+import com.lottie4j.fxplayer.element.FillStyle;
+import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class EllipseRenderer implements ShapeRenderer {
@@ -14,33 +19,68 @@ public class EllipseRenderer implements ShapeRenderer {
 
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
-        if (!(shape instanceof Rectangle ellipse)) {
+        if (!(shape instanceof Ellipse ellipse)) {
             logger.warning("EllipseRenderer called with non-Ellipse shape: " + shape.getClass().getSimpleName());
             return;
         }
 
-        if (ellipse.position() == null || ellipse.size() == null) {
+        if (ellipse.size() == null) {
+            logger.warning("Ellipse missing size data");
             return;
         }
 
-        // Use helper to get position data with coordinate conversion
-        var position = LottieCoordinateHelper.getRectanglePosition(ellipse, frame);
+        // Get size from animated property
+        double width = ellipse.size().getValue(AnimatedValueType.WIDTH, frame);
+        double height = ellipse.size().getValue(AnimatedValueType.HEIGHT, frame);
 
-        logger.info("Rectangle Lottie center coordinates: x=" + position.x() + ", y=" + position.y());
-        logger.info("Rectangle dimensions: w=" + position.width() + ", h=" + position.height());
-        logger.info("Rectangle JavaFX top-left coordinates: x=" + position.topLeftX() + ", y=" + position.topLeftY());
+        // Get position (center point) from animated property, default to 0,0 if null
+        double centerX = 0;
+        double centerY = 0;
+        if (ellipse.position() != null) {
+            centerX = ellipse.position().getValue(AnimatedValueType.X, frame);
+            centerY = ellipse.position().getValue(AnimatedValueType.Y, frame);
+        }
 
-        // Use the converted top-left coordinates for JavaFX rendering
-        double renderX = position.topLeftX();
-        double renderY = position.topLeftY();
-        double width = position.width();
-        double height = position.height();
+        // Convert from center-based to top-left for JavaFX oval rendering
+        double renderX = centerX - (width / 2.0);
+        double renderY = centerY - (height / 2.0);
 
-        gc.save();
+        var fillStyle = getFillStyle(parentGroup);
+        if (fillStyle.isPresent()) {
+            var fillColor = fillStyle.get().getColor(frame);
+            gc.setFill(fillColor);
+            gc.fillOval(renderX, renderY, width, height);
+        }
 
-        gc.fillOval(renderX, renderY, width, height);
-        gc.strokeOval(renderX, renderY, width, height);
+        var strokeStyle = getStrokeStyle(parentGroup);
+        if (strokeStyle.isPresent()) {
+            gc.setStroke(strokeStyle.get().getColor(frame));
+            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+            gc.strokeOval(renderX, renderY, width, height);
+        }
+    }
 
-        gc.restore();
+    private Optional<FillStyle> getFillStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Fill fill) {
+                return Optional.of(new FillStyle(fill));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<StrokeStyle> getStrokeStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Stroke stroke) {
+                return Optional.of(new StrokeStyle(stroke));
+            }
+        }
+        return Optional.empty();
     }
 }

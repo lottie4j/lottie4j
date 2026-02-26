@@ -5,8 +5,13 @@ import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Polystar;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.Stroke;
+import com.lottie4j.fxplayer.element.FillStyle;
+import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class PolystarRenderer implements ShapeRenderer {
@@ -48,15 +53,15 @@ public class PolystarRenderer implements ShapeRenderer {
         StarType starType = polystar.starType() != null ? polystar.starType() : StarType.STAR;
 
         if (starType == StarType.STAR) {
-            renderStar(gc, centerX, centerY, outerRadius, rotation, numPoints, polystar, frame);
+            renderStar(gc, centerX, centerY, outerRadius, rotation, numPoints, polystar, frame, parentGroup);
         } else {
-            renderPolygon(gc, centerX, centerY, outerRadius, rotation, numPoints);
+            renderPolygon(gc, centerX, centerY, outerRadius, rotation, numPoints, parentGroup, frame);
         }
     }
 
     private void renderStar(GraphicsContext gc, double centerX, double centerY,
                             double outerRadius, double rotation, int numPoints,
-                            Polystar polystar, double frame) {
+                            Polystar polystar, double frame, Group parentGroup) {
 
         double innerRadius = polystar.innerRadius() != null ?
                 polystar.innerRadius().getValue(0, frame) : outerRadius * 0.5;
@@ -85,7 +90,7 @@ public class PolystarRenderer implements ShapeRenderer {
             yPoints[i * 2 + 1] = centerY + innerRadius * Math.sin(innerAngle);
         }
 
-        drawPolygonPath(gc, xPoints, yPoints);
+        drawPolygonPath(gc, xPoints, yPoints, parentGroup, frame);
 
         // If roundness is applied, use quadratic curves instead of straight lines
         if (outerRoundness > 0 || innerRoundness > 0) {
@@ -96,7 +101,8 @@ public class PolystarRenderer implements ShapeRenderer {
     }
 
     private void renderPolygon(GraphicsContext gc, double centerX, double centerY,
-                               double radius, double rotation, int numPoints) {
+                               double radius, double rotation, int numPoints,
+                               Group parentGroup, double frame) {
 
         // Calculate points for regular polygon
         double[] xPoints = new double[numPoints];
@@ -110,10 +116,11 @@ public class PolystarRenderer implements ShapeRenderer {
             yPoints[i] = centerY + radius * Math.sin(angle);
         }
 
-        drawPolygonPath(gc, xPoints, yPoints);
+        drawPolygonPath(gc, xPoints, yPoints, parentGroup, frame);
     }
 
-    private void drawPolygonPath(GraphicsContext gc, double[] xPoints, double[] yPoints) {
+    private void drawPolygonPath(GraphicsContext gc, double[] xPoints, double[] yPoints,
+                                 Group parentGroup, double frame) {
         if (xPoints.length == 0) return;
 
         gc.beginPath();
@@ -125,8 +132,42 @@ public class PolystarRenderer implements ShapeRenderer {
 
         gc.closePath();
 
-        // Fill and stroke the path
-        gc.fill();
-        gc.stroke();
+        // Apply fill and stroke from parent group
+        var fillStyle = getFillStyle(parentGroup);
+        if (fillStyle.isPresent()) {
+            gc.setFill(fillStyle.get().getColor(frame));
+            gc.fill();
+        }
+
+        var strokeStyle = getStrokeStyle(parentGroup);
+        if (strokeStyle.isPresent()) {
+            gc.setStroke(strokeStyle.get().getColor(frame));
+            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+            gc.stroke();
+        }
+    }
+
+    private Optional<FillStyle> getFillStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Fill fill) {
+                return Optional.of(new FillStyle(fill));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<StrokeStyle> getStrokeStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof Stroke stroke) {
+                return Optional.of(new StrokeStyle(stroke));
+            }
+        }
+        return Optional.empty();
     }
 }
