@@ -49,9 +49,70 @@ public record Animated(
         return list;
     }
 
-    // TODO should not be needed
-    public Double getValue(int value, double frame) {
-        return (double) value;
+    /**
+     * Get value for single-value animated properties (like opacity) at a specific frame
+     * @param index the index of the value (typically 0 for single-value properties)
+     * @param frame the current animation frame
+     * @return the interpolated value at the given frame
+     */
+    public Double getValue(int index, double frame) {
+        if (keyframes == null || keyframes.isEmpty()) {
+            return 0D;
+        }
+        if (animated == null || animated == 0) {
+            // not animated, fixed value
+            return getValue(index);
+        }
+
+        // Find the appropriate keyframe(s) for the current frame
+        TimedKeyframe prevKeyframe = null;
+        TimedKeyframe nextKeyframe = null;
+
+        for (int i = 0; i < keyframes.size(); i++) {
+            if (keyframes.get(i) instanceof TimedKeyframe timedKeyframe) {
+                if (timedKeyframe.time() <= frame) {
+                    prevKeyframe = timedKeyframe;
+                    // Look for the next keyframe
+                    if (i + 1 < keyframes.size() && keyframes.get(i + 1) instanceof TimedKeyframe next) {
+                        nextKeyframe = next;
+                    }
+                } else {
+                    // We've gone past the current frame
+                    if (prevKeyframe == null) {
+                        // Frame is before the first keyframe
+                        prevKeyframe = timedKeyframe;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (prevKeyframe == null) {
+            return 0D;
+        }
+
+        // If there's no next keyframe, just use the previous one
+        if (nextKeyframe == null) {
+            return getValueFromKeyframe(prevKeyframe, index);
+        }
+
+        // Check if this is a hold keyframe (no interpolation)
+        if (prevKeyframe.holdFrame() != null && prevKeyframe.holdFrame() == 1) {
+            return getValueFromKeyframe(prevKeyframe, index);
+        }
+
+        // Perform linear interpolation between keyframes
+        double startFrame = prevKeyframe.time();
+        double endFrame = nextKeyframe.time();
+        double progress = (frame - startFrame) / (endFrame - startFrame);
+
+        // Clamp progress to [0, 1]
+        progress = Math.max(0, Math.min(1, progress));
+
+        double startValue = getValueFromKeyframe(prevKeyframe, index);
+        double endValue = getValueFromKeyframe(nextKeyframe, index);
+
+        return startValue + (endValue - startValue) * progress;
     }
 
     public Double getValue(AnimatedValueType valueType, double frame) {

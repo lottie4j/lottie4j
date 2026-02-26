@@ -142,8 +142,10 @@ public class LottiePlayer extends Canvas {
         // Set default colors for debugging
         gc.setFill(Color.BLUE);
 
-        // Render layers in order
-        for (Layer layer : animation.layers()) {
+        // Render layers in reverse order
+        // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
+        for (int i = animation.layers().size() - 1; i >= 0; i--) {
+            Layer layer = animation.layers().get(i);
             logger.info("Processing layer: " + layer.name());
 
             if (isLayerActiveAtFrame(layer, frame)) {
@@ -213,8 +215,10 @@ public class LottiePlayer extends Canvas {
                 applyGroupTransform(gc, groupTransform, frame);
             }
 
-            // Render all non-transform shapes
-            for (BaseShape item : group.shapes()) {
+            // Render all non-transform shapes in reverse order
+            // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
+            for (int i = group.shapes().size() - 1; i >= 0; i--) {
+                BaseShape item = group.shapes().get(i);
                 if (item instanceof Transform) {
                     continue; // Skip transform, already applied
                 }
@@ -258,8 +262,8 @@ public class LottiePlayer extends Canvas {
 
         // Apply opacity
         if (transform.opacity() != null) {
-            // Opacity is a single value, get from first keyframe (index 0)
-            double opacityValue = transform.opacity().getValue(0);
+            // Opacity is a single value, get with frame for animation interpolation
+            double opacityValue = transform.opacity().getValue(0, frame);
             double opacity = opacityValue / 100.0;
             logger.info("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
             if (opacity > 0) {
@@ -344,17 +348,13 @@ public class LottiePlayer extends Canvas {
 
         // Apply opacity
         if (layer.transform().opacity() != null) {
-            double opacity = layer.transform().opacity().getValue(AnimatedValueType.OPACITY, frame);
-            logger.info("Setting opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
+            // Opacity is a single value, so use index 0 with current frame for animation
+            double opacity = layer.transform().opacity().getValue(0, frame);
+            logger.info("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
 
-            // DEBUG: Override zero opacity for debugging
-            if (opacity == 0.0) {
-                logger.warning("WARNING: Layer opacity is 0! Overriding to 100 for debugging");
-                opacity = 100.0; // Override to full opacity for debugging
+            if (opacity > 0) {
+                gc.setGlobalAlpha(opacity / 100.0);
             }
-
-
-            gc.setGlobalAlpha(opacity / 100.0);
         } else {
             logger.info("No opacity transform");
         }

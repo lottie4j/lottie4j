@@ -7,10 +7,13 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Path;
 import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.GradientFill;
 import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
+import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Paint;
 
 import java.util.List;
 import java.util.Optional;
@@ -81,10 +84,24 @@ public class PathRenderer implements ShapeRenderer {
         }
 
         // Apply fill and stroke from parent group
-        var fillStyle = getFillStyle(parentGroup);
-        if (fillStyle.isPresent()) {
-            gc.setFill(fillStyle.get().getColor(frame));
+        // Check for gradient fill first, then regular fill
+        var gradientFillStyle = getGradientFillStyle(parentGroup);
+        if (gradientFillStyle.isPresent()) {
+            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            gc.setFill(gradientPaint);
+            double opacity = gradientFillStyle.get().getOpacity(frame);
+            if (opacity < 1.0) {
+                double currentAlpha = gc.getGlobalAlpha();
+                gc.setGlobalAlpha(currentAlpha * opacity);
+            }
             gc.fill();
+            gc.setGlobalAlpha(1.0); // Reset
+        } else {
+            var fillStyle = getFillStyle(parentGroup);
+            if (fillStyle.isPresent()) {
+                gc.setFill(fillStyle.get().getColor(frame));
+                gc.fill();
+            }
         }
 
         var strokeStyle = getStrokeStyle(parentGroup);
@@ -104,6 +121,18 @@ public class PathRenderer implements ShapeRenderer {
         for (BaseShape baseShape : group.shapes()) {
             if (baseShape instanceof Fill fill) {
                 return Optional.of(new FillStyle(fill));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<GradientFillStyle> getGradientFillStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof GradientFill gradientFill) {
+                return Optional.of(new GradientFillStyle(gradientFill));
             }
         }
         return Optional.empty();
