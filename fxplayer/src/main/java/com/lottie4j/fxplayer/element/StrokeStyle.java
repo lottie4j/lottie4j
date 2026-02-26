@@ -16,12 +16,17 @@ public class StrokeStyle {
         if (stroke.color() == null) {
             return Color.BLACK;
         }
-        return Color.color(
-                stroke.color().getValue(AnimatedValueType.RED, frame),
-                stroke.color().getValue(AnimatedValueType.GREEN, frame),
-                stroke.color().getValue(AnimatedValueType.BLUE, frame),
-                stroke.color().getValue(AnimatedValueType.OPACITY, frame)
-        ); // value 0-1.0
+
+        // Lottie colors are already in 0-1.0 range
+        double r = stroke.color().getValue(AnimatedValueType.RED, frame);
+        double g = stroke.color().getValue(AnimatedValueType.GREEN, frame);
+        double b = stroke.color().getValue(AnimatedValueType.BLUE, frame);
+
+        // Get opacity and normalize from 0-100 to 0-1.0 range
+        double opacity = stroke.opacity() != null ?
+            stroke.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0 : 1.0;
+
+        return Color.color(r, g, b, opacity);
     }
 
     public Double getStrokeWidth(double frame) {

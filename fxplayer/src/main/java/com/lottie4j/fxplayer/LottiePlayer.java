@@ -8,6 +8,8 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.animation.AnimationTimer;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -28,7 +30,7 @@ public class LottiePlayer extends Canvas {
     private long startTime;
     private boolean isPlaying = false;
     private boolean debug = false;
-    private double currentFrame = 0;
+    private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
 
     public LottiePlayer(Animation animation) {
         this(animation, false);
@@ -53,7 +55,7 @@ public class LottiePlayer extends Canvas {
 
         isPlaying = true;
         startTime = System.nanoTime();
-        currentFrame = animation.inPoint();
+        currentFrameProperty.set(animation.inPoint());
 
         animationTimer = new AnimationTimer() {
             @Override
@@ -68,8 +70,9 @@ public class LottiePlayer extends Canvas {
                     elapsedSeconds = 0;
                 }
 
-                currentFrame = (long) (animation.inPoint() + (elapsedSeconds * animation.framesPerSecond()));
-                renderFrame(currentFrame);
+                double newFrame = animation.inPoint() + (elapsedSeconds * animation.framesPerSecond());
+                currentFrameProperty.set(newFrame);
+                renderFrame(newFrame);
             }
         };
 
@@ -84,8 +87,13 @@ public class LottiePlayer extends Canvas {
     }
 
     public void seekToFrame(double frame) {
-        currentFrame = Math.max(animation.inPoint(), Math.min(animation.outPoint(), frame));
-        renderFrame(currentFrame);
+        double clampedFrame = Math.max(animation.inPoint(), Math.min(animation.outPoint(), frame));
+        currentFrameProperty.set(clampedFrame);
+        renderFrame(clampedFrame);
+    }
+
+    public DoubleProperty currentFrameProperty() {
+        return currentFrameProperty;
     }
 
     public void render(double frame) {
@@ -190,15 +198,79 @@ public class LottiePlayer extends Canvas {
             return;
         }
         if (shape instanceof Group group) {
+            gc.save();
+
+            // Extract and apply the Transform from the group's shapes
+            Transform groupTransform = null;
             for (BaseShape item : group.shapes()) {
+                if (item instanceof Transform transform) {
+                    groupTransform = transform;
+                    break;
+                }
+            }
+
+            if (groupTransform != null) {
+                applyGroupTransform(gc, groupTransform, frame);
+            }
+
+            // Render all non-transform shapes
+            for (BaseShape item : group.shapes()) {
+                if (item instanceof Transform) {
+                    continue; // Skip transform, already applied
+                }
+
                 switch (item.type().shapeGroup()) {
                     case GROUP -> renderShapeTypeGroup(item, frame);
                     case SHAPE -> renderShapeTypeShape(item, group, frame);
                     default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
                 }
             }
+
+            gc.restore();
+        }
+    }
+
+    private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
+        logger.info("Applying group transform");
+
+        // Apply position
+        if (transform.position() != null) {
+            double x = transform.position().getValue(AnimatedValueType.X, frame);
+            double y = transform.position().getValue(AnimatedValueType.Y, frame);
+            logger.info("Group translation: " + x + ", " + y);
+            gc.translate(x, y);
         }
 
+        // Apply rotation
+        if (transform.rotation() != null) {
+            double rotation = Math.toRadians(transform.rotation().getValue(0, frame));
+            logger.info("Group rotation: " + Math.toDegrees(rotation) + " degrees");
+            gc.rotate(rotation);
+        }
+
+        // Apply scale
+        if (transform.scale() != null) {
+            double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
+            double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
+            logger.info("Group scale: " + scaleX + ", " + scaleY);
+            gc.scale(scaleX, scaleY);
+        }
+
+        // Apply opacity
+        if (transform.opacity() != null) {
+            double opacity = transform.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0;
+            logger.info("Group opacity: " + opacity);
+            gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
+        }
+
+        // Apply anchor point offset (anchor point is the origin for transforms)
+        if (transform.anchor() != null) {
+            double anchorX = transform.anchor().getValue(AnimatedValueType.X, frame);
+            double anchorY = transform.anchor().getValue(AnimatedValueType.Y, frame);
+            logger.info("Group anchor: " + anchorX + ", " + anchorY);
+            // Translate by negative anchor to make it the origin
+            gc.translate(-anchorX, -anchorY);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -362,7 +434,7 @@ public class LottiePlayer extends Canvas {
     }
 
     public double getCurrentFrame() {
-        return currentFrame;
+        return currentFrameProperty.get();
     }
 
     public Animation getAnimation() {

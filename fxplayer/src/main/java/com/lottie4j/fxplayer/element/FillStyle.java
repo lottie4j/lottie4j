@@ -17,13 +17,14 @@ public class FillStyle {
             return Color.BLACK;
         }
 
-        // Get RGB values and normalize from 0-255 to 0-1.0 range
+        // Lottie colors are already in 0-1.0 range
         double r = fill.color().getValue(AnimatedValueType.RED, frame);
         double g = fill.color().getValue(AnimatedValueType.GREEN, frame);
         double b = fill.color().getValue(AnimatedValueType.BLUE, frame);
 
         // Get opacity and normalize from 0-100 to 0-1.0 range
-        double opacity = fill.opacity() != null ? fill.opacity().getValue(1, frame) : 1.0;
+        double opacity = fill.opacity() != null ?
+            fill.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0 : 1.0;
 
         return Color.color(r, g, b, opacity);
     }

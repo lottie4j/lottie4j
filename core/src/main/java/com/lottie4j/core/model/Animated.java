@@ -62,14 +62,65 @@ public record Animated(
             // not animated, fixed value
             return getValue(valueType.getIndex());
         }
-        for (Keyframe keyframe : keyframes) {
-            if (keyframe instanceof TimedKeyframe timedKeyframe) {
-                if (timedKeyframe.time() >= frame) {
-                    return 0D;
+
+        // Find the appropriate keyframe(s) for the current frame
+        TimedKeyframe prevKeyframe = null;
+        TimedKeyframe nextKeyframe = null;
+
+        for (int i = 0; i < keyframes.size(); i++) {
+            if (keyframes.get(i) instanceof TimedKeyframe timedKeyframe) {
+                if (timedKeyframe.time() <= frame) {
+                    prevKeyframe = timedKeyframe;
+                    // Look for the next keyframe
+                    if (i + 1 < keyframes.size() && keyframes.get(i + 1) instanceof TimedKeyframe next) {
+                        nextKeyframe = next;
+                    }
+                } else {
+                    // We've gone past the current frame
+                    if (prevKeyframe == null) {
+                        // Frame is before the first keyframe
+                        prevKeyframe = timedKeyframe;
+                    }
+                    break;
                 }
             }
         }
-        return 0D;
+
+        // If we only have one keyframe or we're at/after the last keyframe
+        if (prevKeyframe == null) {
+            return 0D;
+        }
+
+        if (nextKeyframe == null) {
+            // Use the last keyframe value
+            return getValueFromKeyframe(prevKeyframe, valueType.getIndex());
+        }
+
+        // Check for hold keyframe (step interpolation)
+        if (prevKeyframe.holdFrame() != null && prevKeyframe.holdFrame() == 1) {
+            return getValueFromKeyframe(prevKeyframe, valueType.getIndex());
+        }
+
+        // Interpolate between keyframes
+        double startFrame = prevKeyframe.time();
+        double endFrame = nextKeyframe.time();
+        double progress = (frame - startFrame) / (endFrame - startFrame);
+
+        // Clamp progress to [0, 1]
+        progress = Math.max(0, Math.min(1, progress));
+
+        double startValue = getValueFromKeyframe(prevKeyframe, valueType.getIndex());
+        double endValue = getValueFromKeyframe(nextKeyframe, valueType.getIndex());
+
+        // Linear interpolation for now (TODO: implement easing functions)
+        return startValue + (endValue - startValue) * progress;
+    }
+
+    private Double getValueFromKeyframe(TimedKeyframe keyframe, int index) {
+        if (keyframe.values() == null || keyframe.values().isEmpty() || index >= keyframe.values().size()) {
+            return 0D;
+        }
+        return keyframe.values().get(index).doubleValue();
     }
 
     public Double getValue(int idx) {

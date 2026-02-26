@@ -30,6 +30,9 @@ import java.util.logging.Logger;
  * JavaFX Lottie Animation Viewer
  * This viewer can load and play Lottie animations using a basic rendering engine
  * that works with the lottie4j data model structure.
+ * <p>
+ * You can start this application with the file name as command line option,
+ * for example, `"/basic/box-moving-changing-color.json"`.
  */
 public class LottieFileViewer extends Application {
     private static final Logger logger = Logger.getLogger(LottieFileViewer.class.getName());
@@ -47,6 +50,7 @@ public class LottieFileViewer extends Application {
 
     // UI Controls
     private Button startButton;
+    private Button pauseButton;
     private Button stopButton;
     private Slider frameSlider;
     private Label frameLabel;
@@ -131,26 +135,30 @@ public class LottieFileViewer extends Application {
 
         // Playback controls
         HBox playbackControls = new HBox(5);
-        startButton = new Button("▶ Start");
+        startButton = new Button("▶ Play");
+        pauseButton = new Button("⏸ Pause");
         stopButton = new Button("⏹ Stop");
 
         startButton.setOnAction(e -> startAnimation());
+        pauseButton.setOnAction(e -> pauseAnimation());
         stopButton.setOnAction(e -> stopAnimation());
 
         // Initially disable controls
         startButton.setDisable(true);
+        pauseButton.setDisable(true);
         stopButton.setDisable(true);
 
-        playbackControls.getChildren().addAll(startButton, stopButton);
+        playbackControls.getChildren().addAll(startButton, pauseButton, stopButton);
 
         // Frame controls
         HBox frameControls = new HBox(10);
         frameSlider = new Slider();
         frameSlider.setDisable(true);
         frameSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (!lottiePlayer.isPlaying()) {
+            if (lottiePlayer != null && !lottiePlayer.isPlaying()) {
                 currentFrame = newVal.intValue();
-                //renderFrame();
+                lottiePlayer.seekToFrame(currentFrame);
+                updateFrameLabel();
             }
         });
 
@@ -186,6 +194,7 @@ public class LottieFileViewer extends Application {
 
         // Enable controls
         startButton.setDisable(false);
+        pauseButton.setDisable(false);
         stopButton.setDisable(false);
         frameSlider.setDisable(false);
 
@@ -233,6 +242,18 @@ public class LottieFileViewer extends Application {
             lottiePlayer = new LottiePlayer(animation, true);
             root.setCenter(lottiePlayer);
 
+            // Bind frame slider to lottie player's current frame
+            lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
+                if (!frameSlider.isValueChanging()) {
+                    currentFrame = newVal.intValue();
+                    frameSlider.setValue(currentFrame);
+                    updateFrameLabel();
+                    double progress = (currentFrame - animation.inPoint()) /
+                                     (animation.outPoint() - animation.inPoint());
+                    progressBar.setProgress(progress);
+                }
+            });
+
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();
@@ -249,9 +270,21 @@ public class LottieFileViewer extends Application {
         }
     }
 
+    private void pauseAnimation() {
+        if (lottiePlayer != null) {
+            lottiePlayer.stop();
+            startButton.setDisable(false);
+        }
+    }
+
     private void stopAnimation() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
+            lottiePlayer.seekToFrame(animation.inPoint());
+            currentFrame = animation.inPoint();
+            frameSlider.setValue(currentFrame);
+            updateFrameLabel();
+            progressBar.setProgress(0);
             startButton.setDisable(false);
         }
     }
