@@ -257,6 +257,9 @@ public class LottieFileViewer extends Application {
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = animation.inPoint();
+
+            // Auto-start animation
+            startAnimation();
         } catch (IOException e) {
             showError("Failed to load animation: " + e.getMessage());
         }

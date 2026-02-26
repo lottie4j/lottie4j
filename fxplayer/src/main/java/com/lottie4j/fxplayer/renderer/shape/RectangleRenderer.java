@@ -26,31 +26,47 @@ public class RectangleRenderer implements ShapeRenderer {
 
         logger.info("RectangleRenderer.render called for: " + rectangle.name());
 
-        if (rectangle.size() == null || rectangle.position() == null) {
-            logger.warning("Rectangle missing size or position data");
+        if (rectangle.size() == null) {
+            logger.warning("Rectangle missing size data");
             return;
         }
 
-        // Use helper to get position data with coordinate conversion
-        var position = LottieCoordinateHelper.getRectanglePosition(rectangle, frame);
+        // Get size from animated property
+        double width = rectangle.size().getValue(com.lottie4j.core.model.AnimatedValueType.WIDTH, frame);
+        double height = rectangle.size().getValue(com.lottie4j.core.model.AnimatedValueType.HEIGHT, frame);
 
-        logger.info("Rectangle Lottie center coordinates: x=" + position.x() + ", y=" + position.y());
-        logger.info("Rectangle dimensions: w=" + position.width() + ", h=" + position.height());
-        logger.info("Rectangle JavaFX top-left coordinates: x=" + position.topLeftX() + ", y=" + position.topLeftY());
+        // Get position (center point) from animated property, default to 0,0 if null
+        double centerX = 0;
+        double centerY = 0;
+        if (rectangle.position() != null) {
+            centerX = rectangle.position().getValue(com.lottie4j.core.model.AnimatedValueType.X, frame);
+            centerY = rectangle.position().getValue(com.lottie4j.core.model.AnimatedValueType.Y, frame);
+        }
 
-        // Use the converted top-left coordinates for JavaFX rendering
-        double renderX = position.topLeftX();
-        double renderY = position.topLeftY();
-        double width = position.width();
-        double height = position.height();
+        // Convert from center-based to top-left for JavaFX rectangle rendering
+        double renderX = centerX - (width / 2.0);
+        double renderY = centerY - (height / 2.0);
+
+        System.out.println("=== RECTANGLE RENDER ===");
+        System.out.println("Frame: " + frame);
+        System.out.println("Width: " + width + ", Height: " + height);
+        System.out.println("Center: (" + centerX + ", " + centerY + ")");
+        System.out.println("Top-left: (" + renderX + ", " + renderY + ")");
+
+        // Get current transform to see actual screen position
+        var transform = gc.getTransform();
+        System.out.println("Current transform: tx=" + transform.getTx() + ", ty=" + transform.getTy());
 
         var fillStyle = getFillStyle(parentGroup);
         if (fillStyle.isPresent()) {
             var fillColor = fillStyle.get().getColor(frame);
-            logger.info("Drawing rectangle, filled with color: " + fillColor);
+            System.out.println("Fill color: " + fillColor);
             gc.setFill(fillColor);
             gc.fillRect(renderX, renderY, width, height);
-            gc.restore();
+            System.out.println("Rectangle drawn at screen coords: (" +
+                (renderX + transform.getTx()) + ", " + (renderY + transform.getTy()) + ")");
+        } else {
+            System.out.println("No fill style found!");
         }
 
         var strokeStyle = getStrokeStyle(parentGroup);

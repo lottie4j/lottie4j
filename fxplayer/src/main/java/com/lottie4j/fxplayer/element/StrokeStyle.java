@@ -23,8 +23,9 @@ public class StrokeStyle {
         double b = stroke.color().getValue(AnimatedValueType.BLUE, frame);
 
         // Get opacity and normalize from 0-100 to 0-1.0 range
+        // Opacity is a single value, so use index 0
         double opacity = stroke.opacity() != null ?
-            stroke.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0 : 1.0;
+            stroke.opacity().getValue(0) / 100.0 : 1.0;
 
         return Color.color(r, g, b, opacity);
     }
@@ -33,6 +34,7 @@ public class StrokeStyle {
         if (stroke.strokeWidth() == null) {
             return 0D;
         }
-        return stroke.strokeWidth().getValue(AnimatedValueType.WIDTH, frame);
+        // Stroke width is a single value, so use index 0
+        return stroke.strokeWidth().getValue(0);
     }
 }

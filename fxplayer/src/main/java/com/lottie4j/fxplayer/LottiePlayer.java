@@ -258,9 +258,13 @@ public class LottiePlayer extends Canvas {
 
         // Apply opacity
         if (transform.opacity() != null) {
-            double opacity = transform.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0;
-            logger.info("Group opacity: " + opacity);
-            gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
+            // Opacity is a single value, get from first keyframe (index 0)
+            double opacityValue = transform.opacity().getValue(0);
+            double opacity = opacityValue / 100.0;
+            logger.info("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
+            if (opacity > 0) {
+                gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
+            }
         }
 
         // Apply anchor point offset (anchor point is the origin for transforms)
@@ -286,12 +290,6 @@ public class LottiePlayer extends Canvas {
         var renderer = getShapeRenderer(shape.getClass());
         if (renderer != null) {
             logger.fine("Using renderer: " + renderer.getClass().getSimpleName());
-
-            // Draw a small debug marker at origin
-            gc.save();
-            gc.setFill(Color.MAGENTA);
-            gc.fillOval(-2, -2, 4, 4);
-            gc.restore();
 
             try {
                 // The unchecked cast is still here but now with proper error handling
@@ -373,21 +371,17 @@ public class LottiePlayer extends Canvas {
             }
 
             gc.translate(x, y);
-
-            // DEBUG: Draw a marker at the translated position
-            gc.save();
-            gc.setFill(Color.PURPLE);
-            gc.fillOval(-3, -3, 6, 6);
-            logger.info("DEBUG: Drew purple marker at translated position (" + x + ", " + y + ")");
-            gc.restore();
         } else {
             logger.info("No position transform");
-            // Draw marker at current position if no translation
-            gc.save();
-            gc.setFill(Color.PURPLE);
-            gc.fillOval(-3, -3, 6, 6);
-            logger.info("DEBUG: Drew purple marker at current position (no translation)");
-            gc.restore();
+        }
+
+        // Apply anchor point offset (anchor point is the center of rotation/scale)
+        if (layer.transform().anchor() != null) {
+            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
+            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
+            logger.info("Layer anchor: " + anchorX + ", " + anchorY);
+            // Translate by negative anchor to make it the origin
+            gc.translate(-anchorX, -anchorY);
         }
 
         // Apply rotation
@@ -414,13 +408,6 @@ public class LottiePlayer extends Canvas {
         } else {
             logger.info("No scale transform");
         }
-
-        // DEBUG: Draw a marker AFTER all transforms
-        gc.save();
-        gc.setFill(Color.PINK);
-        gc.fillRect(-2, -2, 4, 4);
-        logger.info("DEBUG: Drew pink marker AFTER all layer transforms");
-        gc.restore();
 
         logger.info("=== LAYER TRANSFORM APPLIED ===");
     }

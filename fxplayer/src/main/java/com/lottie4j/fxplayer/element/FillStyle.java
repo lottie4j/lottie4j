@@ -23,8 +23,9 @@ public class FillStyle {
         double b = fill.color().getValue(AnimatedValueType.BLUE, frame);
 
         // Get opacity and normalize from 0-100 to 0-1.0 range
+        // Opacity is a single value, so use index 0
         double opacity = fill.opacity() != null ?
-            fill.opacity().getValue(AnimatedValueType.OPACITY, frame) / 100.0 : 1.0;
+            fill.opacity().getValue(0) / 100.0 : 1.0;
 
         return Color.color(r, g, b, opacity);
     }
