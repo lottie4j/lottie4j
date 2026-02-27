@@ -1,5 +1,6 @@
 package com.lottie4j.fxplayer;
 
+import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
@@ -15,6 +16,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -27,6 +30,7 @@ public class LottiePlayer extends Canvas {
     private final Animation animation;
     private final GraphicsContext gc;
     private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
+    private final Map<Integer, Layer> layersByIndex;
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -45,6 +49,16 @@ public class LottiePlayer extends Canvas {
         setHeight(animation.height() != null ? animation.height() : 500);
 
         this.gc = getGraphicsContext2D();
+
+        // Build layer index map for parenting support
+        this.layersByIndex = new HashMap<>();
+        if (animation.layers() != null) {
+            for (Layer layer : animation.layers()) {
+                if (layer.indexLayer() != null) {
+                    layersByIndex.put(layer.indexLayer().intValue(), layer);
+                }
+            }
+        }
 
         // Initial render
         renderFrame(getInPoint());
@@ -193,39 +207,67 @@ public class LottiePlayer extends Canvas {
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
         gc.save();
 
-        // Apply layer transform
+        // Apply parent transforms recursively
+        applyParentTransforms(gc, layer, frame);
+
+        // Apply this layer's transform
         applyLayerTransform(gc, layer, frame);
 
-        // Render layer shapes
-        if (layer.shapes() != null && !layer.shapes().isEmpty()) {
-            logger.info("Layer has " + layer.shapes().size() + " shapes");
+        // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
+        if (layer.layerType() != LayerType.NULL) {
+            // Render layer shapes
+            if (layer.shapes() != null && !layer.shapes().isEmpty()) {
+                logger.info("Layer has " + layer.shapes().size() + " shapes");
 
-            // First pass: collect any layer-level modifiers (like TrimPath)
-            TrimPath layerTrimPath = null;
-            for (BaseShape shape : layer.shapes()) {
-                if (shape instanceof TrimPath trim) {
-                    layerTrimPath = trim;
-                    logger.info("Found layer-level TrimPath");
-                }
-            }
-
-            // Second pass: render shapes, passing down layer-level modifiers
-            for (BaseShape shape : layer.shapes()) {
-                if (shape instanceof TrimPath) {
-                    continue; // Skip modifiers, they're applied to shapes
+                // First pass: collect any layer-level modifiers (like TrimPath)
+                TrimPath layerTrimPath = null;
+                for (BaseShape shape : layer.shapes()) {
+                    if (shape instanceof TrimPath trim) {
+                        layerTrimPath = trim;
+                        logger.info("Found layer-level TrimPath");
+                    }
                 }
 
-                switch (shape.type().shapeGroup()) {
-                    case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
-                    case SHAPE -> renderShapeTypeShape(shape, null, frame);
-                    default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
+                // Second pass: render shapes, passing down layer-level modifiers
+                for (BaseShape shape : layer.shapes()) {
+                    if (shape instanceof TrimPath) {
+                        continue; // Skip modifiers, they're applied to shapes
+                    }
+
+                    switch (shape.type().shapeGroup()) {
+                        case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
+                        case SHAPE -> renderShapeTypeShape(shape, null, frame);
+                        default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
+                    }
                 }
+            } else {
+                logger.info("Layer has no shapes");
             }
         } else {
-            logger.info("Layer has no shapes");
+            logger.info("Skipping shape rendering for NULL layer: " + layer.name());
         }
 
         gc.restore();
+    }
+
+    private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {
+        if (layer.indexParent() == null) {
+            return; // No parent
+        }
+
+        Layer parent = layersByIndex.get(layer.indexParent());
+        if (parent == null) {
+            logger.warning("Parent layer not found: " + layer.indexParent());
+            return;
+        }
+
+        logger.info("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
+
+        // Recursively apply parent's parent transforms first
+        applyParentTransforms(gc, parent, frame);
+
+        // Then apply this parent's transform
+        applyLayerTransform(gc, parent, frame);
     }
 
     public void renderShapeTypeGroup(BaseShape shape, double frame, TrimPath layerTrimPath) {
@@ -289,17 +331,17 @@ public class LottiePlayer extends Canvas {
             newShapes.add(trimPath);
         }
         return new Group(
-            original.name(),
-            original.matchName(),
-            original.hidden(),
-            original.blendMode(),
-            original.index(),
-            original.clazz(),
-            original.id(),
-            original.d(),
-            original.cix(),
-            original.numberOfProperties(),
-            newShapes
+                original.name(),
+                original.matchName(),
+                original.hidden(),
+                original.blendMode(),
+                original.index(),
+                original.clazz(),
+                original.id(),
+                original.d(),
+                original.cix(),
+                original.numberOfProperties(),
+                newShapes
         );
     }
 
