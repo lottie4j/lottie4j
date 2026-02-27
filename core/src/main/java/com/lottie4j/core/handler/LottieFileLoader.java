@@ -1,5 +1,6 @@
 package com.lottie4j.core.handler;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.model.Animation;
 
@@ -14,7 +15,9 @@ public class LottieFileLoader {
     }
 
     public static Animation load(File file) throws IOException {
-        return (new ObjectMapper()).readValue(loadAsString(file), Animation.class);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(JsonParser.Feature.ALLOW_NUMERIC_LEADING_ZEROS, true);
+        return mapper.readValue(loadAsString(file), Animation.class);
     }
 
     public static String loadAsString(File file) throws IOException {

@@ -104,11 +104,23 @@ public class LottieFileViewer extends Application {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
             startButton.setDisable(false);
-            currentFrame = animation.inPoint();
+            currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
             progressBar.setProgress(0);
         }
+    }
+
+    private int getInPoint() {
+        return animation != null && animation.inPoint() != null ? animation.inPoint() : 0;
+    }
+
+    private int getOutPoint() {
+        return animation != null && animation.outPoint() != null ? animation.outPoint() : 60;
+    }
+
+    private int getFramesPerSecond() {
+        return animation != null && animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
     }
 
     private MenuBar createMenuBar(Stage stage) {
@@ -199,12 +211,12 @@ public class LottieFileViewer extends Application {
         frameSlider.setDisable(false);
 
         // Setup frame slider
-        frameSlider.setMin(animation.inPoint());
-        frameSlider.setMax(animation.outPoint());
-        frameSlider.setValue(animation.inPoint());
+        frameSlider.setMin(getInPoint());
+        frameSlider.setMax(getOutPoint());
+        frameSlider.setValue(getInPoint());
 
         // Update labels
-        fpsLabel.setText("FPS: " + String.format("%d", animation.framesPerSecond()));
+        fpsLabel.setText("FPS: " + String.format("%d", getFramesPerSecond()));
         updateFrameLabel();
     }
 
@@ -248,19 +260,20 @@ public class LottieFileViewer extends Application {
                     currentFrame = newVal.intValue();
                     frameSlider.setValue(currentFrame);
                     updateFrameLabel();
-                    double progress = (currentFrame - animation.inPoint()) /
-                                     (animation.outPoint() - animation.inPoint());
+                    double progress = (currentFrame - getInPoint()) /
+                            (getOutPoint() - getInPoint());
                     progressBar.setProgress(progress);
                 }
             });
 
             // Reset the animation UI
             setupAnimationControls();
-            currentFrame = animation.inPoint();
+            currentFrame = getInPoint();
 
             // Auto-start animation
             startAnimation();
         } catch (IOException e) {
+            logger.severe("Failed to load animation: " + e.getMessage());
             showError("Failed to load animation: " + e.getMessage());
         }
     }
@@ -283,8 +296,8 @@ public class LottieFileViewer extends Application {
     private void stopAnimation() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
-            lottiePlayer.seekToFrame(animation.inPoint());
-            currentFrame = animation.inPoint();
+            lottiePlayer.seekToFrame(getInPoint());
+            currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
             progressBar.setProgress(0);
@@ -304,7 +317,7 @@ public class LottieFileViewer extends Application {
     private void updateFrameLabel() {
         if (animation != null) {
             frameLabel.setText(String.format("Frame: %d / %d",
-                    currentFrame, animation.outPoint()));
+                    currentFrame, getOutPoint()));
         }
     }
 

@@ -2,11 +2,8 @@ package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.style.GradientFill;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Paint;
-import javafx.scene.paint.Stop;
+import com.lottie4j.fxplayer.util.LottieValueHelper;
+import javafx.scene.paint.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,9 +42,9 @@ public class GradientFillStyle {
             // Where each color stop has 4 values: offset (0-1), R, G, B
             for (int i = 0; i < numColors; i++) {
                 double offset = gradientFill.colors().colors().getValue(i * 4, frame);
-                double r = gradientFill.colors().colors().getValue(i * 4 + 1, frame);
-                double g = gradientFill.colors().colors().getValue(i * 4 + 2, frame);
-                double b = gradientFill.colors().colors().getValue(i * 4 + 3, frame);
+                double r = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 1, frame));
+                double g = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 2, frame));
+                double b = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 3, frame));
 
                 stops.add(new Stop(offset, Color.color(r, g, b)));
             }

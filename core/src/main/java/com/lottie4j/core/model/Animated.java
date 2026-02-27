@@ -116,6 +116,15 @@ public record Animated(
     }
 
     public Double getValue(AnimatedValueType valueType, double frame) {
+        // Check if this uses separated dimensions (s: true means x and y are separate Animated objects)
+        if (s != null && s) {
+            if (valueType == AnimatedValueType.X && x != null) {
+                return x.getValue(0, frame);
+            } else if (valueType == AnimatedValueType.Y && y != null) {
+                return y.getValue(0, frame);
+            }
+        }
+
         if (keyframes == null || keyframes.isEmpty()) {
             return 0D;
         }

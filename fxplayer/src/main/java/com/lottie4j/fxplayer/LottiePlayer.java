@@ -25,12 +25,11 @@ public class LottiePlayer extends Canvas {
 
     private final Animation animation;
     private final GraphicsContext gc;
-
+    private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
     private boolean debug = false;
-    private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
 
     public LottiePlayer(Animation animation) {
         this(animation, false);
@@ -40,14 +39,34 @@ public class LottiePlayer extends Canvas {
         this.animation = animation;
         this.debug = debug;
 
-        // Set canvas size to animation size
-        setWidth(animation.width());
-        setHeight(animation.height());
+        // Set canvas size to animation size (use defaults if not specified)
+        setWidth(animation.width() != null ? animation.width() : 500);
+        setHeight(animation.height() != null ? animation.height() : 500);
 
         this.gc = getGraphicsContext2D();
 
         // Initial render
-        renderFrame(animation.inPoint());
+        renderFrame(getInPoint());
+    }
+
+    private int getInPoint() {
+        return animation.inPoint() != null ? animation.inPoint() : 0;
+    }
+
+    private int getOutPoint() {
+        return animation.outPoint() != null ? animation.outPoint() : 60;
+    }
+
+    private int getFramesPerSecond() {
+        return animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
+    }
+
+    private int getAnimationWidth() {
+        return animation.width() != null ? animation.width() : 500;
+    }
+
+    private int getAnimationHeight() {
+        return animation.height() != null ? animation.height() : 500;
     }
 
     public void play() {
@@ -55,14 +74,14 @@ public class LottiePlayer extends Canvas {
 
         isPlaying = true;
         startTime = System.nanoTime();
-        currentFrameProperty.set(animation.inPoint());
+        currentFrameProperty.set(getInPoint());
 
         animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
-                double totalFrames = animation.outPoint() - animation.inPoint();
-                double animationDuration = totalFrames / animation.framesPerSecond();
+                double totalFrames = getOutPoint() - getInPoint();
+                double animationDuration = totalFrames / getFramesPerSecond();
 
                 if (elapsedSeconds >= animationDuration) {
                     // Loop animation
@@ -70,7 +89,7 @@ public class LottiePlayer extends Canvas {
                     elapsedSeconds = 0;
                 }
 
-                double newFrame = animation.inPoint() + (elapsedSeconds * animation.framesPerSecond());
+                double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
                 currentFrameProperty.set(newFrame);
                 renderFrame(newFrame);
             }
@@ -87,7 +106,7 @@ public class LottiePlayer extends Canvas {
     }
 
     public void seekToFrame(double frame) {
-        double clampedFrame = Math.max(animation.inPoint(), Math.min(animation.outPoint(), frame));
+        double clampedFrame = Math.max(getInPoint(), Math.min(getOutPoint(), frame));
         currentFrameProperty.set(clampedFrame);
         renderFrame(clampedFrame);
     }
@@ -126,12 +145,12 @@ public class LottiePlayer extends Canvas {
         logger.info("Animation has " + animation.layers().size() + " layers");
 
         // Calculate scaling to fit canvas while maintaining aspect ratio
-        double scaleX = gc.getCanvas().getWidth() / animation.width();
-        double scaleY = gc.getCanvas().getHeight() / animation.height();
+        double scaleX = gc.getCanvas().getWidth() / getAnimationWidth();
+        double scaleY = gc.getCanvas().getHeight() / getAnimationHeight();
         double scale = Math.min(scaleX, scaleY);
-        double offsetX = (gc.getCanvas().getWidth() - animation.width() * scale) / 2;
-        double offsetY = (gc.getCanvas().getHeight() - animation.height() * scale) / 2;
-        logger.info("Animation size: " + animation.width() + "x" + animation.height());
+        double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
+        double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
+        logger.info("Animation size: " + getAnimationWidth() + "x" + getAnimationHeight());
         logger.info("Canvas size: " + gc.getCanvas().getWidth() + "x" + gc.getCanvas().getHeight());
         logger.info("Scale: " + scale + ", Offset: " + offsetX + ", " + offsetY);
 
@@ -237,30 +256,7 @@ public class LottiePlayer extends Canvas {
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
         logger.info("Applying group transform");
 
-        // Apply position
-        if (transform.position() != null) {
-            double x = transform.position().getValue(AnimatedValueType.X, frame);
-            double y = transform.position().getValue(AnimatedValueType.Y, frame);
-            logger.info("Group translation: " + x + ", " + y);
-            gc.translate(x, y);
-        }
-
-        // Apply rotation
-        if (transform.rotation() != null) {
-            double rotation = Math.toRadians(transform.rotation().getValue(0, frame));
-            logger.info("Group rotation: " + Math.toDegrees(rotation) + " degrees");
-            gc.rotate(rotation);
-        }
-
-        // Apply scale
-        if (transform.scale() != null) {
-            double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
-            double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-            logger.info("Group scale: " + scaleX + ", " + scaleY);
-            gc.scale(scaleX, scaleY);
-        }
-
-        // Apply opacity
+        // Apply opacity first (doesn't affect transform order)
         if (transform.opacity() != null) {
             // Opacity is a single value, get with frame for animation interpolation
             double opacityValue = transform.opacity().getValue(0, frame);
@@ -271,12 +267,42 @@ public class LottiePlayer extends Canvas {
             }
         }
 
-        // Apply anchor point offset (anchor point is the origin for transforms)
+        // Correct transform order for Lottie/After Effects:
+        // 1. Translate by position
+        // 2. Apply rotation
+        // 3. Apply scale
+        // 4. Translate by -anchor (to offset the coordinate system)
+
+        // Step 1: Apply position
+        if (transform.position() != null) {
+            double x = transform.position().getValue(AnimatedValueType.X, frame);
+            double y = transform.position().getValue(AnimatedValueType.Y, frame);
+            logger.info("Group translation: " + x + ", " + y);
+            gc.translate(x, y);
+        }
+
+        // Step 2: Apply rotation
+        if (transform.rotation() != null) {
+            double rotation = Math.toRadians(transform.rotation().getValue(0, frame));
+            logger.info("Group rotation: " + Math.toDegrees(rotation) + " degrees");
+            gc.rotate(rotation);
+        }
+
+        // Step 3: Apply scale
+        if (transform.scale() != null) {
+            double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
+            double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
+            logger.info("Group scale: " + scaleX + ", " + scaleY);
+            gc.scale(scaleX, scaleY);
+        }
+
+        // Step 4: Apply anchor point offset (anchor point is the origin for transforms)
+        // This must be done AFTER rotation and scale
         if (transform.anchor() != null) {
             double anchorX = transform.anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = transform.anchor().getValue(AnimatedValueType.Y, frame);
             logger.info("Group anchor: " + anchorX + ", " + anchorY);
-            // Translate by negative anchor to make it the origin
+            // Translate by negative anchor to offset the coordinate system
             gc.translate(-anchorX, -anchorY);
         }
     }
@@ -359,11 +385,17 @@ public class LottiePlayer extends Canvas {
             logger.info("No opacity transform");
         }
 
-        // Apply position
+        // Correct transform order for Lottie/After Effects:
+        // 1. Translate by position
+        // 2. Translate by -anchor (to move anchor to origin)
+        // 3. Apply rotation
+        // 4. Apply scale
+
+        // Step 1: Apply position
         if (layer.transform().position() != null) {
             double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
             double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-            logger.info("Translating by: " + x + ", " + y);
+            logger.info("Translating by position: " + x + ", " + y);
 
             // Check for extreme values that might push content off-screen
             if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
@@ -375,16 +407,16 @@ public class LottiePlayer extends Canvas {
             logger.info("No position transform");
         }
 
-        // Apply anchor point offset (anchor point is the center of rotation/scale)
-        if (layer.transform().anchor() != null) {
-            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
-            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
-            logger.info("Layer anchor: " + anchorX + ", " + anchorY);
-            // Translate by negative anchor to make it the origin
-            gc.translate(-anchorX, -anchorY);
+        // Step 2: Apply rotation
+        if (layer.transform().rotation() != null) {
+            double rotation = Math.toRadians(layer.transform().rotation().getValue(0, frame));
+            logger.info("Rotating by: " + Math.toDegrees(rotation) + " degrees");
+            gc.rotate(rotation);
+        } else {
+            logger.info("No rotation transform");
         }
 
-        // Apply 3D rotation approximation (rx, ry) before 2D rotation
+        // Step 3: Apply 3D rotation approximation (rx, ry)
         // Approximate 3D rotation by scaling perpendicular axis
         double rx3DScale = 1.0;
         double ry3DScale = 1.0;
@@ -403,16 +435,7 @@ public class LottiePlayer extends Canvas {
             logger.info("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
         }
 
-        // Apply rotation
-        if (layer.transform().rotation() != null) {
-            double rotation = Math.toRadians(layer.transform().rotation().getValue(0, frame));
-            logger.info("Rotating by: " + Math.toDegrees(rotation) + " degrees");
-            gc.rotate(rotation);
-        } else {
-            logger.info("No rotation transform");
-        }
-
-        // Apply scale (combine regular scale with 3D rotation scale approximation)
+        // Step 4: Apply scale (combine regular scale with 3D rotation scale approximation)
         if (layer.transform().scale() != null) {
             double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, frame) / 100.0;
             double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, frame) / 100.0;
@@ -431,6 +454,16 @@ public class LottiePlayer extends Canvas {
             gc.scale(scaleX, scaleY);
         } else {
             logger.info("No scale transform");
+        }
+
+        // Step 5: Apply anchor point offset (anchor point is the center of rotation/scale)
+        // This must be done AFTER rotation and scale, but effectively moves the origin
+        if (layer.transform().anchor() != null) {
+            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
+            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
+            logger.info("Layer anchor: " + anchorX + ", " + anchorY);
+            // Translate by negative anchor to offset the coordinate system
+            gc.translate(-anchorX, -anchorY);
         }
 
         logger.info("=== LAYER TRANSFORM APPLIED ===");
