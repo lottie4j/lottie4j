@@ -200,9 +200,23 @@ public class LottiePlayer extends Canvas {
         if (layer.shapes() != null && !layer.shapes().isEmpty()) {
             logger.info("Layer has " + layer.shapes().size() + " shapes");
 
+            // First pass: collect any layer-level modifiers (like TrimPath)
+            TrimPath layerTrimPath = null;
             for (BaseShape shape : layer.shapes()) {
+                if (shape instanceof TrimPath trim) {
+                    layerTrimPath = trim;
+                    logger.info("Found layer-level TrimPath");
+                }
+            }
+
+            // Second pass: render shapes, passing down layer-level modifiers
+            for (BaseShape shape : layer.shapes()) {
+                if (shape instanceof TrimPath) {
+                    continue; // Skip modifiers, they're applied to shapes
+                }
+
                 switch (shape.type().shapeGroup()) {
-                    case GROUP -> renderShapeTypeGroup(shape, frame);
+                    case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
                     case SHAPE -> renderShapeTypeShape(shape, null, frame);
                     default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
                 }
@@ -214,7 +228,7 @@ public class LottiePlayer extends Canvas {
         gc.restore();
     }
 
-    public void renderShapeTypeGroup(BaseShape shape, double frame) {
+    public void renderShapeTypeGroup(BaseShape shape, double frame, TrimPath layerTrimPath) {
         if (shape instanceof Transform) {
             logger.warning("Don't know how to render a Transform group yet");
             return;
@@ -224,12 +238,12 @@ public class LottiePlayer extends Canvas {
 
             // Extract Transform and TrimPath from the group's shapes
             Transform groupTransform = null;
-            TrimPath trimPath = null;
+            TrimPath groupTrimPath = null;
             for (BaseShape item : group.shapes()) {
                 if (item instanceof Transform transform) {
                     groupTransform = transform;
                 } else if (item instanceof TrimPath trim) {
-                    trimPath = trim;
+                    groupTrimPath = trim;
                 }
             }
 
@@ -237,8 +251,14 @@ public class LottiePlayer extends Canvas {
                 applyGroupTransform(gc, groupTransform, frame);
             }
 
-            // Store trim path in group context for renderers to access
-            // (We'll pass the group which contains the trim path)
+            // Use group-level TrimPath if present, otherwise use layer-level TrimPath
+            TrimPath effectiveTrimPath = groupTrimPath != null ? groupTrimPath : layerTrimPath;
+            if (effectiveTrimPath != null) {
+                logger.info("Using TrimPath for group: " + group.name());
+            }
+
+            // Create a synthetic group that includes the effective trim path for renderers
+            Group effectiveGroup = createGroupWithTrimPath(group, effectiveTrimPath);
 
             // Render all non-transform/non-modifier shapes in reverse order
             // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
@@ -249,14 +269,38 @@ public class LottiePlayer extends Canvas {
                 }
 
                 switch (item.type().shapeGroup()) {
-                    case GROUP -> renderShapeTypeGroup(item, frame);
-                    case SHAPE -> renderShapeTypeShape(item, group, frame);
+                    case GROUP -> renderShapeTypeGroup(item, frame, effectiveTrimPath);
+                    case SHAPE -> renderShapeTypeShape(item, effectiveGroup, frame);
                     default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
                 }
             }
 
             gc.restore();
         }
+    }
+
+    private Group createGroupWithTrimPath(Group original, TrimPath trimPath) {
+        if (trimPath == null) {
+            return original;
+        }
+        // Create a new group that includes the TrimPath in its shapes list
+        java.util.List<BaseShape> newShapes = new java.util.ArrayList<>(original.shapes());
+        if (!newShapes.contains(trimPath)) {
+            newShapes.add(trimPath);
+        }
+        return new Group(
+            original.name(),
+            original.matchName(),
+            original.hidden(),
+            original.blendMode(),
+            original.index(),
+            original.clazz(),
+            original.id(),
+            original.d(),
+            original.cix(),
+            original.numberOfProperties(),
+            newShapes
+        );
     }
 
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
