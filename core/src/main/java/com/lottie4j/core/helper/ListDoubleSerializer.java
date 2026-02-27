@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 public class ListDoubleSerializer extends JsonSerializer {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Override
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

@@ -18,7 +18,7 @@ import java.util.List;
 
 public class KeyframeDeserializer extends JsonDeserializer {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Override
     public List<Keyframe> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {

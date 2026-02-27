@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class BezierDeserializer extends JsonDeserializer {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Override
     public Bezier deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {

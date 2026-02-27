@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 public class KeyframeSerializer extends JsonSerializer {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
      * A custom serializer is needed as
