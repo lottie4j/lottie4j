@@ -1,4 +1,4 @@
-package com.lottie4j.core.handler;
+package com.lottie4j.core.loader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class AnimationLoaderTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
-
 
     @Test
     void testFileToObjectToJson() throws IOException {

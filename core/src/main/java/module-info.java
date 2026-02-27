@@ -7,7 +7,7 @@ module com.lottie4j.core {
     exports com.lottie4j.core.model.bezier;
     exports com.lottie4j.core.definition;
     exports com.lottie4j.core.exception;
-    exports com.lottie4j.core.handler;
+    exports com.lottie4j.core.loader;
     exports com.lottie4j.core.helper;
     exports com.lottie4j.core.info;
     exports com.lottie4j.core.model;

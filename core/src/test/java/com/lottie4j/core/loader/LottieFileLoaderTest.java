@@ -1,4 +1,4 @@
-package com.lottie4j.core.handler;
+package com.lottie4j.core.loader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;

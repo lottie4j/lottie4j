@@ -17,7 +17,7 @@ More info is available on [lottie4j.com/lottie-format](https://lottie4j.com/lott
 This is the minimal code needed to display a Lottie animation:
 
 ```java
-import com.lottie4j.core.handler.LottieFileLoader;
+import com.lottie4j.core.loader.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
