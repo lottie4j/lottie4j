@@ -57,18 +57,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate secrets are available
+        run: |
+          if [ -z "${{ secrets.OSSRH_USERNAME }}" ]; then
+            echo "ERROR: OSSRH_USERNAME secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.OSSRH_TOKEN }}" ]; then
+            echo "ERROR: OSSRH_TOKEN secret is not set"
+            exit 1
+          fi
+          echo "✅ Both OSSRH_USERNAME and OSSRH_TOKEN secrets are available"
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'zulu'
           cache: maven
-          server-id: central
+          server-id: ossrh
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
 
-      - name: Deploy SNAPSHOT to Maven Central
+      - name: Deploy SNAPSHOT to OSSRH
         run: mvn -Psnapshot -ntp -B deploy -DskipTests
         env:
-          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
