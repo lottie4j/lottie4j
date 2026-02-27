@@ -9,7 +9,7 @@
     <packaging>pom</packaging>
     <name>Lottie4J</name>
     <description>Java library for parsing and rendering Lottie animations</description>
-    <url>https://github.com/FrankDupree/lottie4j</url>
+    <url>https://github.com/lottie4j</url>
 
     <licenses>
         <license>
@@ -21,15 +21,15 @@
 
     <developers>
         <developer>
-            <id>frankdupree</id>
-            <name>Frank Dupree</name>
+            <id>frankDelporte</id>
+            <name>Frank Delporte</name>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/FrankDupree/lottie4j.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/FrankDupree/lottie4j.git</developerConnection>
-        <url>https://github.com/FrankDupree/lottie4j</url>
+        <connection>scm:git:https://github.com/lottie4j/lottie4j.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/lottie4j/lottie4j.git</developerConnection>
+        <url>https://github.com/lottie4j/lottie4j</url>
         <tag>HEAD</tag>
     </scm>
 

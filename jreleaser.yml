@@ -2,7 +2,7 @@ project:
   name: lottie4j
   description: Java library for parsing and rendering Lottie animations
   longDescription: Lottie4J is a Java library that provides parsing and rendering capabilities for Lottie animations
-  website: https://github.com/FrankDupree/lottie4j
+  website: https://lottie4j.com
   authors:
     - Frank Delporte
   license: GNU v2
