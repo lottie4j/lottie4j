@@ -6,6 +6,7 @@ import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
+import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
@@ -221,12 +222,14 @@ public class LottiePlayer extends Canvas {
         if (shape instanceof Group group) {
             gc.save();
 
-            // Extract and apply the Transform from the group's shapes
+            // Extract Transform and TrimPath from the group's shapes
             Transform groupTransform = null;
+            TrimPath trimPath = null;
             for (BaseShape item : group.shapes()) {
                 if (item instanceof Transform transform) {
                     groupTransform = transform;
-                    break;
+                } else if (item instanceof TrimPath trim) {
+                    trimPath = trim;
                 }
             }
 
@@ -234,12 +237,15 @@ public class LottiePlayer extends Canvas {
                 applyGroupTransform(gc, groupTransform, frame);
             }
 
-            // Render all non-transform shapes in reverse order
+            // Store trim path in group context for renderers to access
+            // (We'll pass the group which contains the trim path)
+
+            // Render all non-transform/non-modifier shapes in reverse order
             // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
             for (int i = group.shapes().size() - 1; i >= 0; i--) {
                 BaseShape item = group.shapes().get(i);
-                if (item instanceof Transform) {
-                    continue; // Skip transform, already applied
+                if (item instanceof Transform || item instanceof TrimPath) {
+                    continue; // Skip modifiers, they're applied to the shapes
                 }
 
                 switch (item.type().shapeGroup()) {

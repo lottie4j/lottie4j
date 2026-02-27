@@ -7,7 +7,7 @@ import javafx.scene.paint.Color;
 
 public class StrokeStyle {
 
-    private final Stroke stroke;
+    public final Stroke stroke;
 
     public StrokeStyle(Stroke stroke) {
         this.stroke = stroke;

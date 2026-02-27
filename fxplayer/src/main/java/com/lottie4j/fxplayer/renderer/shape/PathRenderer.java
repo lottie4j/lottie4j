@@ -1,5 +1,7 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import com.lottie4j.core.definition.LineCap;
+import com.lottie4j.core.definition.LineJoin;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
@@ -14,6 +16,8 @@ import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
 
 import java.util.List;
 import java.util.Optional;
@@ -108,6 +112,10 @@ public class PathRenderer implements ShapeRenderer {
         if (strokeStyle.isPresent()) {
             gc.setStroke(strokeStyle.get().getColor(frame));
             gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+
+            // Apply line cap and join
+            applyStrokeStyle(gc, strokeStyle.get().stroke);
+
             gc.stroke();
         }
 
@@ -164,5 +172,30 @@ public class PathRenderer implements ShapeRenderer {
             }
         }
         return null;
+    }
+
+    private void applyStrokeStyle(GraphicsContext gc, Stroke stroke) {
+        // Set line cap: 1=butt, 2=round, 3=square
+        if (stroke.lineCap() != null) {
+            switch (stroke.lineCap()) {
+                case LineCap.ROUND -> gc.setLineCap(StrokeLineCap.ROUND);
+                case LineCap.SQUARE -> gc.setLineCap(StrokeLineCap.SQUARE);
+                default -> gc.setLineCap(StrokeLineCap.BUTT);
+            }
+        }
+
+        // Set line join: 1=miter, 2=round, 3=bevel
+        if (stroke.lineJoin() != null) {
+            switch (stroke.lineJoin()) {
+                case LineJoin.ROUND -> gc.setLineJoin(StrokeLineJoin.ROUND);
+                case LineJoin.BEVEL -> gc.setLineJoin(StrokeLineJoin.BEVEL);
+                default -> gc.setLineJoin(StrokeLineJoin.MITER);
+            }
+        }
+
+        // Set miter limit if specified
+        if (stroke.miterLimit() != null) {
+            gc.setMiterLimit(stroke.miterLimit());
+        }
     }
 }
