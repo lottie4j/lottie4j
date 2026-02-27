@@ -101,13 +101,18 @@ public record Animated(
             return getValueFromKeyframe(prevKeyframe, index);
         }
 
-        // Perform linear interpolation between keyframes
+        // Interpolate between keyframes with easing
         double startFrame = prevKeyframe.time();
         double endFrame = nextKeyframe.time();
         double progress = (frame - startFrame) / (endFrame - startFrame);
 
         // Clamp progress to [0, 1]
         progress = Math.max(0, Math.min(1, progress));
+
+        // Apply Bezier easing if available
+        if (prevKeyframe.easingOut() != null && prevKeyframe.easingIn() != null) {
+            progress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
+        }
 
         double startValue = getValueFromKeyframe(prevKeyframe, index);
         double endValue = getValueFromKeyframe(nextKeyframe, index);
@@ -171,7 +176,7 @@ public record Animated(
             return getValueFromKeyframe(prevKeyframe, valueType.getIndex());
         }
 
-        // Interpolate between keyframes
+        // Interpolate between keyframes with easing
         double startFrame = prevKeyframe.time();
         double endFrame = nextKeyframe.time();
         double progress = (frame - startFrame) / (endFrame - startFrame);
@@ -179,10 +184,14 @@ public record Animated(
         // Clamp progress to [0, 1]
         progress = Math.max(0, Math.min(1, progress));
 
+        // Apply Bezier easing if available
+        if (prevKeyframe.easingOut() != null && prevKeyframe.easingIn() != null) {
+            progress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
+        }
+
         double startValue = getValueFromKeyframe(prevKeyframe, valueType.getIndex());
         double endValue = getValueFromKeyframe(nextKeyframe, valueType.getIndex());
 
-        // Linear interpolation for now (TODO: implement easing functions)
         return startValue + (endValue - startValue) * progress;
     }
 
@@ -202,5 +211,63 @@ public record Animated(
             return numberKeyframe.doubleValue();
         }
         return 0D;
+    }
+
+    /**
+     * Apply cubic Bezier easing curve to progress value
+     * Based on the Lottie easing specification
+     * @param t progress value (0-1)
+     * @param easingOut outgoing easing handle from current keyframe
+     * @param easingIn incoming easing handle for next keyframe (not used in simplified calculation)
+     * @return eased progress value
+     */
+    private double applyBezierEasing(double t, EasingHandle easingOut, EasingHandle easingIn) {
+        // Get control points from easing handles (use first value if multiple)
+        // Lottie uses cubic bezier with control points P0(0,0), P1(x1,y1), P2(x2,y2), P3(1,1)
+        double x1 = easingOut.x() != null && !easingOut.x().isEmpty() ? easingOut.x().get(0) : 0.0;
+        double y1 = easingOut.y() != null && !easingOut.y().isEmpty() ? easingOut.y().get(0) : 0.0;
+        double x2 = easingIn.x() != null && !easingIn.x().isEmpty() ? easingIn.x().get(0) : 1.0;
+        double y2 = easingIn.y() != null && !easingIn.y().isEmpty() ? easingIn.y().get(0) : 1.0;
+
+        // Use Newton-Raphson iteration to find t value that gives us the correct x
+        // This solves the cubic Bezier equation for x to find the corresponding y
+        double currentT = t;
+        for (int i = 0; i < 8; i++) {
+            double currentX = cubicBezier(currentT, 0, x1, x2, 1);
+            double dx = currentX - t;
+            if (Math.abs(dx) < 0.001) break;
+
+            double derivative = cubicBezierDerivative(currentT, 0, x1, x2, 1);
+            if (Math.abs(derivative) < 1e-6) break;
+
+            currentT = currentT - dx / derivative;
+        }
+
+        // Calculate y value using the solved t
+        return cubicBezier(currentT, 0, y1, y2, 1);
+    }
+
+    /**
+     * Calculate cubic Bezier value at t for control points p0, p1, p2, p3
+     */
+    private double cubicBezier(double t, double p0, double p1, double p2, double p3) {
+        double t2 = t * t;
+        double t3 = t2 * t;
+        double mt = 1 - t;
+        double mt2 = mt * mt;
+        double mt3 = mt2 * mt;
+
+        return mt3 * p0 + 3 * mt2 * t * p1 + 3 * mt * t2 * p2 + t3 * p3;
+    }
+
+    /**
+     * Calculate derivative of cubic Bezier at t for control points p0, p1, p2, p3
+     */
+    private double cubicBezierDerivative(double t, double p0, double p1, double p2, double p3) {
+        double t2 = t * t;
+        double mt = 1 - t;
+        double mt2 = mt * mt;
+
+        return 3 * mt2 * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t2 * (p3 - p2);
     }
 }

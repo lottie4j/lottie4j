@@ -18,11 +18,15 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
@@ -57,6 +61,9 @@ public class LottieFileViewer extends Application {
     private Label fpsLabel;
     private ProgressBar progressBar;
     private LottiePlayer lottiePlayer;
+    private WebView webView;
+    private WebEngine webEngine;
+    private File currentFile;
 
     @Override
     public void start(Stage primaryStage) {
@@ -68,7 +75,32 @@ public class LottieFileViewer extends Application {
         // Create canvas for animation rendering
         canvas = new Canvas(500, 500);
         gc = canvas.getGraphicsContext2D();
-        root.setCenter(canvas);
+
+        // Create WebView for JavaScript Lottie player
+        webView = new WebView();
+        webEngine = webView.getEngine();
+        webView.setPrefSize(500, 500);
+        webView.setMaxSize(500, 500);
+
+        // Create HBox to hold both players side by side
+        HBox playersBox = new HBox(10);
+        playersBox.setPadding(new Insets(10));
+        playersBox.setAlignment(Pos.CENTER);
+
+        VBox javaFXPlayerBox = new VBox(5);
+        javaFXPlayerBox.setAlignment(Pos.TOP_CENTER);
+        Label javaFXLabel = new Label("JavaFX Lottie4J Player");
+        javaFXLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        javaFXPlayerBox.getChildren().addAll(javaFXLabel, canvas);
+
+        VBox webPlayerBox = new VBox(5);
+        webPlayerBox.setAlignment(Pos.TOP_CENTER);
+        Label webLabel = new Label("JavaScript Lottie-Web Player");
+        webLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        webPlayerBox.getChildren().addAll(webLabel, webView);
+
+        playersBox.getChildren().addAll(javaFXPlayerBox, webPlayerBox);
+        root.setCenter(playersBox);
 
         // Create control panel
         VBox controlPanel = createControlPanel();
@@ -222,6 +254,7 @@ public class LottieFileViewer extends Application {
 
     private void loadAnimation(File file) {
         stopAnimation();
+        currentFile = file;
 
         try {
             animation = LottieFileLoader.load(file);
@@ -252,7 +285,17 @@ public class LottieFileViewer extends Application {
 
             // Show new LottiePlayer
             lottiePlayer = new LottiePlayer(animation, true);
-            root.setCenter(lottiePlayer);
+
+            // Update the JavaFX player box
+            HBox playersBox = (HBox) root.getCenter();
+            VBox javaFXPlayerBox = (VBox) playersBox.getChildren().get(0);
+            if (javaFXPlayerBox.getChildren().size() > 1) {
+                javaFXPlayerBox.getChildren().remove(1);
+            }
+            javaFXPlayerBox.getChildren().add(lottiePlayer);
+
+            // Load animation into JavaScript player
+            loadLottieInWebView(file);
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
@@ -366,5 +409,61 @@ public class LottieFileViewer extends Application {
         HBox linkBox = new HBox(new Label("More info on:"), link);
         linkBox.setAlignment(Pos.BASELINE_LEFT);
         return linkBox;
+    }
+
+    private void loadLottieInWebView(File lottieFile) {
+        try {
+            // Read the Lottie JSON file
+            String lottieJson = Files.readString(lottieFile.toPath());
+
+            // Escape JSON for embedding in JavaScript
+            String escapedJson = lottieJson.replace("\\", "\\\\")
+                                          .replace("\"", "\\\"")
+                                          .replace("\n", "\\n")
+                                          .replace("\r", "\\r");
+
+            // Create HTML with lottie-web player
+            String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            background-color: #ffffff;
+                        }
+                        #lottie-container {
+                            width: 500px;
+                            height: 500px;
+                        }
+                    </style>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+                </head>
+                <body>
+                    <div id="lottie-container"></div>
+                    <script>
+                        var animationData = JSON.parse("%s");
+                        var animation = lottie.loadAnimation({
+                            container: document.getElementById('lottie-container'),
+                            renderer: 'svg',
+                            loop: true,
+                            autoplay: true,
+                            animationData: animationData
+                        });
+                    </script>
+                </body>
+                </html>
+                """.formatted(escapedJson);
+
+            webEngine.loadContent(html);
+        } catch (IOException e) {
+            logger.severe("Failed to load Lottie file in WebView: " + e.getMessage());
+        }
     }
 }

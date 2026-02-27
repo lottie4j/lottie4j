@@ -3,6 +3,7 @@ module com.lottie4j.fxdemo {
     requires com.lottie4j.core;
     requires javafx.graphics;
     requires javafx.controls;
+    requires javafx.web;
     requires java.logging;
     requires com.lottie4j.fxplayer;
 

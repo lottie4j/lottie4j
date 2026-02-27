@@ -3,6 +3,7 @@ package com.lottie4j.fxplayer;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.Asset;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
@@ -31,6 +32,7 @@ public class LottiePlayer extends Canvas {
     private final GraphicsContext gc;
     private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
     private final Map<Integer, Layer> layersByIndex;
+    private final Map<String, Asset> assetsById;
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -56,6 +58,16 @@ public class LottiePlayer extends Canvas {
             for (Layer layer : animation.layers()) {
                 if (layer.indexLayer() != null) {
                     layersByIndex.put(layer.indexLayer().intValue(), layer);
+                }
+            }
+        }
+
+        // Build asset map for precomposition support
+        this.assetsById = new HashMap<>();
+        if (animation.assets() != null) {
+            for (Asset asset : animation.assets()) {
+                if (asset.id() != null) {
+                    assetsById.put(asset.id(), asset);
                 }
             }
         }
@@ -213,8 +225,12 @@ public class LottiePlayer extends Canvas {
         // Apply this layer's transform
         applyLayerTransform(gc, layer, frame);
 
+        // Handle precomposition layers
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            renderPrecompositionLayer(gc, layer, frame);
+        }
         // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
-        if (layer.layerType() != LayerType.NULL) {
+        else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
                 logger.info("Layer has " + layer.shapes().size() + " shapes");
@@ -248,6 +264,111 @@ public class LottiePlayer extends Canvas {
         }
 
         gc.restore();
+    }
+
+    private void renderPrecompositionLayer(GraphicsContext gc, Layer layer, double frame) {
+        if (layer.referenceId() == null) {
+            logger.warning("Precomposition layer has no referenceId: " + layer.name());
+            return;
+        }
+
+        Asset asset = assetsById.get(layer.referenceId());
+        if (asset == null) {
+            logger.warning("Asset not found for referenceId: " + layer.referenceId());
+            return;
+        }
+
+        if (asset.layers() == null || asset.layers().isEmpty()) {
+            logger.warning("Precomposition asset has no layers: " + layer.referenceId());
+            return;
+        }
+
+        logger.info("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers");
+
+        // Build a temporary layer index map for this precomposition's parenting
+        Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
+        for (Layer precompLayer : asset.layers()) {
+            if (precompLayer.indexLayer() != null) {
+                precompLayersByIndex.put(precompLayer.indexLayer().intValue(), precompLayer);
+            }
+        }
+
+        // Render all layers in the precomposition in reverse order
+        // Use the normal renderLayer flow but with the precomp's layer map
+        for (int i = asset.layers().size() - 1; i >= 0; i--) {
+            Layer precompLayer = asset.layers().get(i);
+            if (isLayerActiveAtFrame(precompLayer, frame)) {
+                renderPrecompLayer(gc, precompLayer, frame, precompLayersByIndex);
+            }
+        }
+    }
+
+    private void renderPrecompLayer(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
+        gc.save();
+
+        // Apply parent transforms recursively within the precomp
+        applyPrecompParentTransforms(gc, layer, frame, precompLayersByIndex);
+
+        // Apply this layer's transform
+        applyLayerTransform(gc, layer, frame);
+
+        // Handle different layer types
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            renderPrecompositionLayer(gc, layer, frame);
+        } else if (layer.layerType() != LayerType.NULL) {
+            // Render layer shapes
+            if (layer.shapes() != null && !layer.shapes().isEmpty()) {
+                logger.info("Layer has " + layer.shapes().size() + " shapes");
+
+                // First pass: collect any layer-level modifiers (like TrimPath)
+                TrimPath layerTrimPath = null;
+                for (BaseShape shape : layer.shapes()) {
+                    if (shape instanceof TrimPath trim) {
+                        layerTrimPath = trim;
+                        logger.info("Found layer-level TrimPath");
+                    }
+                }
+
+                // Second pass: render shapes, passing down layer-level modifiers
+                for (BaseShape shape : layer.shapes()) {
+                    if (shape instanceof TrimPath) {
+                        continue; // Skip modifiers, they're applied to shapes
+                    }
+
+                    switch (shape.type().shapeGroup()) {
+                        case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
+                        case SHAPE -> renderShapeTypeShape(shape, null, frame);
+                        default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
+                    }
+                }
+            } else {
+                logger.info("Layer has no shapes");
+            }
+        } else {
+            logger.info("Skipping shape rendering for NULL layer: " + layer.name());
+        }
+
+        gc.restore();
+    }
+
+    private void applyPrecompParentTransforms(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
+        if (layer.indexParent() == null) {
+            return; // No parent
+        }
+
+        Layer parent = precompLayersByIndex.get(layer.indexParent());
+        if (parent == null) {
+            logger.warning("Parent layer not found in precomp: " + layer.indexParent());
+            return;
+        }
+
+        logger.info("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
+
+        // Recursively apply parent's parent transforms first
+        applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
+
+        // Then apply this parent's transform
+        applyLayerTransform(gc, parent, frame);
     }
 
     private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {
@@ -471,7 +592,8 @@ public class LottiePlayer extends Canvas {
             logger.info("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
 
             if (opacity > 0) {
-                gc.setGlobalAlpha(opacity / 100.0);
+                // Multiply with existing alpha to properly composite nested opacities
+                gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));
             }
         } else {
             logger.info("No opacity transform");

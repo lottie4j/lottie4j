@@ -31,6 +31,12 @@
             <version>${javafx.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.lottie4j</groupId>
             <artifactId>fxplayer</artifactId>
             <version>0.0.1-SNAPSHOT</version>

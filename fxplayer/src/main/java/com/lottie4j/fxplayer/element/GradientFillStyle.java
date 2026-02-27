@@ -1,5 +1,6 @@
 package com.lottie4j.fxplayer.element;
 
+import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.style.GradientFill;
 import com.lottie4j.fxplayer.util.LottieValueHelper;
@@ -54,15 +55,33 @@ public class GradientFillStyle {
             return Color.BLACK;
         }
 
-        // Create linear gradient
-        // The coordinates need to be normalized (0-1 range) for JavaFX LinearGradient
-        // We'll use the actual start/end points from Lottie
-        return new LinearGradient(
-                startX, startY, endX, endY,
-                false, // proportional = false (use absolute coordinates)
-                CycleMethod.NO_CYCLE,
-                stops
-        );
+        // Check gradient type and create appropriate gradient
+        if (gradientFill.gradientType() == GradientType.RADIAL) {
+            // For radial gradients, calculate center point and radius
+            double centerX = startX;
+            double centerY = startY;
+            double radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+
+            return new RadialGradient(
+                    0, // focusAngle
+                    0, // focusDistance
+                    centerX, centerY,
+                    radius,
+                    false, // proportional = false (use absolute coordinates)
+                    CycleMethod.NO_CYCLE,
+                    stops
+            );
+        } else {
+            // Create linear gradient (default)
+            // The coordinates need to be normalized (0-1 range) for JavaFX LinearGradient
+            // We'll use the actual start/end points from Lottie
+            return new LinearGradient(
+                    startX, startY, endX, endY,
+                    false, // proportional = false (use absolute coordinates)
+                    CycleMethod.NO_CYCLE,
+                    stops
+            );
+        }
     }
 
     public double getOpacity(double frame) {
