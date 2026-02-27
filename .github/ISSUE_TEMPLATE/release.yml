@@ -1,0 +1,67 @@
+name: Release Request
+description: Request a new release to Maven Central
+title: "Release version X.Y.Z"
+labels: ["release-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Release Request
+        This issue will be used to track and approve a release to Maven Central.
+
+        **Important:** The title must follow the format `Release version X.Y.Z` (e.g., `Release version 1.0.0`)
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version number to release (semantic versioning)
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: changes
+    attributes:
+      label: Changes in this release
+      description: List the major changes, features, and bug fixes in this release
+      placeholder: |
+        - Added new feature X
+        - Fixed bug Y
+        - Updated dependency Z
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-release checklist
+      description: Ensure all items are completed before approval
+      options:
+        - label: All tests are passing
+          required: true
+        - label: Version number follows semantic versioning
+          required: true
+        - label: CHANGELOG has been updated (if applicable)
+          required: true
+        - label: Documentation has been updated (if applicable)
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## Approval Process
+
+        To approve this release, a maintainer should:
+        1. Review the changes and checklist above
+        2. Add the label `approved-for-release` to this issue
+        3. The GitHub Action will automatically begin the release process
+
+        The following secrets must be configured in the repository:
+        - `OSSRH_USERNAME` - Sonatype OSSRH username
+        - `OSSRH_PASSWORD` - Sonatype OSSRH password
+        - `GPG_PRIVATE_KEY` - GPG private key for signing
+        - `GPG_PUBLIC_KEY` - GPG public key
+        - `GPG_PASSPHRASE` - GPG key passphrase
