@@ -46,7 +46,7 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
           cache: maven
-          server-id: ossrh
+          server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -56,24 +56,13 @@ jobs:
         run: |
           mvn versions:set -DnewVersion=${{ steps.parse.outputs.version }} -DgenerateBackupPoms=false
 
-      - name: Build and stage artifacts
+      - name: Build and publish release
         run: |
-          mvn -Prelease clean deploy -DaltDeploymentRepository=local::file:./target/staging-deploy
+          mvn -Prelease clean deploy -DskipTests
         env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Run JReleaser
-        run: |
-          mvn -Prelease jreleaser:deploy -Djreleaser.dry.run=false
-        env:
-          JRELEASER_NEXUS2_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          JRELEASER_NEXUS2_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
-          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Git tag and push
         run: |
