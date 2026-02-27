@@ -227,10 +227,10 @@ public class PathRenderer implements ShapeRenderer {
             prevBezier.tangentsOut(), nextBezier.tangentsOut(), progress);
 
         return new BezierDefinition(
+            prevBezier.closed(),
             interpolatedVertices,
             interpolatedTangentsIn,
-            interpolatedTangentsOut,
-            prevBezier.closed()
+            interpolatedTangentsOut
         );
     }
 
