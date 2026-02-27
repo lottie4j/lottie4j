@@ -7,11 +7,10 @@
     <artifactId>lottie4j</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <url>http://www.lottie4j.com</url>
 
     <properties>
         <java.version>21</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
 
         <!-- Dependencies -->
         <javafx.version>21.0.7</javafx.version>

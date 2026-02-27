@@ -1,6 +1,7 @@
 package com.lottie4j.core.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LottieFileLoaderTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(
@@ -54,7 +55,6 @@ class LottieFileLoaderTest {
         File f = new File(this.getClass().getResource(file).getFile());
         String jsonFromFile = LottieFileLoader.loadAsString(f);
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
-        ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writeValueAsString(objectFromJson);
         // mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
 

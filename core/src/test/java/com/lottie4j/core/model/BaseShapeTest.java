@@ -1,6 +1,7 @@
 package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.handler.LottieFileLoader;
 import com.lottie4j.core.model.shape.BaseShape;
@@ -27,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BaseShapeTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
 
     private static Stream<Arguments> provideShapeFiles() {
         return Stream.of(

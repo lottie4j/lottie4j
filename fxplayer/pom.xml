@@ -9,12 +9,8 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.lottie4j</groupId>
     <artifactId>fxplayer</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-
-    <name>Lottie4J JavaFX Player</name>
-    <url>http://www.lottie4j.com</url>
+    <name>Lottie4J JavaFX Player Component</name>
 
     <dependencies>
         <dependency>
@@ -42,6 +38,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.10.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
             </plugin>
 
             <plugin>

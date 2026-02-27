@@ -1,6 +1,7 @@
 package com.lottie4j.core.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationLoaderTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
 
 
     @Test
@@ -20,7 +21,6 @@ class AnimationLoaderTest {
         File f = new File(this.getClass().getResource("/lottie/lottie_file/timeline_animation.json").getFile());
         String jsonFromFile = LottieFileLoader.loadAsString(f);
         var animation = mapper.readValue(jsonFromFile, Animation.class);
-        ObjectMapper mapper = new ObjectMapper();
         String jsonFromObject = mapper.writeValueAsString(animation);
 
         System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
