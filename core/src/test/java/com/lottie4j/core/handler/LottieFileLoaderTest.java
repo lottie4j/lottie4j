@@ -1,7 +1,7 @@
 package com.lottie4j.core.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LottieFileLoaderTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
+    private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(

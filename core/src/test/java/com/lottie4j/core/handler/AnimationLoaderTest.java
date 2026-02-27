@@ -1,7 +1,7 @@
 package com.lottie4j.core.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationLoaderTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
+    private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
 
     @Test

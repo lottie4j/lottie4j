@@ -3,7 +3,7 @@ package com.lottie4j.core.model;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class KeyframeTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
+    private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Test
     void testSingleValue() throws JsonProcessingException {
