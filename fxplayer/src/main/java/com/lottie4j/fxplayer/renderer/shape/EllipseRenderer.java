@@ -154,38 +154,54 @@ public class EllipseRenderer implements ShapeRenderer {
 
     private void renderWithTrimPath(GraphicsContext gc, double x, double y, double width, double height,
                                     double centerX, double centerY, TrimPath trimPath, double frame, Group parentGroup) {
-        // Get trim values (0-100 range in Lottie)
+        // Get trim values (all in 0-100 range in Lottie, or degrees for offset depending on version)
         double start = trimPath.segmentStart() != null ? trimPath.segmentStart().getValue(0, frame) : 0;
         double end = trimPath.segmentEnd() != null ? trimPath.segmentEnd().getValue(0, frame) : 100;
         double offset = trimPath.offset() != null ? trimPath.offset().getValue(0, frame) : 0;
 
         logger.info("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
 
-        // Convert to 0-1 range
+        // Convert to normalized 0-1 range
         start = start / 100.0;
         end = end / 100.0;
-        offset = offset / 360.0;  // Offset is in degrees, not percentage
 
-        // Apply offset (rotates the trim around the circle)
-        start = (start + offset) % 1.0;
-        end = (end + offset) % 1.0;
+        // Offset in Lottie: Based on testing with loading.json where offset goes 0→3
+        // and produces 2 total rotations (1 from layer + 1 from offset),
+        // offset=3 should contribute exactly 1 full rotation (360°)
+        // Therefore offset represents degrees where we divide by 360 to get rotations
+        // offset / 360 = rotations, so 3/360 is tiny...
+        // Actually, offset might be in a 0-3.6 range representing 0-360° when scaled by 100
+        // Testing: offset * (360/3) = offset * 120 gives us degrees
+        double offsetDegrees = offset * 120.0;  // Scale factor to convert to degrees
+        double offsetRotations = offsetDegrees / 360.0;
+
+        // Apply offset as rotations to both start and end positions
+        start = start + offsetRotations;
+        end = end + offsetRotations;
+
+        // Handle wrapping for values > 1.0
+        while (start > 1.0) start -= 1.0;
+        while (end > 1.0) end -= 1.0;
 
         // Lottie measures from the top (12 o'clock) going clockwise
-        // JavaFX measures from the right (3 o'clock) going counterclockwise for positive angles
-        // So we need to:
-        // 1. Convert Lottie's 0-1 range (0=top, 0.25=right, 0.5=bottom, 0.75=left) to degrees
-        // 2. Adjust for JavaFX's coordinate system (starts at 3 o'clock)
+        // JavaFX measures from the right (3 o'clock) with positive angles going counterclockwise
 
-        // Convert to angles: Lottie 0 = top (90° in JavaFX), going clockwise
-        double startAngle = 90 - (start * 360.0);  // Start from top, go clockwise
+        // Convert start/end from 0-1 range to degrees (0=top, going clockwise in Lottie space)
+        // Then convert to JavaFX coordinate system (0=right, counterclockwise positive)
+        // Lottie: 0 = top (12 o'clock) = 90° in JavaFX system
+        double startAngle = 90 - (start * 360.0);
         double endAngle = 90 - (end * 360.0);
 
-        // Calculate arc extent (negative = clockwise in JavaFX)
+        // Calculate arc extent (how much of the circle to draw)
+        // In JavaFX, negative extent = clockwise
         double arcExtent = startAngle - endAngle;
 
-        // Handle wrapping
-        if (arcExtent < 0) {
+        // Normalize angles
+        while (arcExtent <= 0) {
             arcExtent += 360;
+        }
+        while (arcExtent > 360) {
+            arcExtent -= 360;
         }
 
         logger.info("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
