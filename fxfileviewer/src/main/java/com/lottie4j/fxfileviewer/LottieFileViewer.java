@@ -12,8 +12,6 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -26,7 +24,6 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Base64;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
@@ -61,9 +58,8 @@ public class LottieFileViewer extends Application {
     private Label fpsLabel;
     private ProgressBar progressBar;
     private LottiePlayer lottiePlayer;
-    private WebView webView;
     private WebEngine webEngine;
-    private File currentFile;
+    private Object jsAnimation;
 
     @Override
     public void start(Stage primaryStage) {
@@ -77,7 +73,7 @@ public class LottieFileViewer extends Application {
         gc = canvas.getGraphicsContext2D();
 
         // Create WebView for JavaScript Lottie player
-        webView = new WebView();
+        var webView = new WebView();
         webEngine = webView.getEngine();
         webView.setPrefSize(500, 500);
         webView.setMaxSize(500, 500);
@@ -102,13 +98,8 @@ public class LottieFileViewer extends Application {
         playersBox.getChildren().addAll(javaFXPlayerBox, webPlayerBox);
         root.setCenter(playersBox);
 
-        // Create control panel
-        VBox controlPanel = createControlPanel();
-        root.setBottom(controlPanel);
-
-        // Create menu bar
-        MenuBar menuBar = createMenuBar(primaryStage);
-        root.setTop(menuBar);
+        root.setBottom(createControlPanel());
+        root.setTop(createMenuBar(primaryStage));
 
         // Set up scene
         Scene scene = new Scene(root, 1400, 800);
@@ -172,8 +163,8 @@ public class LottieFileViewer extends Application {
         return menuBar;
     }
 
-    private VBox createControlPanel() {
-        VBox controlPanel = new VBox(10);
+    private HBox createControlPanel() {
+        var controlPanel = new HBox(10);
         controlPanel.setPadding(new Insets(10));
         controlPanel.setStyle("-fx-background-color: #f0f0f0;");
 
@@ -203,20 +194,23 @@ public class LottieFileViewer extends Application {
                 currentFrame = newVal.intValue();
                 lottiePlayer.seekToFrame(currentFrame);
                 updateFrameLabel();
+
+                // Sync JS player frame
+                try {
+                    webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
+                } catch (Exception e) {
+                    logger.warning("Failed to seek JS animation: " + e.getMessage());
+                }
             }
         });
 
         frameLabel = new Label("Frame: 0 / 0");
         frameControls.getChildren().addAll(new Label("Frame:"), frameSlider, frameLabel);
 
-        // Info panel
-        HBox infoPanel = new HBox(20);
+        // FPS
         fpsLabel = new Label("FPS: --");
-        progressBar = new ProgressBar(0);
-        progressBar.setPrefWidth(200);
-        infoPanel.getChildren().addAll(fpsLabel, progressBar);
 
-        controlPanel.getChildren().addAll(playbackControls, frameControls, infoPanel);
+        controlPanel.getChildren().addAll(playbackControls, fpsLabel, frameControls);
         return controlPanel;
     }
 
@@ -254,7 +248,6 @@ public class LottieFileViewer extends Application {
 
     private void loadAnimation(File file) {
         stopAnimation();
-        currentFile = file;
 
         try {
             animation = LottieFileLoader.load(file);
@@ -262,20 +255,6 @@ public class LottieFileViewer extends Application {
             // Remove existing LottiePlayer if any
             if (lottiePlayer != null) {
                 root.getChildren().remove(lottiePlayer);
-            }
-
-            // Show preview image (if available)
-            String imagePath = file.getAbsolutePath().replaceFirst("\\.[^.]+$", ".png");
-            try {
-                Image image = new Image(new File(imagePath).toURI().toString());
-                ImageView imageView = new ImageView(image);
-                imageView.setFitWidth(200);
-                imageView.setPreserveRatio(true);
-                root.setLeft(imageView);
-            } catch (Exception e) {
-                Label noImageLabel = new Label("no image available");
-                noImageLabel.setPadding(new Insets(10));
-                root.setLeft(noImageLabel);
             }
 
             // Show the lottie file structure
@@ -303,8 +282,7 @@ public class LottieFileViewer extends Application {
                     currentFrame = newVal.intValue();
                     frameSlider.setValue(currentFrame);
                     updateFrameLabel();
-                    double progress = (currentFrame - getInPoint()) /
-                            (getOutPoint() - getInPoint());
+                    double progress = (double) (currentFrame - getInPoint()) / (getOutPoint() - getInPoint());
                     progressBar.setProgress(progress);
                 }
             });
@@ -312,9 +290,6 @@ public class LottieFileViewer extends Application {
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = getInPoint();
-
-            // Auto-start animation
-            startAnimation();
         } catch (IOException e) {
             logger.severe("Failed to load animation: " + e.getMessage());
             showError("Failed to load animation: " + e.getMessage());
@@ -324,8 +299,16 @@ public class LottieFileViewer extends Application {
     // Update play/pause/stop methods:
     private void startAnimation() {
         if (lottiePlayer != null) {
+            // Synchronize both players - start FX player first
             lottiePlayer.play();
             startButton.setDisable(true);
+
+            // Then immediately start JS player
+            try {
+                webEngine.executeScript("window.playAnimation()");
+            } catch (Exception e) {
+                logger.warning("Failed to start JS animation: " + e.getMessage());
+            }
         }
     }
 
@@ -333,6 +316,13 @@ public class LottieFileViewer extends Application {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
             startButton.setDisable(false);
+
+            // Pause JS player as well
+            try {
+                webEngine.executeScript("window.pauseAnimation()");
+            } catch (Exception e) {
+                logger.warning("Failed to pause JS animation: " + e.getMessage());
+            }
         }
     }
 
@@ -345,6 +335,13 @@ public class LottieFileViewer extends Application {
             updateFrameLabel();
             progressBar.setProgress(0);
             startButton.setDisable(false);
+
+            // Stop JS player as well
+            try {
+                webEngine.executeScript("window.stopAnimation()");
+            } catch (Exception e) {
+                logger.warning("Failed to stop JS animation: " + e.getMessage());
+            }
         }
     }
 
@@ -362,14 +359,6 @@ public class LottieFileViewer extends Application {
             frameLabel.setText(String.format("Frame: %d / %d",
                     currentFrame, getOutPoint()));
         }
-    }
-
-    private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     private void showError(String message) {
@@ -418,48 +407,66 @@ public class LottieFileViewer extends Application {
 
             // Escape JSON for embedding in JavaScript
             String escapedJson = lottieJson.replace("\\", "\\\\")
-                                          .replace("\"", "\\\"")
-                                          .replace("\n", "\\n")
-                                          .replace("\r", "\\r");
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r");
 
             // Create HTML with lottie-web player
             String html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            height: 100vh;
-                            background-color: #ffffff;
-                        }
-                        #lottie-container {
-                            width: 500px;
-                            height: 500px;
-                        }
-                    </style>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-                </head>
-                <body>
-                    <div id="lottie-container"></div>
-                    <script>
-                        var animationData = JSON.parse("%s");
-                        var animation = lottie.loadAnimation({
-                            container: document.getElementById('lottie-container'),
-                            renderer: 'svg',
-                            loop: true,
-                            autoplay: true,
-                            animationData: animationData
-                        });
-                    </script>
-                </body>
-                </html>
-                """.formatted(escapedJson);
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body {
+                                margin: 0;
+                                padding: 0;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100vh;
+                                background-color: #ffffff;
+                                overflow: hidden;
+                            }
+                            #lottie-container {
+                                width: 500px;
+                                height: 500px;
+                            }
+                        </style>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+                    </head>
+                    <body>
+                        <div id="lottie-container"></div>
+                        <script>
+                            var animationData = JSON.parse("%s");
+                            var animation = lottie.loadAnimation({
+                                container: document.getElementById('lottie-container'),
+                                renderer: 'svg',
+                                loop: true,
+                                autoplay: false,
+                                animationData: animationData
+                            });
+
+                            // Expose control functions to JavaFX
+                            window.playAnimation = function() {
+                                animation.play();
+                            };
+
+                            window.pauseAnimation = function() {
+                                animation.pause();
+                            };
+
+                            window.stopAnimation = function() {
+                                animation.stop();
+                            };
+
+                            window.seekToFrame = function(frame) {
+                                animation.goToAndStop(frame, true);
+                            };
+                        </script>
+                    </body>
+                    </html>
+                    """.formatted(escapedJson);
 
             webEngine.loadContent(html);
         } catch (IOException e) {
