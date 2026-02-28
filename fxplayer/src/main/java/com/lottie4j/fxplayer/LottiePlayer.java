@@ -50,6 +50,7 @@ public class LottiePlayer extends Canvas {
         // Set canvas size to animation size (use defaults if not specified)
         setWidth(animation.width() != null ? animation.width() : 500);
         setHeight(animation.height() != null ? animation.height() : 500);
+        logger.info("Canvas size set to: " + getWidth() + "x" + getHeight());
 
         this.gc = getGraphicsContext2D();
 
@@ -100,13 +101,14 @@ public class LottiePlayer extends Canvas {
     public void play() {
         if (isPlaying) return;
 
+        logger.info("Starting animation");
         isPlaying = true;
 
         // Calculate the time offset based on current frame position
         double currentFrame = currentFrameProperty.get();
         double frameOffset = currentFrame - getInPoint();
         double timeOffset = frameOffset / getFramesPerSecond();
-        startTime = System.nanoTime() - (long)(timeOffset * 1_000_000_000.0);
+        startTime = System.nanoTime() - (long) (timeOffset * 1_000_000_000.0);
 
         animationTimer = new AnimationTimer() {
             @Override
@@ -134,6 +136,7 @@ public class LottiePlayer extends Canvas {
         if (animationTimer != null) {
             animationTimer.stop();
         }
+        logger.info("Animation stopped");
         isPlaying = false;
     }
 
@@ -148,9 +151,9 @@ public class LottiePlayer extends Canvas {
     }
 
     public void render(double frame) {
-        logger.info("=== RENDER START ===");
-        logger.info("Canvas dimensions: " + getWidth() + "x" + getHeight());
-        logger.info("Rendering frame: " + frame);
+        logger.fine("=== RENDER START ===");
+        logger.fine("Canvas dimensions: " + getWidth() + "x" + getHeight());
+        logger.fine("Rendering frame: " + frame);
 
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
         gc.setFill(backgroundColor);
@@ -174,7 +177,7 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.info("Animation has " + animation.layers().size() + " layers");
+        logger.fine("Animation has " + animation.layers().size() + " layers");
 
         // Calculate scaling to fit canvas while maintaining aspect ratio
         double scaleX = gc.getCanvas().getWidth() / getAnimationWidth();
@@ -182,9 +185,9 @@ public class LottiePlayer extends Canvas {
         double scale = Math.min(scaleX, scaleY);
         double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
         double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
-        logger.info("Animation size: " + getAnimationWidth() + "x" + getAnimationHeight());
-        logger.info("Canvas size: " + gc.getCanvas().getWidth() + "x" + gc.getCanvas().getHeight());
-        logger.info("Scale: " + scale + ", Offset: " + offsetX + ", " + offsetY);
+        logger.fine("Animation size: " + getAnimationWidth() + "x" + getAnimationHeight());
+        logger.fine("Canvas size: " + gc.getCanvas().getWidth() + "x" + gc.getCanvas().getHeight());
+        logger.fine("Scale: " + scale + ", Offset: " + offsetX + ", " + offsetY);
 
         gc.save();
         gc.translate(offsetX, offsetY);
@@ -197,10 +200,10 @@ public class LottiePlayer extends Canvas {
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
-            logger.info("Processing layer: " + layer.name());
+            logger.fine("Processing layer: " + layer.name());
 
             if (isLayerActiveAtFrame(layer, frame)) {
-                logger.info("Rendering active layer: " + layer.name());
+                logger.fine("Rendering active layer: " + layer.name());
                 renderLayer(gc, layer, frame);
             }
         }
@@ -238,34 +241,38 @@ public class LottiePlayer extends Canvas {
         else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
-                logger.info("Layer has " + layer.shapes().size() + " shapes");
+                logger.fine("Layer has " + layer.shapes().size() + " shapes");
 
                 // First pass: collect any layer-level modifiers (like TrimPath)
                 TrimPath layerTrimPath = null;
                 for (BaseShape shape : layer.shapes()) {
                     if (shape instanceof TrimPath trim) {
                         layerTrimPath = trim;
-                        logger.info("Found layer-level TrimPath");
+                        logger.fine("Found layer-level TrimPath");
                     }
                 }
 
                 // Second pass: render shapes, passing down layer-level modifiers
                 for (BaseShape shape : layer.shapes()) {
+                    // Skip modifiers and styles - they're applied within groups/shapes
                     if (shape instanceof TrimPath) {
-                        continue; // Skip modifiers, they're applied to shapes
+                        continue;
                     }
 
                     switch (shape.type().shapeGroup()) {
                         case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
                         case SHAPE -> renderShapeTypeShape(shape, null, frame);
-                        default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
+                        case STYLE -> {
+                            // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                        }
+                        default -> logger.warning("Unsupported shape type: " + shape.type().shapeGroup());
                     }
                 }
             } else {
-                logger.info("Layer has no shapes");
+                logger.fine("Layer has no shapes");
             }
         } else {
-            logger.info("Skipping shape rendering for NULL layer: " + layer.name());
+            logger.fine("Skipping shape rendering for NULL layer: " + layer.name());
         }
 
         gc.restore();
@@ -288,7 +295,7 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.info("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers");
+        logger.fine("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers");
 
         // Build a temporary layer index map for this precomposition's parenting
         Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
@@ -323,34 +330,37 @@ public class LottiePlayer extends Canvas {
         } else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
-                logger.info("Layer has " + layer.shapes().size() + " shapes");
+                logger.fine("Layer has " + layer.shapes().size() + " shapes");
 
                 // First pass: collect any layer-level modifiers (like TrimPath)
                 TrimPath layerTrimPath = null;
                 for (BaseShape shape : layer.shapes()) {
                     if (shape instanceof TrimPath trim) {
                         layerTrimPath = trim;
-                        logger.info("Found layer-level TrimPath");
+                        logger.fine("Found layer-level TrimPath");
                     }
                 }
 
                 // Second pass: render shapes, passing down layer-level modifiers
                 for (BaseShape shape : layer.shapes()) {
+                    // Skip modifiers and styles - they're applied within groups/shapes
                     if (shape instanceof TrimPath) {
-                        continue; // Skip modifiers, they're applied to shapes
+                        continue;
                     }
 
                     switch (shape.type().shapeGroup()) {
                         case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
                         case SHAPE -> renderShapeTypeShape(shape, null, frame);
-                        default -> logger.warning("Not defined how to render shape type: " + shape.type().shapeGroup());
+                        case STYLE -> {
+                        } // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                        default -> logger.fine("Unsupported shape type: " + shape.type().shapeGroup());
                     }
                 }
             } else {
-                logger.info("Layer has no shapes");
+                logger.fine("Layer has no shapes");
             }
         } else {
-            logger.info("Skipping shape rendering for NULL layer: " + layer.name());
+            logger.fine("Skipping shape rendering for NULL layer: " + layer.name());
         }
 
         gc.restore();
@@ -367,7 +377,7 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.info("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
+        logger.fine("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
 
         // Recursively apply parent's parent transforms first
         applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
@@ -387,7 +397,7 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.info("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
+        logger.fine("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
 
         // Recursively apply parent's parent transforms first
         applyParentTransforms(gc, parent, frame);
@@ -422,7 +432,7 @@ public class LottiePlayer extends Canvas {
             // Use group-level TrimPath if present, otherwise use layer-level TrimPath
             TrimPath effectiveTrimPath = groupTrimPath != null ? groupTrimPath : layerTrimPath;
             if (effectiveTrimPath != null) {
-                logger.info("Using TrimPath for group: " + group.name());
+                logger.fine("Using TrimPath for group: " + group.name());
             }
 
             // Create a synthetic group that includes the effective trim path for renderers
@@ -439,6 +449,9 @@ public class LottiePlayer extends Canvas {
                 switch (item.type().shapeGroup()) {
                     case GROUP -> renderShapeTypeGroup(item, frame, effectiveTrimPath);
                     case SHAPE -> renderShapeTypeShape(item, effectiveGroup, frame);
+                    case STYLE -> {
+                        // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                    }
                     default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
                 }
             }
@@ -472,14 +485,14 @@ public class LottiePlayer extends Canvas {
     }
 
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
-        logger.info("Applying group transform");
+        logger.fine("Applying group transform");
 
         // Apply opacity first (doesn't affect transform order)
         if (transform.opacity() != null) {
             // Opacity is a single value, get with frame for animation interpolation
             double opacityValue = transform.opacity().getValue(0, frame);
             double opacity = opacityValue / 100.0;
-            logger.info("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
+            logger.fine("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
             if (opacity > 0) {
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
             }
@@ -495,14 +508,14 @@ public class LottiePlayer extends Canvas {
         if (transform.position() != null) {
             double x = transform.position().getValue(AnimatedValueType.X, frame);
             double y = transform.position().getValue(AnimatedValueType.Y, frame);
-            logger.info("Group translation: " + x + ", " + y);
+            logger.fine("Group translation: " + x + ", " + y);
             gc.translate(x, y);
         }
 
         // Step 2: Apply rotation
         if (transform.rotation() != null) {
             double rotation = Math.toRadians(transform.rotation().getValue(0, frame));
-            logger.info("Group rotation: " + Math.toDegrees(rotation) + " degrees");
+            logger.fine("Group rotation: " + Math.toDegrees(rotation) + " degrees");
             gc.rotate(rotation);
         }
 
@@ -510,7 +523,7 @@ public class LottiePlayer extends Canvas {
         if (transform.scale() != null) {
             double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
             double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-            logger.info("Group scale: " + scaleX + ", " + scaleY);
+            logger.fine("Group scale: " + scaleX + ", " + scaleY);
             gc.scale(scaleX, scaleY);
         }
 
@@ -519,7 +532,7 @@ public class LottiePlayer extends Canvas {
         if (transform.anchor() != null) {
             double anchorX = transform.anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = transform.anchor().getValue(AnimatedValueType.Y, frame);
-            logger.info("Group anchor: " + anchorX + ", " + anchorY);
+            logger.fine("Group anchor: " + anchorX + ", " + anchorY);
             // Translate by negative anchor to offset the coordinate system
             gc.translate(-anchorX, -anchorY);
         }
@@ -532,7 +545,7 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.info("Rendering shape: " + shape.getClass().getSimpleName() +
+        logger.fine("Rendering shape: " + shape.getClass().getSimpleName() +
                 " (name: " + (shape.name() != null ? shape.name() : "unnamed") + ")");
 
         var renderer = getShapeRenderer(shape.getClass());
@@ -586,7 +599,7 @@ public class LottiePlayer extends Canvas {
 
     private void applyLayerTransform(GraphicsContext gc, Layer layer, double frame) {
         if (layer.transform() == null) {
-            logger.info("No transform for layer: " + layer.name());
+            logger.fine("No transform for layer: " + layer.name());
             return;
         }
 
@@ -594,14 +607,14 @@ public class LottiePlayer extends Canvas {
         if (layer.transform().opacity() != null) {
             // Opacity is a single value, so use index 0 with current frame for animation
             double opacity = layer.transform().opacity().getValue(0, frame);
-            logger.info("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
+            logger.fine("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
 
             if (opacity > 0) {
                 // Multiply with existing alpha to properly composite nested opacities
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));
             }
         } else {
-            logger.info("No opacity transform");
+            logger.fine("No opacity transform");
         }
 
         // Correct transform order for Lottie/After Effects:
@@ -614,7 +627,7 @@ public class LottiePlayer extends Canvas {
         if (layer.transform().position() != null) {
             double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
             double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-            logger.info("Translating by position: " + x + ", " + y);
+            logger.fine("Translating by position: " + x + ", " + y);
 
             // Check for extreme values that might push content off-screen
             if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
@@ -623,16 +636,16 @@ public class LottiePlayer extends Canvas {
 
             gc.translate(x, y);
         } else {
-            logger.info("No position transform");
+            logger.fine("No position transform");
         }
 
         // Step 2: Apply rotation
         if (layer.transform().rotation() != null) {
             double rotation = Math.toRadians(layer.transform().rotation().getValue(0, frame));
-            logger.info("Rotating by: " + Math.toDegrees(rotation) + " degrees");
+            logger.fine("Rotating by: " + Math.toDegrees(rotation) + " degrees");
             gc.rotate(rotation);
         } else {
-            logger.info("No rotation transform");
+            logger.fine("No rotation transform");
         }
 
         // Step 3: Apply 3D rotation approximation (rx, ry)
@@ -644,14 +657,14 @@ public class LottiePlayer extends Canvas {
             // X-axis rotation: scale Y dimension by cos(rx) for flip effect
             double rxDegrees = layer.transform().rx().getValue(0, frame);
             rx3DScale = Math.cos(Math.toRadians(rxDegrees));
-            logger.info("Applying 3D X-axis rotation: " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
+            logger.fine("Applying 3D X-axis rotation: " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
         }
 
         if (layer.transform().ry() != null) {
             // Y-axis rotation: scale X dimension by cos(ry) for flip effect
             double ryDegrees = layer.transform().ry().getValue(0, frame);
             ry3DScale = Math.cos(Math.toRadians(ryDegrees));
-            logger.info("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
+            logger.fine("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
         }
 
         // Step 4: Apply scale (combine regular scale with 3D rotation scale approximation)
@@ -663,7 +676,7 @@ public class LottiePlayer extends Canvas {
             scaleX *= ry3DScale;
             scaleY *= rx3DScale;
 
-            logger.info("Scaling by: " + scaleX + ", " + scaleY);
+            logger.fine("Scaling by: " + scaleX + ", " + scaleY);
 
             // Check for zero or negative scale that would make content invisible
             if (scaleX <= 0 || scaleY <= 0) {
@@ -672,7 +685,7 @@ public class LottiePlayer extends Canvas {
 
             gc.scale(scaleX, scaleY);
         } else {
-            logger.info("No scale transform");
+            logger.fine("No scale transform");
         }
 
         // Step 5: Apply anchor point offset (anchor point is the center of rotation/scale)
@@ -680,12 +693,12 @@ public class LottiePlayer extends Canvas {
         if (layer.transform().anchor() != null) {
             double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
-            logger.info("Layer anchor: " + anchorX + ", " + anchorY);
+            logger.fine("Layer anchor: " + anchorX + ", " + anchorY);
             // Translate by negative anchor to offset the coordinate system
             gc.translate(-anchorX, -anchorY);
         }
 
-        logger.info("=== LAYER TRANSFORM APPLIED ===");
+        logger.fine("=== LAYER TRANSFORM APPLIED ===");
     }
 
     private void renderFrame(double frame) {
@@ -704,13 +717,13 @@ public class LottiePlayer extends Canvas {
         return animation;
     }
 
+    public Color getBackgroundColor() {
+        return backgroundColor;
+    }
+
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
         // Re-render current frame with new background
         renderFrame(currentFrameProperty.get());
-    }
-
-    public Color getBackgroundColor() {
-        return backgroundColor;
     }
 }

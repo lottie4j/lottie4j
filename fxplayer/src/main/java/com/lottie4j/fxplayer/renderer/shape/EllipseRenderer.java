@@ -159,7 +159,7 @@ public class EllipseRenderer implements ShapeRenderer {
         double end = trimPath.segmentEnd() != null ? trimPath.segmentEnd().getValue(0, frame) : 100;
         double offset = trimPath.offset() != null ? trimPath.offset().getValue(0, frame) : 0;
 
-        logger.info("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
+        logger.fine("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
 
         // Convert to normalized 0-1 range
         start = start / 100.0;
@@ -204,7 +204,7 @@ public class EllipseRenderer implements ShapeRenderer {
             arcExtent -= 360;
         }
 
-        logger.info("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
+        logger.fine("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
 
         // Only stroke is affected by trim paths (not fill)
         var strokeStyle = getStrokeStyle(parentGroup);

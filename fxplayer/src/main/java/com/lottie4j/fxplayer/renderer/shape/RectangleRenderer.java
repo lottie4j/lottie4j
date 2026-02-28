@@ -9,7 +9,6 @@ import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
-import com.lottie4j.fxplayer.util.LottieCoordinateHelper;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 
@@ -27,7 +26,7 @@ public class RectangleRenderer implements ShapeRenderer {
             return;
         }
 
-        logger.info("RectangleRenderer.render called for: " + rectangle.name());
+        logger.fine("RectangleRenderer.render called for: " + rectangle.name());
 
         if (rectangle.size() == null) {
             logger.warning("Rectangle missing size data");
@@ -73,7 +72,7 @@ public class RectangleRenderer implements ShapeRenderer {
 
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            logger.info("Drawing rectangle stroke with color and width: "
+            logger.fine("Drawing rectangle stroke with color and width: "
                     + strokeStyle.get().getColor(frame)
                     + strokeStyle.get().getStrokeWidth(frame));
             gc.setStroke(strokeStyle.get().getColor(frame));

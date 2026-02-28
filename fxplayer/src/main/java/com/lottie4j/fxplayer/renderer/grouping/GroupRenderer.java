@@ -13,7 +13,7 @@ public class GroupRenderer {
     private static final Logger logger = Logger.getLogger(GroupRenderer.class.getName());
 
     public void render(GraphicsContext gc, Group group, double frame) {
-        logger.info("GroupRenderer.render called for group with " + group.shapes().size() + " items");
+        logger.fine("GroupRenderer.render called for group with " + group.shapes().size() + " items");
 
         gc.save();
 
@@ -70,10 +70,10 @@ public class GroupRenderer {
         gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
 
         // Log the transform values for debugging
-        logger.info("Group transform position: " + translateX + ", " + translateY);
-        //logger.info("Group transform anchor: " + anchorX + ", " + anchorY);
-        logger.info("Group transform scale: " + scaleX + ", " + scaleY);
-        logger.info("Group transform rotation: " + rotation + " degrees");
-        logger.info("Group transform opacity: " + opacity);
+        logger.fine("Group transform position: " + translateX + ", " + translateY);
+        //logger.fine("Group transform anchor: " + anchorX + ", " + anchorY);
+        logger.fine("Group transform scale: " + scaleX + ", " + scaleY);
+        logger.fine("Group transform rotation: " + rotation + " degrees");
+        logger.fine("Group transform opacity: " + opacity);
     }
 }

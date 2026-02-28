@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
@@ -40,6 +41,7 @@ public class LottieFileViewer extends Application {
 
     static {
         Logger rootLogger = LogManager.getLogManager().getLogger("");
+        Logger.getLogger("com.lottie4j").setLevel(Level.INFO);
         rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
     }
 
@@ -52,12 +54,12 @@ public class LottieFileViewer extends Application {
     // UI Controls
     private Button startButton;
     private Button pauseButton;
-    private Button stopButton;
     private Slider frameSlider;
     private Label frameLabel;
     private Label fpsLabel;
     private LottiePlayer lottiePlayer;
     private WebEngine webEngine;
+    private WebView webView;
     private Color backgroundColor = Color.WHITE;
 
     @Override
@@ -72,7 +74,7 @@ public class LottieFileViewer extends Application {
         gc = canvas.getGraphicsContext2D();
 
         // Create WebView for JavaScript Lottie player
-        var webView = new WebView();
+        webView = new WebView();
         webEngine = webView.getEngine();
         webView.setPrefSize(500, 500);
         webView.setMaxSize(500, 500);
@@ -84,13 +86,13 @@ public class LottieFileViewer extends Application {
 
         var javaFXPlayerBox = new VBox(5);
         javaFXPlayerBox.setAlignment(Pos.TOP_CENTER);
-        Label javaFXLabel = new Label("JavaFX Lottie4J Player");
+        Label javaFXLabel = new Label("JavaFX Lottie Player");
         javaFXLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
         javaFXPlayerBox.getChildren().addAll(javaFXLabel, canvas);
 
         var webPlayerBox = new VBox(5);
         webPlayerBox.setAlignment(Pos.TOP_CENTER);
-        Label webLabel = new Label("JavaScript Lottie-Web Player");
+        Label webLabel = new Label("HTML JS Lottie Player");
         webLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
         webPlayerBox.getChildren().addAll(webLabel, webView);
 
@@ -126,6 +128,7 @@ public class LottieFileViewer extends Application {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
             startButton.setDisable(false);
+            pauseButton.setDisable(true);
             currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
@@ -170,18 +173,15 @@ public class LottieFileViewer extends Application {
         var playbackControls = new HBox(5);
         startButton = new Button("▶ Play");
         pauseButton = new Button("⏸ Pause");
-        stopButton = new Button("⏹ Stop");
 
         startButton.setOnAction(e -> startAnimation());
         pauseButton.setOnAction(e -> pauseAnimation());
-        stopButton.setOnAction(e -> stopAnimation());
 
         // Initially disable controls
         startButton.setDisable(true);
         pauseButton.setDisable(true);
-        stopButton.setDisable(true);
 
-        playbackControls.getChildren().addAll(startButton, pauseButton, stopButton);
+        playbackControls.getChildren().addAll(startButton, pauseButton);
 
         // Frame controls
         var frameControls = new HBox(10);
@@ -235,10 +235,9 @@ public class LottieFileViewer extends Application {
     private void setupAnimationControls() {
         if (animation == null) return;
 
-        // Enable controls
+        // Enable controls - Play enabled, Pause disabled initially
         startButton.setDisable(false);
-        pauseButton.setDisable(false);
-        stopButton.setDisable(false);
+        pauseButton.setDisable(true);
         frameSlider.setDisable(false);
 
         // Setup frame slider
@@ -252,7 +251,10 @@ public class LottieFileViewer extends Application {
     }
 
     private void loadAnimation(File file) {
-        stopAnimation();
+        // Pause any currently playing animation
+        if (lottiePlayer != null && lottiePlayer.isPlaying()) {
+            pauseAnimation();
+        }
 
         try {
             animation = LottieFileLoader.load(file);
@@ -268,7 +270,7 @@ public class LottieFileViewer extends Application {
             root.setRight(treeViewer);
 
             // Show new LottiePlayer
-            lottiePlayer = new LottiePlayer(animation, true);
+            lottiePlayer = new LottiePlayer(animation);
             lottiePlayer.setBackgroundColor(backgroundColor);
 
             // Get animation size
@@ -283,6 +285,11 @@ public class LottieFileViewer extends Application {
             }
             javaFXPlayerBox.getChildren().add(lottiePlayer);
             javaFXPlayerBox.setPrefSize(width, height);
+
+            // Update WebView size to match animation
+            webView.setPrefSize(width, height);
+            webView.setMaxSize(width, height);
+            webView.setMinSize(width, height);
 
             // Load animation into JavaScript player
             loadLottieInWebView(file, width, height);
@@ -312,12 +319,13 @@ public class LottieFileViewer extends Application {
         }
     }
 
-    // Update play/pause/stop methods:
+    // Update play/pause methods:
     private void startAnimation() {
         if (lottiePlayer != null) {
             // Synchronize both players - start FX player first
             lottiePlayer.play();
             startButton.setDisable(true);
+            pauseButton.setDisable(false);
 
             // Then immediately start JS player
             try {
@@ -332,30 +340,13 @@ public class LottieFileViewer extends Application {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
             startButton.setDisable(false);
+            pauseButton.setDisable(true);
 
             // Pause JS player as well
             try {
                 webEngine.executeScript("window.pauseAnimation()");
             } catch (Exception e) {
                 logger.warning("Failed to pause JS animation: " + e.getMessage());
-            }
-        }
-    }
-
-    private void stopAnimation() {
-        if (lottiePlayer != null) {
-            lottiePlayer.stop();
-            lottiePlayer.seekToFrame(getInPoint());
-            currentFrame = getInPoint();
-            frameSlider.setValue(currentFrame);
-            updateFrameLabel();
-            startButton.setDisable(false);
-
-            // Stop JS player as well
-            try {
-                webEngine.executeScript("window.stopAnimation()");
-            } catch (Exception e) {
-                logger.warning("Failed to stop JS animation: " + e.getMessage());
             }
         }
     }
