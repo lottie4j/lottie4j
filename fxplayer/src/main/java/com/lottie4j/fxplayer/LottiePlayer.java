@@ -37,6 +37,7 @@ public class LottiePlayer extends Canvas {
     private long startTime;
     private boolean isPlaying = false;
     private boolean debug = false;
+    private Color backgroundColor = Color.WHITE;
 
     public LottiePlayer(Animation animation) {
         this(animation, false);
@@ -152,7 +153,7 @@ public class LottiePlayer extends Canvas {
         logger.info("Rendering frame: " + frame);
 
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-        gc.setFill(Color.WHITE);
+        gc.setFill(backgroundColor);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
 
         if (debug) {
@@ -701,5 +702,15 @@ public class LottiePlayer extends Canvas {
 
     public Animation getAnimation() {
         return animation;
+    }
+
+    public void setBackgroundColor(Color color) {
+        this.backgroundColor = color;
+        // Re-render current frame with new background
+        renderFrame(currentFrameProperty.get());
+    }
+
+    public Color getBackgroundColor() {
+        return backgroundColor;
     }
 }

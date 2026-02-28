@@ -58,6 +58,7 @@ public class LottieFileViewer extends Application {
     private Label fpsLabel;
     private LottiePlayer lottiePlayer;
     private WebEngine webEngine;
+    private Color backgroundColor = Color.WHITE;
 
     @Override
     public void start(Stage primaryStage) {
@@ -77,17 +78,17 @@ public class LottieFileViewer extends Application {
         webView.setMaxSize(500, 500);
 
         // Create HBox to hold both players side by side
-        HBox playersBox = new HBox(10);
+        var playersBox = new HBox(10);
         playersBox.setPadding(new Insets(10));
         playersBox.setAlignment(Pos.CENTER);
 
-        VBox javaFXPlayerBox = new VBox(5);
+        var javaFXPlayerBox = new VBox(5);
         javaFXPlayerBox.setAlignment(Pos.TOP_CENTER);
         Label javaFXLabel = new Label("JavaFX Lottie4J Player");
         javaFXLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
         javaFXPlayerBox.getChildren().addAll(javaFXLabel, canvas);
 
-        VBox webPlayerBox = new VBox(5);
+        var webPlayerBox = new VBox(5);
         webPlayerBox.setAlignment(Pos.TOP_CENTER);
         Label webLabel = new Label("JavaScript Lottie-Web Player");
         webLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -100,7 +101,7 @@ public class LottieFileViewer extends Application {
         root.setTop(createMenuBar(primaryStage));
 
         // Set up scene
-        Scene scene = new Scene(root, 1600, 800);
+        var scene = new Scene(root, 1600, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -108,7 +109,7 @@ public class LottieFileViewer extends Application {
         clearCanvas();
 
         // Handle command-line arguments
-        Parameters args = getParameters();
+        var args = getParameters();
         if (!args.getUnnamed().isEmpty()) {
             var fileName = args.getUnnamed().get(0);
             var r = this.getClass().getResource(fileName);
@@ -144,14 +145,14 @@ public class LottieFileViewer extends Application {
     }
 
     private MenuBar createMenuBar(Stage stage) {
-        MenuBar menuBar = new MenuBar();
+        var menuBar = new MenuBar();
 
-        Menu fileMenu = new Menu("File");
+        var fileMenu = new Menu("File");
         MenuItem openItem = new MenuItem("Open Lottie File...");
         openItem.setOnAction(e -> openFile(stage));
         fileMenu.getItems().add(openItem);
 
-        Menu helpMenu = new Menu("Help");
+        var helpMenu = new Menu("Help");
         MenuItem aboutItem = new MenuItem("About");
         aboutItem.setOnAction(e -> showAbout());
         helpMenu.getItems().add(aboutItem);
@@ -166,7 +167,7 @@ public class LottieFileViewer extends Application {
         controlPanel.setStyle("-fx-background-color: #f0f0f0;");
 
         // Playback controls
-        HBox playbackControls = new HBox(5);
+        var playbackControls = new HBox(5);
         startButton = new Button("▶ Play");
         pauseButton = new Button("⏸ Pause");
         stopButton = new Button("⏹ Stop");
@@ -183,7 +184,7 @@ public class LottieFileViewer extends Application {
         playbackControls.getChildren().addAll(startButton, pauseButton, stopButton);
 
         // Frame controls
-        HBox frameControls = new HBox(10);
+        var frameControls = new HBox(10);
         frameSlider = new Slider();
         frameSlider.setDisable(true);
         frameSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
@@ -207,18 +208,25 @@ public class LottieFileViewer extends Application {
         // FPS
         fpsLabel = new Label("FPS: --");
 
-        controlPanel.getChildren().addAll(playbackControls, fpsLabel, frameControls);
+        // Background color picker
+        var colorPicker = new ColorPicker(backgroundColor);
+        colorPicker.setOnAction(e -> {
+            backgroundColor = colorPicker.getValue();
+            updateBackgroundColor();
+        });
+
+        controlPanel.getChildren().addAll(playbackControls, colorPicker, fpsLabel, frameControls);
         return controlPanel;
     }
 
     private void openFile(Stage stage) {
-        FileChooser fileChooser = new FileChooser();
+        var fileChooser = new FileChooser();
         fileChooser.setTitle("Open Lottie Animation");
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Lottie Files", "*.json", "*.lottie")
         );
 
-        File file = fileChooser.showOpenDialog(stage);
+        var file = fileChooser.showOpenDialog(stage);
         if (file != null) {
             loadAnimation(file);
         }
@@ -261,14 +269,15 @@ public class LottieFileViewer extends Application {
 
             // Show new LottiePlayer
             lottiePlayer = new LottiePlayer(animation, true);
+            lottiePlayer.setBackgroundColor(backgroundColor);
 
             // Get animation size
             var width = animation.width() != null ? animation.width() : 500;
             var height = animation.height() != null ? animation.height() : 500;
 
             // Update the JavaFX player box
-            HBox playersBox = (HBox) root.getCenter();
-            VBox javaFXPlayerBox = (VBox) playersBox.getChildren().get(0);
+            var playersBox = (HBox) root.getCenter();
+            var javaFXPlayerBox = (VBox) playersBox.getChildren().get(0);
             if (javaFXPlayerBox.getChildren().size() > 1) {
                 javaFXPlayerBox.getChildren().remove(1);
             }
@@ -368,7 +377,7 @@ public class LottieFileViewer extends Application {
     }
 
     private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
+        var alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(null);
         alert.setContentText(message);
@@ -376,7 +385,7 @@ public class LottieFileViewer extends Application {
     }
 
     private void showAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        var alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
         alert.setHeaderText("Lottie4J File Viewer");
         VBox content = new VBox(5);
@@ -391,7 +400,7 @@ public class LottieFileViewer extends Application {
     }
 
     private HBox createClickableLink() {
-        Hyperlink link = new Hyperlink("https://lottie4j.com/");
+        var link = new Hyperlink("https://lottie4j.com/");
         link.setOnAction(e -> {
             try {
                 // Use JavaFX HostServices to open URL
@@ -401,7 +410,7 @@ public class LottieFileViewer extends Application {
             }
         });
 
-        HBox linkBox = new HBox(new Label("More info on:"), link);
+        var linkBox = new HBox(new Label("More info on:"), link);
         linkBox.setAlignment(Pos.BASELINE_LEFT);
         return linkBox;
     }
@@ -409,16 +418,16 @@ public class LottieFileViewer extends Application {
     private void loadLottieInWebView(File lottieFile, int width, int height) {
         try {
             // Read the Lottie JSON file
-            String lottieJson = Files.readString(lottieFile.toPath());
+            var lottieJson = Files.readString(lottieFile.toPath());
 
             // Escape JSON for embedding in JavaScript
-            String escapedJson = lottieJson.replace("\\", "\\\\")
+            var escapedJson = lottieJson.replace("\\", "\\\\")
                     .replace("\"", "\\\"")
                     .replace("\n", "\\n")
                     .replace("\r", "\\r");
 
             // Create HTML with lottie-web player
-            String html = """
+            var html = """
                     <!DOCTYPE html>
                     <html>
                     <head>
@@ -472,6 +481,10 @@ public class LottieFileViewer extends Application {
                             window.seekToFrame = function(frame) {
                                 animation.goToAndStop(frame, true);
                             };
+                    
+                            window.setBackgroundColor = function(color) {
+                                document.body.style.backgroundColor = color;
+                            };
                         </script>
                     </body>
                     </html>
@@ -484,6 +497,24 @@ public class LottieFileViewer extends Application {
             });
         } catch (IOException e) {
             logger.severe("Failed to load Lottie file in WebView: " + e.getMessage());
+        }
+    }
+
+    private void updateBackgroundColor() {
+        // Update FX player background
+        if (lottiePlayer != null) {
+            lottiePlayer.setBackgroundColor(backgroundColor);
+        }
+
+        // Update JS player background
+        try {
+            var colorHex = String.format("#%02X%02X%02X",
+                    (int) (backgroundColor.getRed() * 255),
+                    (int) (backgroundColor.getGreen() * 255),
+                    (int) (backgroundColor.getBlue() * 255));
+            webEngine.executeScript("window.setBackgroundColor('" + colorHex + "')");
+        } catch (Exception e) {
+            logger.warning("Failed to update JS background color: " + e.getMessage());
         }
     }
 }
