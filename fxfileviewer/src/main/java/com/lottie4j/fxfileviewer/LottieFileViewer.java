@@ -41,7 +41,7 @@ public class LottieFileViewer extends Application {
 
     static {
         Logger rootLogger = LogManager.getLogManager().getLogger("");
-        Logger.getLogger("com.lottie4j").setLevel(Level.INFO);
+        Logger.getLogger("com.lottie4j.fxplayer").setLevel(Level.INFO);
         rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
     }
 
@@ -306,13 +306,6 @@ public class LottieFileViewer extends Application {
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = getInPoint();
-
-            // Ensure JS player also starts at the initial frame
-            try {
-                webEngine.executeScript("window.seekToFrame(" + getInPoint() + ")");
-            } catch (Exception e) {
-                logger.warning("Failed to initialize JS animation frame: " + e.getMessage());
-            }
         } catch (IOException e) {
             logger.severe("Failed to load animation: " + e.getMessage());
             showError("Failed to load animation: " + e.getMessage());
@@ -482,10 +475,6 @@ public class LottieFileViewer extends Application {
                     """.formatted(width, height, width, height, escapedJson);
 
             webEngine.loadContent(html);
-            webEngine.documentProperty().addListener((obs, oldDoc, newDoc) -> {
-                // Start the animation if the page is loaded
-                startAnimation();
-            });
         } catch (IOException e) {
             logger.severe("Failed to load Lottie file in WebView: " + e.getMessage());
         }
