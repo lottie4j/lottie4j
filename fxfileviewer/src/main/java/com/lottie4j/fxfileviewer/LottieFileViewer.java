@@ -56,10 +56,8 @@ public class LottieFileViewer extends Application {
     private Slider frameSlider;
     private Label frameLabel;
     private Label fpsLabel;
-    private ProgressBar progressBar;
     private LottiePlayer lottiePlayer;
     private WebEngine webEngine;
-    private Object jsAnimation;
 
     @Override
     public void start(Stage primaryStage) {
@@ -102,7 +100,7 @@ public class LottieFileViewer extends Application {
         root.setTop(createMenuBar(primaryStage));
 
         // Set up scene
-        Scene scene = new Scene(root, 1400, 800);
+        Scene scene = new Scene(root, 1600, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -130,7 +128,6 @@ public class LottieFileViewer extends Application {
             currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
-            progressBar.setProgress(0);
         }
     }
 
@@ -265,6 +262,10 @@ public class LottieFileViewer extends Application {
             // Show new LottiePlayer
             lottiePlayer = new LottiePlayer(animation, true);
 
+            // Get animation size
+            var width = animation.width() != null ? animation.width() : 500;
+            var height = animation.height() != null ? animation.height() : 500;
+
             // Update the JavaFX player box
             HBox playersBox = (HBox) root.getCenter();
             VBox javaFXPlayerBox = (VBox) playersBox.getChildren().get(0);
@@ -272,9 +273,10 @@ public class LottieFileViewer extends Application {
                 javaFXPlayerBox.getChildren().remove(1);
             }
             javaFXPlayerBox.getChildren().add(lottiePlayer);
+            javaFXPlayerBox.setPrefSize(width, height);
 
             // Load animation into JavaScript player
-            loadLottieInWebView(file);
+            loadLottieInWebView(file, width, height);
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
@@ -282,14 +284,19 @@ public class LottieFileViewer extends Application {
                     currentFrame = newVal.intValue();
                     frameSlider.setValue(currentFrame);
                     updateFrameLabel();
-                    double progress = (double) (currentFrame - getInPoint()) / (getOutPoint() - getInPoint());
-                    progressBar.setProgress(progress);
                 }
             });
 
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = getInPoint();
+
+            // Ensure JS player also starts at the initial frame
+            try {
+                webEngine.executeScript("window.seekToFrame(" + getInPoint() + ")");
+            } catch (Exception e) {
+                logger.warning("Failed to initialize JS animation frame: " + e.getMessage());
+            }
         } catch (IOException e) {
             logger.severe("Failed to load animation: " + e.getMessage());
             showError("Failed to load animation: " + e.getMessage());
@@ -333,7 +340,6 @@ public class LottieFileViewer extends Application {
             currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
-            progressBar.setProgress(0);
             startButton.setDisable(false);
 
             // Stop JS player as well
@@ -400,7 +406,7 @@ public class LottieFileViewer extends Application {
         return linkBox;
     }
 
-    private void loadLottieInWebView(File lottieFile) {
+    private void loadLottieInWebView(File lottieFile, int width, int height) {
         try {
             // Read the Lottie JSON file
             String lottieJson = Files.readString(lottieFile.toPath());
@@ -421,16 +427,16 @@ public class LottieFileViewer extends Application {
                             body {
                                 margin: 0;
                                 padding: 0;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                height: 100vh;
+                                width: %spx;
+                                height: %spx;
                                 background-color: #ffffff;
                                 overflow: hidden;
                             }
                             #lottie-container {
-                                width: 500px;
-                                height: 500px;
+                                width: %spx;
+                                height: %spx;
+                                margin: 0;
+                                padding: 0;
                             }
                         </style>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
@@ -444,31 +450,38 @@ public class LottieFileViewer extends Application {
                                 renderer: 'svg',
                                 loop: true,
                                 autoplay: false,
-                                animationData: animationData
+                                animationData: animationData,
+                                rendererSettings: {
+                                    preserveAspectRatio: 'xMidYMid meet'
+                                }
                             });
-
+                    
                             // Expose control functions to JavaFX
                             window.playAnimation = function() {
                                 animation.play();
                             };
-
+                    
                             window.pauseAnimation = function() {
                                 animation.pause();
                             };
-
+                    
                             window.stopAnimation = function() {
                                 animation.stop();
                             };
-
+                    
                             window.seekToFrame = function(frame) {
                                 animation.goToAndStop(frame, true);
                             };
                         </script>
                     </body>
                     </html>
-                    """.formatted(escapedJson);
+                    """.formatted(width, height, width, height, escapedJson);
 
             webEngine.loadContent(html);
+            webEngine.documentProperty().addListener((obs, oldDoc, newDoc) -> {
+                // Start the animation if the page is loaded
+                startAnimation();
+            });
         } catch (IOException e) {
             logger.severe("Failed to load Lottie file in WebView: " + e.getMessage());
         }

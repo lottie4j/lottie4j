@@ -100,8 +100,12 @@ public class LottiePlayer extends Canvas {
         if (isPlaying) return;
 
         isPlaying = true;
-        startTime = System.nanoTime();
-        currentFrameProperty.set(getInPoint());
+
+        // Calculate the time offset based on current frame position
+        double currentFrame = currentFrameProperty.get();
+        double frameOffset = currentFrame - getInPoint();
+        double timeOffset = frameOffset / getFramesPerSecond();
+        startTime = System.nanoTime() - (long)(timeOffset * 1_000_000_000.0);
 
         animationTimer = new AnimationTimer() {
             @Override
