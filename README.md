@@ -79,11 +79,3 @@ public class DemoApplication extends Application {
     * Uses `core` and `fxplayer` libraries.
     * This repo contains test files in `src/main/resources`, of which some were downloaded
       as [free samples from lottiefiles.com](https://lottiefiles.com/featured-free-animations).
-
-## More Info About Lottie Files
-
-https://lottiefiles.github.io/lottie-docs/
-Meet LottieDocs, the ultimate guide to the Lottie format!
-This document contains a human-readable description of the Lottie format, complete with interactive examples, a JSON
-editor to help you debug issues & more.
-Watch the video tutorial at https://youtu.be/uHxi9nEfUR0
