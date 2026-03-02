@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.lottie4j</groupId>
         <artifactId>lottie4j</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>fxfileviewer</artifactId>
@@ -16,7 +16,7 @@
         <dependency>
             <groupId>com.lottie4j</groupId>
             <artifactId>core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
 
@@ -39,7 +39,7 @@
         <dependency>
             <groupId>com.lottie4j</groupId>
             <artifactId>fxplayer</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
@@ -77,6 +77,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -14,7 +14,18 @@ More info is available on [lottie4j.com/lottie-format](https://lottie4j.com/lott
 
 ## Showing a Lottie Animation in a JavaFX Application
 
-This is the minimal code needed to display a Lottie animation:
+Add the dependency in your `pom.xml`:
+
+```xml
+
+<dependency>
+    <groupId>com.lottie4j</groupId>
+    <artifactId>fxplayer</artifactId>
+    <version>${lottie4j.version}</version>
+</dependency>
+```
+
+This is the minimal code needed to display a Lottie animation.
 
 ```java
 import com.lottie4j.core.loader.LottieFileLoader;
