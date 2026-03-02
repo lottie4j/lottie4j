@@ -1,40 +1,27 @@
 name: Release to Maven Central
 
 on:
-  issues:
-    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
   release:
-    if: github.event.label.name == 'approved-for-release'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Parse release version from issue
-        id: parse
+      - name: Validate version format
         run: |
-          VERSION=$(echo "${{ github.event.issue.title }}" | grep -oP 'Release version \K[0-9]+\.[0-9]+\.[0-9]+')
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not parse version from issue title. Expected format: 'Release version X.Y.Z'"
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format. Expected format: X.Y.Z (e.g., 1.0.0)"
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Parsed version: $VERSION"
-
-      - name: Comment on issue - Starting release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🚀 Starting release process for version ${{ steps.parse.outputs.version }}...'
-            })
 
       - uses: actions/checkout@v4
         with:
@@ -54,50 +41,18 @@ jobs:
 
       - name: Update version in POM
         run: |
-          mvn versions:set -DnewVersion=${{ steps.parse.outputs.version }} -DgenerateBackupPoms=false
+          mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
 
       - name: Build and publish release
-        run: |
-          mvn -Prelease clean deploy -DskipTests
+        run: mvn -Prelease clean deploy
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Git tag and push
+      - name: Create and push Git tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a v${{ steps.parse.outputs.version }} -m "Release version ${{ steps.parse.outputs.version }}"
-          git push origin v${{ steps.parse.outputs.version }}
-
-      - name: Comment on issue - Success
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ Release ${{ steps.parse.outputs.version }} completed successfully!\n\nArtifacts published:\n- `com.lottie4j:core:${{ steps.parse.outputs.version }}`\n- `com.lottie4j:fxplayer:${{ steps.parse.outputs.version }}`'
-            })
-            github.rest.issues.update({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
-              labels: ['approved-for-release', 'released']
-            })
-
-      - name: Comment on issue - Failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ Release ${{ steps.parse.outputs.version }} failed. Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
-            })
+          git tag -a v${{ inputs.version }} -m "Release version ${{ inputs.version }}"
+          git push origin v${{ inputs.version }}
