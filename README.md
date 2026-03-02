@@ -66,6 +66,8 @@ public class DemoApplication extends Application {
     * JavaFX application to show a Lottie animation.
     * Visualizes the structure of the Lottie file.
     * Uses `core` and `fxplayer` libraries.
+    * This repo contains test files in `src/main/resources`, of which some were downloaded
+      as [free samples from lottiefiles.com](https://lottiefiles.com/featured-free-animations).
 
 ## More Info About Lottie Files
 
