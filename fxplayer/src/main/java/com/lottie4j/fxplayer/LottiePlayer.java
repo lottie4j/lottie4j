@@ -39,21 +39,47 @@ public class LottiePlayer extends Canvas {
     private boolean debug = false;
     private Color backgroundColor = Color.WHITE;
 
+    /**
+     * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
+     *
+     * @param animation {@link Animation}
+     */
     public LottiePlayer(Animation animation) {
         this(animation, false);
     }
 
+    /**
+     * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
+     *
+     * @param animation {@link Animation}
+     * @param debug     Flag to define if debug info should be displayed on top of the animation
+     */
     public LottiePlayer(Animation animation, boolean debug) {
         this(animation,
-             animation.width() != null ? animation.width() : 500,
-             animation.height() != null ? animation.height() : 500,
-             debug);
+                animation.width() != null ? animation.width() : 500,
+                animation.height() != null ? animation.height() : 500,
+                debug);
     }
 
+    /**
+     * Creates a player with the specified dimensions.
+     *
+     * @param animation {@link Animation}
+     * @param width     Specifies the width of the canvas
+     * @param height    Specifies the height of the canvas
+     */
     public LottiePlayer(Animation animation, int width, int height) {
         this(animation, width, height, false);
     }
 
+    /**
+     * Creates a player with the specified dimensions.
+     *
+     * @param animation {@link Animation}
+     * @param width     Specifies the width of the canvas
+     * @param height    Specifies the height of the canvas
+     * @param debug     Flag to define if debug info should be displayed on top of the animation
+     */
     public LottiePlayer(Animation animation, int width, int height, boolean debug) {
         this.animation = animation;
         this.debug = debug;
@@ -263,12 +289,16 @@ public class LottiePlayer extends Canvas {
                     }
                 }
 
-                // Second pass: render shapes, passing down layer-level modifiers
-                for (BaseShape shape : layer.shapes()) {
+                // Second pass: render shapes in REVERSE order (bottom-to-top: last shape renders first)
+                for (int i = layer.shapes().size() - 1; i >= 0; i--) {
+                    BaseShape shape = layer.shapes().get(i);
+
                     // Skip modifiers and styles - they're applied within groups/shapes
                     if (shape instanceof TrimPath) {
                         continue;
                     }
+
+                    logger.fine("Shape class: " + shape.getClass().getSimpleName() + ", type: " + shape.type() + ", shapeGroup: " + shape.type().shapeGroup());
 
                     switch (shape.type().shapeGroup()) {
                         case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
@@ -426,6 +456,9 @@ public class LottiePlayer extends Canvas {
         }
         if (shape instanceof Group group) {
             logger.fine("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
+            if ("Group 1".equals(group.name())) {
+                logger.warning("*** GROUP 1 DETECTED - SPECIAL LOGGING ENABLED ***");
+            }
             gc.save();
 
             // Extract Transform and TrimPath from the group's shapes

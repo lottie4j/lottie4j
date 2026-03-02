@@ -46,10 +46,13 @@ public class PathRenderer implements ShapeRenderer {
         List<List<Double>> tangentsIn = bezierDef.tangentsIn();
         List<List<Double>> tangentsOut = bezierDef.tangentsOut();
 
+        if (vertices.size() == 8) {
+            logger.warning("*** 8-VERTEX F-LOGO PATH: " + path.name() + " ***");
+        }
         logger.fine("Path '" + path.name() + "' - vertices: " + vertices.size() +
-                   ", closed: " + bezierDef.closed());
+                ", closed: " + bezierDef.closed());
         if (!vertices.isEmpty()) {
-            logger.fine("  First vertex: " + vertices.get(0));
+            logger.finer("  First vertex: " + vertices.get(0));
         }
 
         boolean first = true;
@@ -89,8 +92,31 @@ public class PathRenderer implements ShapeRenderer {
             }
         }
 
-        if (bezierDef.closed() != null && bezierDef.closed()) {
-            gc.closePath();
+        // Handle closing bezier curve from last vertex back to first vertex
+        if (bezierDef.closed() != null && bezierDef.closed() && vertices.size() > 1) {
+            int lastIdx = vertices.size() - 1;
+            if (tangentsIn != null && tangentsOut != null &&
+                    lastIdx < tangentsOut.size() && 0 < tangentsIn.size()) {
+
+                List<Double> lastTangentOut = tangentsOut.get(lastIdx);
+                List<Double> firstTangentIn = tangentsIn.get(0);
+
+                if (lastTangentOut.size() >= 2 && firstTangentIn.size() >= 2) {
+                    List<Double> lastVertex = vertices.get(lastIdx);
+                    List<Double> firstVertex = vertices.get(0);
+
+                    double cp1x = lastVertex.get(0) + lastTangentOut.get(0);
+                    double cp1y = lastVertex.get(1) + lastTangentOut.get(1);
+                    double cp2x = firstVertex.get(0) + firstTangentIn.get(0);
+                    double cp2y = firstVertex.get(1) + firstTangentIn.get(1);
+
+                    gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
+                } else {
+                    gc.closePath();
+                }
+            } else {
+                gc.closePath();
+            }
         }
 
         // Apply fill and stroke from parent group
@@ -100,7 +126,7 @@ public class PathRenderer implements ShapeRenderer {
             Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
-            logger.fine("  Applying gradient fill, opacity: " + opacity);
+            logger.finer("  Applying gradient fill, opacity: " + opacity);
             if (opacity < 1.0) {
                 double currentAlpha = gc.getGlobalAlpha();
                 gc.setGlobalAlpha(currentAlpha * opacity);
@@ -211,8 +237,8 @@ public class PathRenderer implements ShapeRenderer {
         // If no next keyframe or we're at/past the last keyframe, use the current one
         if (nextKeyframe == null || prevKeyframe.beziers() == null || prevKeyframe.beziers().isEmpty()) {
             return prevKeyframe.beziers() != null && !prevKeyframe.beziers().isEmpty()
-                ? prevKeyframe.beziers().get(0)
-                : null;
+                    ? prevKeyframe.beziers().get(0)
+                    : null;
         }
 
         // If next keyframe has no bezier data, use previous
@@ -236,17 +262,17 @@ public class PathRenderer implements ShapeRenderer {
 
         // Interpolate vertices
         List<List<Double>> interpolatedVertices = interpolateVertices(
-            prevBezier.vertices(), nextBezier.vertices(), progress);
+                prevBezier.vertices(), nextBezier.vertices(), progress);
         List<List<Double>> interpolatedTangentsIn = interpolateVertices(
-            prevBezier.tangentsIn(), nextBezier.tangentsIn(), progress);
+                prevBezier.tangentsIn(), nextBezier.tangentsIn(), progress);
         List<List<Double>> interpolatedTangentsOut = interpolateVertices(
-            prevBezier.tangentsOut(), nextBezier.tangentsOut(), progress);
+                prevBezier.tangentsOut(), nextBezier.tangentsOut(), progress);
 
         return new BezierDefinition(
-            prevBezier.closed(),
-            interpolatedVertices,
-            interpolatedTangentsIn,
-            interpolatedTangentsOut
+                prevBezier.closed(),
+                interpolatedVertices,
+                interpolatedTangentsIn,
+                interpolatedTangentsOut
         );
     }
 
