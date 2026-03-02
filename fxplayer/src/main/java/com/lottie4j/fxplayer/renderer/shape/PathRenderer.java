@@ -46,6 +46,12 @@ public class PathRenderer implements ShapeRenderer {
         List<List<Double>> tangentsIn = bezierDef.tangentsIn();
         List<List<Double>> tangentsOut = bezierDef.tangentsOut();
 
+        logger.fine("Path '" + path.name() + "' - vertices: " + vertices.size() +
+                   ", closed: " + bezierDef.closed());
+        if (!vertices.isEmpty()) {
+            logger.fine("  First vertex: " + vertices.get(0));
+        }
+
         boolean first = true;
         for (int i = 0; i < vertices.size(); i++) {
             List<Double> vertex = vertices.get(i);
@@ -94,6 +100,7 @@ public class PathRenderer implements ShapeRenderer {
             Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
+            logger.fine("  Applying gradient fill, opacity: " + opacity);
             if (opacity < 1.0) {
                 double currentAlpha = gc.getGlobalAlpha();
                 gc.setGlobalAlpha(currentAlpha * opacity);
@@ -103,20 +110,29 @@ public class PathRenderer implements ShapeRenderer {
         } else {
             var fillStyle = getFillStyle(parentGroup);
             if (fillStyle.isPresent()) {
-                gc.setFill(fillStyle.get().getColor(frame));
+                var fillColor = fillStyle.get().getColor(frame);
+                logger.fine("  Applying fill: " + fillColor);
+                gc.setFill(fillColor);
                 gc.fill();
+            } else {
+                logger.fine("  No fill style found");
             }
         }
 
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            gc.setStroke(strokeStyle.get().getColor(frame));
-            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
+            var strokeColor = strokeStyle.get().getColor(frame);
+            var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
+            logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth);
+            gc.setStroke(strokeColor);
+            gc.setLineWidth(strokeWidth);
 
             // Apply line cap and join
             applyStrokeStyle(gc, strokeStyle.get().stroke);
 
             gc.stroke();
+        } else {
+            logger.fine("  No stroke style found");
         }
 
         gc.restore();

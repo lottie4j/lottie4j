@@ -41,7 +41,8 @@ public class LottieFileViewer extends Application {
 
     static {
         Logger rootLogger = LogManager.getLogManager().getLogger("");
-        Logger.getLogger("com.lottie4j.fxplayer").setLevel(Level.INFO);
+        Logger.getLogger("com.lottie4j").setLevel(Level.FINE);
+        rootLogger.getHandlers()[0].setLevel(Level.FINE);
         rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
     }
 
@@ -269,13 +270,22 @@ public class LottieFileViewer extends Application {
             treeViewer.setPrefWidth(420);
             root.setRight(treeViewer);
 
-            // Show new LottiePlayer
-            lottiePlayer = new LottiePlayer(animation);
-            lottiePlayer.setBackgroundColor(backgroundColor);
-
             // Get animation size
-            var width = animation.width() != null ? animation.width() : 500;
-            var height = animation.height() != null ? animation.height() : 500;
+            var originalWidth = animation.width() != null ? animation.width() : 500;
+            var originalHeight = animation.height() != null ? animation.height() : 500;
+
+            // Scale down proportionally if width or height > 500
+            int width = originalWidth;
+            int height = originalHeight;
+            if (width > 500 || height > 500) {
+                double scale = Math.min(500.0 / width, 500.0 / height);
+                width = (int) (width * scale);
+                height = (int) (height * scale);
+            }
+
+            // Show new LottiePlayer with scaled size
+            lottiePlayer = new LottiePlayer(animation, width, height);
+            lottiePlayer.setBackgroundColor(backgroundColor);
 
             // Update the JavaFX player box
             var playersBox = (HBox) root.getCenter();
