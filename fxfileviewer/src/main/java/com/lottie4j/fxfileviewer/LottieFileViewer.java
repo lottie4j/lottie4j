@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -44,6 +45,16 @@ public class LottieFileViewer extends Application {
         Logger.getLogger("com.lottie4j").setLevel(Level.FINE);
         rootLogger.getHandlers()[0].setLevel(Level.FINE);
         rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
+
+        // Add file handler
+        try {
+            FileHandler fileHandler = new FileHandler("lottie4j.log");
+            fileHandler.setLevel(Level.FINE);
+            fileHandler.setFormatter(new CompactFormatter());
+            rootLogger.addHandler(fileHandler);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Canvas canvas;

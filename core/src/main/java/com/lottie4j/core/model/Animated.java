@@ -110,14 +110,23 @@ public record Animated(
         progress = Math.max(0, Math.min(1, progress));
 
         // Apply Bezier easing if available
+        double easedProgress = progress;
         if (prevKeyframe.easingOut() != null && prevKeyframe.easingIn() != null) {
-            progress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
+            easedProgress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
         }
 
         double startValue = getValueFromKeyframe(prevKeyframe, index);
         double endValue = getValueFromKeyframe(nextKeyframe, index);
 
-        return startValue + (endValue - startValue) * progress;
+        // Debug logging for rotation
+        if (index == 0 && (Math.abs(endValue - startValue) > 90 || (startValue >= 170 && startValue <= 190))) {
+            java.util.logging.Logger.getLogger("Animated").fine(
+                String.format("Rotation: frame=%.1f, kf[%.1f→%.1f], val[%.1f→%.1f], prog=%.3f→%.3f = %.1f",
+                    frame, startFrame, endFrame, startValue, endValue, progress, easedProgress,
+                    startValue + (endValue - startValue) * easedProgress));
+        }
+
+        return startValue + (endValue - startValue) * easedProgress;
     }
 
     public Double getValue(AnimatedValueType valueType, double frame) {

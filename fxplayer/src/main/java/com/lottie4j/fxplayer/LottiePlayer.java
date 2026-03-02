@@ -347,10 +347,11 @@ public class LottiePlayer extends Canvas {
         }
 
         // Render all layers in the precomposition in reverse order
-        // Use the normal renderLayer flow but with the precomp's layer map
+        // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
             Layer precompLayer = asset.layers().get(i);
             if (isLayerActiveAtFrame(precompLayer, frame)) {
+                logger.fine("Rendering precomp layer [" + i + "] ind=" + precompLayer.indexLayer() + " name='" + precompLayer.name() + "'");
                 renderPrecompLayer(gc, precompLayer, frame, precompLayersByIndex);
             }
         }
@@ -382,8 +383,11 @@ public class LottiePlayer extends Canvas {
                     }
                 }
 
-                // Second pass: render shapes, passing down layer-level modifiers
-                for (BaseShape shape : layer.shapes()) {
+                // Second pass: render shapes in REVERSE order, passing down layer-level modifiers
+                // Lottie renders shapes from last to first (last appears behind, first appears on top)
+                java.util.List<BaseShape> shapes = layer.shapes();
+                for (int i = shapes.size() - 1; i >= 0; i--) {
+                    BaseShape shape = shapes.get(i);
                     // Skip modifiers and styles - they're applied within groups/shapes
                     if (shape instanceof TrimPath) {
                         continue;
@@ -425,8 +429,39 @@ public class LottiePlayer extends Canvas {
         // Recursively apply parent's parent transforms first
         applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
 
-        // Then apply this parent's transform
-        applyLayerTransform(gc, parent, frame);
+        // Then apply this parent's transform (but NOT opacity - opacity doesn't inherit)
+        applyLayerTransformWithoutOpacity(gc, parent, frame);
+    }
+
+    private void renderChildrenAfterParent(GraphicsContext gc, Layer parent, double frame,
+                                           java.util.List<Layer> allLayers,
+                                           Map<Integer, Layer> precompLayersByIndex,
+                                           java.util.Set<Integer> renderedIndices) {
+        Integer parentInd = parent.indexLayer() != null ? parent.indexLayer().intValue() : null;
+        if (parentInd == null) return;
+
+        // Find and render all direct children of this parent in REVERSE order
+        // Render from high index to low so that lower indices appear on top
+        for (int i = allLayers.size() - 1; i >= 0; i--) {
+            Layer layer = allLayers.get(i);
+            Integer childInd = layer.indexLayer() != null ? layer.indexLayer().intValue() : null;
+            if (childInd == null) continue;
+
+            // Check if this layer is a child of the parent
+            if (layer.indexParent() != null && layer.indexParent().intValue() == parentInd) {
+                // Skip if already rendered
+                if (renderedIndices.contains(childInd)) continue;
+
+                if (isLayerActiveAtFrame(layer, frame)) {
+                    logger.fine("  -> Rendering child layer ind=" + childInd + " name='" + layer.name() + "' after parent '" + parent.name() + "'");
+                    renderPrecompLayer(gc, layer, frame, precompLayersByIndex);
+                    renderedIndices.add(childInd);
+
+                    // Recursively render this child's children
+                    renderChildrenAfterParent(gc, layer, frame, allLayers, precompLayersByIndex, renderedIndices);
+                }
+            }
+        }
     }
 
     private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {
@@ -456,9 +491,6 @@ public class LottiePlayer extends Canvas {
         }
         if (shape instanceof Group group) {
             logger.fine("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
-            if ("Group 1".equals(group.name())) {
-                logger.warning("*** GROUP 1 DETECTED - SPECIAL LOGGING ENABLED ***");
-            }
             gc.save();
 
             // Extract Transform and TrimPath from the group's shapes
@@ -664,11 +696,11 @@ public class LottiePlayer extends Canvas {
             logger.finer("No opacity transform");
         }
 
-        // Correct transform order for Lottie/After Effects:
+        // Correct transform order for Lottie/After Effects (matching group transform):
         // 1. Translate by position
-        // 2. Translate by -anchor (to move anchor to origin)
-        // 3. Apply rotation
-        // 4. Apply scale
+        // 2. Apply rotation
+        // 3. Apply scale
+        // 4. Translate by -anchor (to offset the coordinate system)
 
         // Step 1: Apply position
         if (layer.transform().position() != null) {
@@ -688,9 +720,9 @@ public class LottiePlayer extends Canvas {
 
         // Step 2: Apply rotation
         if (layer.transform().rotation() != null) {
-            double rotation = Math.toRadians(layer.transform().rotation().getValue(0, frame));
-            logger.finer("Rotating by: " + Math.toDegrees(rotation) + " degrees");
-            gc.rotate(rotation);
+            double rotationDegrees = layer.transform().rotation().getValue(0, frame);
+            logger.finer("Rotating by: " + rotationDegrees + " degrees");
+            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
         } else {
             logger.finer("No rotation transform");
         }
@@ -735,8 +767,8 @@ public class LottiePlayer extends Canvas {
             logger.finer("No scale transform");
         }
 
-        // Step 5: Apply anchor point offset (anchor point is the center of rotation/scale)
-        // This must be done AFTER rotation and scale, but effectively moves the origin
+        // Step 5: Apply anchor point offset (anchor point is the origin for transforms)
+        // This must be done AFTER rotation and scale
         if (layer.transform().anchor() != null) {
             double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
@@ -746,6 +778,102 @@ public class LottiePlayer extends Canvas {
         }
 
         logger.finer("=== LAYER TRANSFORM APPLIED ===");
+    }
+
+    /**
+     * Apply layer transform WITHOUT opacity - used for parent transforms where opacity should not inherit
+     */
+    private void applyLayerTransformWithoutOpacity(GraphicsContext gc, Layer layer, double frame) {
+        if (layer.transform() == null) {
+            logger.finer("No transform for layer: " + layer.name());
+            return;
+        }
+
+        // NOTE: Opacity is NOT applied here - this method is used for parent transforms
+        // where opacity should not be inherited by child layers
+
+        // Correct transform order for Lottie/After Effects (matching group transform):
+        // 1. Translate by position
+        // 2. Apply rotation
+        // 3. Apply scale
+        // 4. Translate by -anchor (to offset the coordinate system)
+
+        // Step 1: Apply position
+        if (layer.transform().position() != null) {
+            double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
+            double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
+            logger.finer("Translating by position (without opacity): " + x + ", " + y);
+
+            // Check for extreme values that might push content off-screen
+            if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
+                logger.warning("WARNING: Large translation values detected! x=" + x + ", y=" + y);
+            }
+
+            gc.translate(x, y);
+        } else {
+            logger.finer("No position transform");
+        }
+
+        // Step 2: Apply rotation
+        if (layer.transform().rotation() != null) {
+            double rotationDegrees = layer.transform().rotation().getValue(0, frame);
+            logger.finer("Rotating by (without opacity): " + rotationDegrees + " degrees");
+            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
+        } else {
+            logger.finer("No rotation transform");
+        }
+
+        // Step 3: Apply 3D rotation approximation (rx, ry)
+        // Approximate 3D rotation by scaling perpendicular axis
+        double rx3DScale = 1.0;
+        double ry3DScale = 1.0;
+
+        if (layer.transform().rx() != null) {
+            // X-axis rotation: scale Y dimension by cos(rx) for flip effect
+            double rxDegrees = layer.transform().rx().getValue(0, frame);
+            rx3DScale = Math.cos(Math.toRadians(rxDegrees));
+            logger.finer("Applying 3D X-axis rotation (without opacity): " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
+        }
+
+        if (layer.transform().ry() != null) {
+            // Y-axis rotation: scale X dimension by cos(ry) for flip effect
+            double ryDegrees = layer.transform().ry().getValue(0, frame);
+            ry3DScale = Math.cos(Math.toRadians(ryDegrees));
+            logger.finer("Applying 3D Y-axis rotation (without opacity): " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
+        }
+
+        // Step 4: Apply scale (combine regular scale with 3D rotation scale approximation)
+        if (layer.transform().scale() != null) {
+            double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, frame) / 100.0;
+            double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, frame) / 100.0;
+
+            // Apply 3D rotation approximation scaling
+            scaleX *= ry3DScale;
+            scaleY *= rx3DScale;
+
+            logger.finer("Scaling by (without opacity): " + scaleX + ", " + scaleY);
+
+            // Check for zero or negative scale that would make content invisible
+            if (scaleX <= 0 || scaleY <= 0) {
+                logger.warning("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
+            }
+
+            gc.scale(scaleX, scaleY);
+        } else {
+            logger.finer("No scale transform");
+        }
+
+        // Step 5: Apply anchor point offset (anchor point is the origin for transforms)
+        // This must be done AFTER rotation and scale
+        if (layer.transform().anchor() != null) {
+            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
+            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
+            logger.finer("Layer anchor (without opacity): " + anchorX + ", " + anchorY);
+            // Translate by negative anchor to offset the coordinate system
+            gc.translate(-anchorX, -anchorY);
+        }
+
+        logger.finer("=== LAYER TRANSFORM APPLIED (WITHOUT OPACITY) ===");
     }
 
     private void renderFrame(double frame) {
