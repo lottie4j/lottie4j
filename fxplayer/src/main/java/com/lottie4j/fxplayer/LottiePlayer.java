@@ -517,21 +517,26 @@ public class LottiePlayer extends Canvas {
             // Create a synthetic group that includes the effective trim path for renderers
             Group effectiveGroup = createGroupWithTrimPath(group, effectiveTrimPath);
 
-            // Render all non-transform/non-modifier shapes in reverse order
-            // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
-            for (int i = group.shapes().size() - 1; i >= 0; i--) {
-                BaseShape item = group.shapes().get(i);
-                if (item instanceof Transform || item instanceof TrimPath) {
-                    continue; // Skip modifiers, they're applied to the shapes
-                }
+            // Check if this group has multiple Path shapes with a single Fill (needs combined rendering)
+            boolean hasMultiplePaths = renderGroupWithCombinedPaths(group, effectiveGroup, frame, effectiveTrimPath);
 
-                switch (item.type().shapeGroup()) {
-                    case GROUP -> renderShapeTypeGroup(item, frame, effectiveTrimPath);
-                    case SHAPE -> renderShapeTypeShape(item, effectiveGroup, frame);
-                    case STYLE -> {
-                        // Skip - styles (Fill, Stroke, etc.) are handled within groups
+            if (!hasMultiplePaths) {
+                // Render all non-transform/non-modifier shapes in reverse order
+                // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
+                for (int i = group.shapes().size() - 1; i >= 0; i--) {
+                    BaseShape item = group.shapes().get(i);
+                    if (item instanceof Transform || item instanceof TrimPath) {
+                        continue; // Skip modifiers, they're applied to the shapes
                     }
-                    default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
+
+                    switch (item.type().shapeGroup()) {
+                        case GROUP -> renderShapeTypeGroup(item, frame, effectiveTrimPath);
+                        case SHAPE -> renderShapeTypeShape(item, effectiveGroup, frame);
+                        case STYLE -> {
+                            // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                        }
+                        default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
+                    }
                 }
             }
 
@@ -561,6 +566,155 @@ public class LottiePlayer extends Canvas {
                 original.numberOfProperties(),
                 newShapes
         );
+    }
+
+    /**
+     * Handle groups with multiple Path shapes that share a single Fill.
+     * These need to be rendered together with a fill rule to create holes/rings.
+     * Returns true if the group was rendered as combined paths, false otherwise.
+     */
+    private boolean renderGroupWithCombinedPaths(Group group, Group effectiveGroup, double frame, TrimPath effectiveTrimPath) {
+        // Count Path shapes and check for Fill
+        java.util.List<com.lottie4j.core.model.shape.shape.Path> paths = new java.util.ArrayList<>();
+        com.lottie4j.core.model.shape.style.Fill fill = null;
+
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof com.lottie4j.core.model.shape.shape.Path path) {
+                paths.add(path);
+            } else if (item instanceof com.lottie4j.core.model.shape.style.Fill f) {
+                fill = f;
+            }
+        }
+
+        // Only use combined rendering if we have multiple paths with a fill
+        if (paths.size() < 2 || fill == null) {
+            return false;
+        }
+
+        logger.fine("Rendering " + paths.size() + " combined paths with fill rule for group: " + group.name());
+
+        // Set fill rule
+        javafx.scene.shape.FillRule fxFillRule = fill.fillRule() == com.lottie4j.core.definition.FillRule.EVEN_ODD ?
+                javafx.scene.shape.FillRule.EVEN_ODD : javafx.scene.shape.FillRule.NON_ZERO;
+
+        gc.save();
+        gc.setFillRule(fxFillRule);
+        gc.beginPath();
+
+        // Add all paths to the canvas path in reverse order (last to first)
+        for (int i = paths.size() - 1; i >= 0; i--) {
+            addPathToCanvas(paths.get(i), frame);
+        }
+
+        // Apply fill color and opacity
+        var fillColor = new com.lottie4j.fxplayer.element.FillStyle(fill).getColor(frame);
+        gc.setFill(fillColor);
+
+        double fillOpacity = fill.opacity() != null ? fill.opacity().getValue(0, frame) / 100.0 : 1.0;
+        if (fillOpacity < 1.0) {
+            double currentAlpha = gc.getGlobalAlpha();
+            gc.setGlobalAlpha(currentAlpha * fillOpacity);
+        }
+
+        gc.fill();
+        gc.restore();
+
+        // Render any nested groups
+        for (int i = group.shapes().size() - 1; i >= 0; i--) {
+            BaseShape item = group.shapes().get(i);
+            if (item.type().shapeGroup() == com.lottie4j.core.definition.ShapeGroup.GROUP) {
+                renderShapeTypeGroup(item, frame, effectiveTrimPath);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Add a Path shape's bezier curves to the current canvas path
+     */
+    private void addPathToCanvas(com.lottie4j.core.model.shape.shape.Path path, double frame) {
+        if (path.bezier() == null) return;
+
+        com.lottie4j.core.model.bezier.BezierDefinition bezierDef;
+        if (path.bezier() instanceof com.lottie4j.core.model.bezier.FixedBezier fixedBezier) {
+            bezierDef = fixedBezier.bezier();
+        } else if (path.bezier() instanceof com.lottie4j.core.model.bezier.AnimatedBezier animatedBezier) {
+            bezierDef = getInterpolatedBezier(animatedBezier, frame);
+        } else {
+            return;
+        }
+
+        if (bezierDef == null || bezierDef.vertices() == null || bezierDef.vertices().isEmpty()) return;
+
+        java.util.List<java.util.List<Double>> vertices = bezierDef.vertices();
+        java.util.List<java.util.List<Double>> tangentsIn = bezierDef.tangentsIn();
+        java.util.List<java.util.List<Double>> tangentsOut = bezierDef.tangentsOut();
+
+        boolean first = true;
+        for (int i = 0; i < vertices.size(); i++) {
+            java.util.List<Double> vertex = vertices.get(i);
+            if (vertex.size() < 2) continue;
+
+            double x = vertex.get(0);
+            double y = vertex.get(1);
+
+            if (first) {
+                gc.moveTo(x, y);
+                first = false;
+            } else {
+                if (tangentsIn != null && tangentsOut != null &&
+                        i - 1 < tangentsOut.size() && i < tangentsIn.size()) {
+                    java.util.List<Double> prevTangentOut = tangentsOut.get(i - 1);
+                    java.util.List<Double> currentTangentIn = tangentsIn.get(i);
+
+                    if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
+                        java.util.List<Double> prevVertex = vertices.get(i - 1);
+                        double cp1x = prevVertex.get(0) + prevTangentOut.get(0);
+                        double cp1y = prevVertex.get(1) + prevTangentOut.get(1);
+                        double cp2x = x + currentTangentIn.get(0);
+                        double cp2y = y + currentTangentIn.get(1);
+                        gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+                    } else {
+                        gc.lineTo(x, y);
+                    }
+                } else {
+                    gc.lineTo(x, y);
+                }
+            }
+        }
+
+        // Handle closing bezier curve
+        if (bezierDef.closed() != null && bezierDef.closed() && vertices.size() > 1) {
+            int lastIdx = vertices.size() - 1;
+            if (tangentsIn != null && tangentsOut != null &&
+                    lastIdx < tangentsOut.size() && 0 < tangentsIn.size()) {
+                java.util.List<Double> lastTangentOut = tangentsOut.get(lastIdx);
+                java.util.List<Double> firstTangentIn = tangentsIn.get(0);
+                if (lastTangentOut.size() >= 2 && firstTangentIn.size() >= 2) {
+                    java.util.List<Double> lastVertex = vertices.get(lastIdx);
+                    java.util.List<Double> firstVertex = vertices.get(0);
+                    double cp1x = lastVertex.get(0) + lastTangentOut.get(0);
+                    double cp1y = lastVertex.get(1) + lastTangentOut.get(1);
+                    double cp2x = firstVertex.get(0) + firstTangentIn.get(0);
+                    double cp2y = firstVertex.get(1) + firstTangentIn.get(1);
+                    gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
+                    // Note: Don't call closePath() here - JavaFX will handle it
+                } else {
+                    gc.closePath();
+                }
+            } else {
+                gc.closePath();
+            }
+        }
+    }
+
+    private com.lottie4j.core.model.bezier.BezierDefinition getInterpolatedBezier(
+            com.lottie4j.core.model.bezier.AnimatedBezier animatedBezier, double frame) {
+        // This method should already exist in PathRenderer - we need to extract it or duplicate it
+        // For now, return null and we'll need to implement it
+        logger.warning("Animated bezier not yet supported in combined path rendering");
+        return null;
     }
 
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
