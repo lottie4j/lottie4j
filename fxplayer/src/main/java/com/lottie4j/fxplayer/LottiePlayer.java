@@ -593,9 +593,9 @@ public class LottiePlayer extends Canvas {
 
         // Step 2: Apply rotation
         if (transform.rotation() != null) {
-            double rotation = Math.toRadians(transform.rotation().getValue(0, frame));
-            logger.finer("Group rotation: " + Math.toDegrees(rotation) + " degrees");
-            gc.rotate(rotation);
+            double rotationDegrees = transform.rotation().getValue(0, frame);
+            logger.finer("Group rotation: " + rotationDegrees + " degrees");
+            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
         }
 
         // Step 3: Apply scale

@@ -165,15 +165,10 @@ public class EllipseRenderer implements ShapeRenderer {
         start = start / 100.0;
         end = end / 100.0;
 
-        // Offset in Lottie: Based on testing with loading.json where offset goes 0→3
-        // and produces 2 total rotations (1 from layer + 1 from offset),
-        // offset=3 should contribute exactly 1 full rotation (360°)
-        // Therefore offset represents degrees where we divide by 360 to get rotations
-        // offset / 360 = rotations, so 3/360 is tiny...
-        // Actually, offset might be in a 0-3.6 range representing 0-360° when scaled by 100
-        // Testing: offset * (360/3) = offset * 120 gives us degrees
-        double offsetDegrees = offset * 120.0;  // Scale factor to convert to degrees
-        double offsetRotations = offsetDegrees / 360.0;
+        // Offset in Lottie is in degrees (can be positive or negative)
+        // For example: offset goes 0 → -360 → -720 for 2 full rotations
+        // Convert degrees to rotations (fraction of a full circle)
+        double offsetRotations = offset / 360.0;
 
         // Apply offset as rotations to both start and end positions
         start = start + offsetRotations;

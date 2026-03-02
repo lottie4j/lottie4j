@@ -9,7 +9,6 @@ module com.lottie4j.fxplayer {
 
     exports com.lottie4j.fxplayer;
     exports com.lottie4j.fxplayer.renderer.shape;
-    exports com.lottie4j.fxplayer.renderer.grouping;
     exports com.lottie4j.fxplayer.renderer.style;
 }
 
