@@ -14,6 +14,7 @@ import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
+import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeLineCap;
@@ -144,16 +145,24 @@ public class PathRenderer implements ShapeRenderer {
 
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            var strokeColor = strokeStyle.get().getColor(frame);
             var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
-            logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth);
-            gc.setStroke(strokeColor);
-            gc.setLineWidth(strokeWidth);
 
-            // Apply line cap and join
-            applyStrokeStyle(gc, strokeStyle.get().stroke);
+            if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
+                var strokeColor = strokeStyle.get().getColor(frame);
+                double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-            gc.stroke();
+                logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
+                           " (compensated: " + compensatedWidth + ")");
+                gc.setStroke(strokeColor);
+                gc.setLineWidth(compensatedWidth);
+
+                // Apply line cap and join
+                applyStrokeStyle(gc, strokeStyle.get().stroke);
+
+                gc.stroke();
+            } else {
+                logger.fine("  Skipping stroke with width: " + strokeWidth);
+            }
         } else {
             logger.fine("  No stroke style found");
         }

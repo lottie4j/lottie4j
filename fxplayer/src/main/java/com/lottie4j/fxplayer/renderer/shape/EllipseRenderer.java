@@ -12,6 +12,7 @@ import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
+import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ArcType;
@@ -97,9 +98,15 @@ public class EllipseRenderer implements ShapeRenderer {
             }
 
             if (strokeStyle.isPresent()) {
-                gc.setStroke(strokeStyle.get().getColor(frame));
-                gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
-                gc.strokeOval(renderX, renderY, width, height);
+                var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
+
+                if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
+                    double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+
+                    gc.setStroke(strokeStyle.get().getColor(frame));
+                    gc.setLineWidth(compensatedWidth);
+                    gc.strokeOval(renderX, renderY, width, height);
+                }
             }
         }
     }
@@ -204,9 +211,15 @@ public class EllipseRenderer implements ShapeRenderer {
         // Only stroke is affected by trim paths (not fill)
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            gc.setStroke(strokeStyle.get().getColor(frame));
-            gc.setLineWidth(strokeStyle.get().getStrokeWidth(frame));
-            gc.strokeArc(x, y, width, height, startAngle, -arcExtent, ArcType.OPEN);
+            var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
+
+            if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
+                double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+
+                gc.setStroke(strokeStyle.get().getColor(frame));
+                gc.setLineWidth(compensatedWidth);
+                gc.strokeArc(x, y, width, height, startAngle, -arcExtent, ArcType.OPEN);
+            }
         }
     }
 }
