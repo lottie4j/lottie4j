@@ -23,6 +23,7 @@ import javafx.scene.paint.Color;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -42,6 +43,7 @@ public class LottiePlayer extends Canvas {
     private boolean isPlaying = false;
     private boolean debug = false;
     private Color backgroundColor = Color.WHITE;
+    private Set<Integer> visibleLayerIndices = null;  // null means all layers visible
 
     /**
      * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
@@ -166,7 +168,7 @@ public class LottiePlayer extends Canvas {
 
                 double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
                 currentFrameProperty.set(newFrame);
-                renderFrame(newFrame);
+                render(newFrame, visibleLayerIndices);
             }
         };
 
@@ -184,7 +186,7 @@ public class LottiePlayer extends Canvas {
     public void seekToFrame(double frame) {
         double clampedFrame = Math.max(getInPoint(), Math.min(getOutPoint(), frame));
         currentFrameProperty.set(clampedFrame);
-        renderFrame(clampedFrame);
+        render(clampedFrame, visibleLayerIndices);
     }
 
     public DoubleProperty currentFrameProperty() {
@@ -192,9 +194,32 @@ public class LottiePlayer extends Canvas {
     }
 
     public void render(double frame) {
+        render(frame, null);
+    }
+
+    /**
+     * Render a specific frame with optional layer filtering
+     * @param frame Frame number to render
+     * @param visibleLayerIndices Set of layer indices to render, null to render all layers
+     */
+    public void render(double frame, Set<Integer> visibleLayerIndices) {
+        renderFrame(gc, frame, visibleLayerIndices);
+    }
+
+    /**
+     * Render a frame to a specific graphics context with optional layer filtering.
+     * Useful for generating thumbnails or rendering to custom canvases.
+     * @param gc Graphics context to render to
+     * @param frame Frame number to render
+     * @param visibleLayerIndices Set of layer indices to render, null to render all layers
+     */
+    public void renderFrame(GraphicsContext gc, double frame, Set<Integer> visibleLayerIndices) {
         logger.finer("=== RENDER START ===");
         logger.finer("Canvas dimensions: " + getWidth() + "x" + getHeight());
         logger.finer("Rendering frame: " + frame);
+        if (visibleLayerIndices != null) {
+            logger.finer("Visible layers: " + visibleLayerIndices);
+        }
 
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
         gc.setFill(backgroundColor);
@@ -242,6 +267,13 @@ public class LottiePlayer extends Canvas {
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
             logger.finer("Processing layer: " + layer.name());
+
+            // Skip layer if not in visible set (when filtering is active)
+            Integer layerIndex = layer.indexLayer() != null ? layer.indexLayer().intValue() : i;
+            if (visibleLayerIndices != null && !visibleLayerIndices.contains(layerIndex)) {
+                logger.finer("Skipping layer " + layer.name() + " (filtered out)");
+                continue;
+            }
 
             if (isLayerActiveAtFrame(layer, frame)) {
                 // Check if this layer uses a track matte (has tt set)
@@ -1336,6 +1368,26 @@ public class LottiePlayer extends Canvas {
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
         // Re-render current frame with new background
-        renderFrame(currentFrameProperty.get());
+        render(currentFrameProperty.get(), visibleLayerIndices);
+    }
+
+    /**
+     * Set which layers should be visible when rendering.
+     * @param visibleLayerIndices Set of layer indices to render, null to render all layers
+     */
+    public void setVisibleLayerIndices(Set<Integer> visibleLayerIndices) {
+        this.visibleLayerIndices = visibleLayerIndices;
+        // Re-render current frame with new visibility
+        if (!isPlaying) {
+            render(currentFrameProperty.get(), visibleLayerIndices);
+        }
+    }
+
+    /**
+     * Get the current visible layer indices.
+     * @return Set of visible layer indices, null if all layers are visible
+     */
+    public Set<Integer> getVisibleLayerIndices() {
+        return visibleLayerIndices;
     }
 }

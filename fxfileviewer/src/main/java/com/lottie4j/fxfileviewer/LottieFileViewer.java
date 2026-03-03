@@ -2,6 +2,8 @@ package com.lottie4j.fxfileviewer;
 
 import com.lottie4j.core.loader.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
+import com.lottie4j.fxfileviewer.component.LayerTileView;
+import com.lottie4j.fxfileviewer.component.LayerTreeView;
 import com.lottie4j.fxfileviewer.component.LottieTreeView;
 import com.lottie4j.fxfileviewer.util.CompactFormatter;
 import com.lottie4j.fxplayer.LottiePlayer;
@@ -86,6 +88,8 @@ public class LottieFileViewer extends Application {
     private File currentAnimationFile;
     private Button screenshotButton;
     private Button screenshotAllButton;
+    private LayerTreeView layerTreeView;
+    private LayerTileView layerTileView;
 
     @Override
     public void start(Stage primaryStage) {
@@ -219,6 +223,11 @@ public class LottieFileViewer extends Application {
                 lottiePlayer.seekToFrame(currentFrame);
                 updateFrameLabel();
 
+                // Update layer tree view current frame for thumbnail generation
+                if (layerTreeView != null) {
+                    layerTreeView.setCurrentFrame(currentFrame);
+                }
+
                 // Sync JS player frame
                 try {
                     webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
@@ -307,7 +316,15 @@ public class LottieFileViewer extends Application {
             // Show the lottie file structure
             var treeViewer = new LottieTreeView(file.getName(), animation);
             treeViewer.setPrefWidth(420);
-            root.setRight(treeViewer);
+
+            // Create layer tree view (will be populated after LottiePlayer is created)
+            TabPane rightPane = new TabPane();
+            Tab propertiesTab = new Tab("Properties", treeViewer);
+            propertiesTab.setClosable(false);
+            rightPane.getTabs().add(propertiesTab);
+
+            rightPane.setPrefWidth(420);
+            root.setRight(rightPane);
 
             // Get animation size
             var originalWidth = animation.width() != null ? animation.width() : 500;
@@ -325,6 +342,38 @@ public class LottieFileViewer extends Application {
             // Show new LottiePlayer with scaled size
             lottiePlayer = new LottiePlayer(animation, width, height);
             lottiePlayer.setBackgroundColor(backgroundColor);
+
+            // Create and add LayerTreeView tab
+            layerTreeView = new LayerTreeView(animation, lottiePlayer);
+            layerTreeView.setBackgroundColor(backgroundColor);
+            Tab layersTab = new Tab("Layers Tree", layerTreeView);
+            layersTab.setClosable(false);
+            rightPane.getTabs().add(layersTab);
+
+            // Create and add LayerTileView tab with live previews
+            layerTileView = new LayerTileView(animation, lottiePlayer.currentFrameProperty());
+            layerTileView.setBackgroundColor(backgroundColor);
+            Tab tilesTab = new Tab("Live Tiles", layerTileView);
+            tilesTab.setClosable(false);
+            rightPane.getTabs().add(tilesTab);
+
+            // Listen for layer visibility changes in tree view and update player
+            layerTreeView.getRoot().getChildren().forEach(treeItem -> {
+                if (treeItem.getValue().getType() == LayerTreeView.LayerNodeType.LAYER) {
+                    treeItem.getValue().getVisibleProperty().addListener((obs, oldVal, newVal) -> {
+                        // Update player's visible layer indices
+                        lottiePlayer.setVisibleLayerIndices(layerTreeView.getVisibleLayerIndices());
+                    });
+                }
+            });
+
+            // Listen for layer visibility changes in tile view and update player
+            layerTileView.getLayerVisibilityMap().forEach((layerIndex, visibleProperty) -> {
+                visibleProperty.addListener((obs, oldVal, newVal) -> {
+                    // Update player's visible layer indices
+                    lottiePlayer.setVisibleLayerIndices(layerTileView.getVisibleLayerIndices());
+                });
+            });
 
             // Update the JavaFX player box
             var playersBox = (HBox) root.getCenter();
@@ -533,6 +582,16 @@ public class LottieFileViewer extends Application {
         // Update FX player background
         if (lottiePlayer != null) {
             lottiePlayer.setBackgroundColor(backgroundColor);
+        }
+
+        // Update layer tree view background for preview windows
+        if (layerTreeView != null) {
+            layerTreeView.setBackgroundColor(backgroundColor);
+        }
+
+        // Update layer tile view background
+        if (layerTileView != null) {
+            layerTileView.setBackgroundColor(backgroundColor);
         }
 
         // Update JS player background
