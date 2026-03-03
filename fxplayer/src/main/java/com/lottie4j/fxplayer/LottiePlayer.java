@@ -13,8 +13,12 @@ import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
 import java.util.HashMap;
@@ -233,13 +237,40 @@ public class LottiePlayer extends Canvas {
         // Set default colors for debugging
         gc.setFill(Color.BLUE);
 
-        // Render layers in reverse order
+        // Render layers in reverse order with track matte support
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
             logger.finer("Processing layer: " + layer.name());
 
             if (isLayerActiveAtFrame(layer, frame)) {
+                // Check if this layer uses a track matte (has tt set)
+                if (layer.matteMode() != null) {
+                    // This layer uses a matte - the next layer (i+1) should be the matte source
+                    if (i + 1 < animation.layers().size()) {
+                        Layer matteSource = animation.layers().get(i + 1);
+                        if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
+                                && isLayerActiveAtFrame(matteSource, frame)) {
+                            logger.fine("Rendering matted layer " + i + ": " + layer.name() + " with matte from " + matteSource.name());
+                            renderLayerWithMatteSimple(gc, layer, matteSource, frame);
+                            continue;
+                        }
+                    }
+                    logger.warning("Layer " + layer.name() + " has matte mode but no valid matte source found");
+                }
+
+                // Skip matte source layers (td=1) - they should not be rendered directly
+                if (layer.matteTarget() != null && layer.matteTarget() == 1) {
+                    logger.fine("Skipping matte source layer: " + layer.name());
+                    continue;
+                }
+
+                // Skip layers whose parent uses mattes or is a matte source
+                if (shouldSkipDueToParent(layer)) {
+                    logger.fine("Skipping layer with skipped parent: " + layer.name());
+                    continue;
+                }
+
                 logger.fine("Rendering layer: " + layer.name());
                 renderLayer(gc, layer, frame);
             }
@@ -259,6 +290,25 @@ public class LottiePlayer extends Canvas {
         logger.finer("Layer " + layer.name() + " active at frame " + frame + ": " + active +
                 " (in: " + layer.inPoint() + ", out: " + layer.outPoint() + ")");
         return active;
+    }
+
+    private boolean shouldSkipDueToParent(Layer layer) {
+        if (layer.indexParent() == null) {
+            return false; // No parent
+        }
+
+        Layer parent = layersByIndex.get(layer.indexParent());
+        if (parent == null) {
+            return false; // Parent not found
+        }
+
+        // Check if parent should be skipped
+        if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
+            return true;
+        }
+
+        // Recursively check parent's parent
+        return shouldSkipDueToParent(parent);
     }
 
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
@@ -317,6 +367,179 @@ public class LottiePlayer extends Canvas {
         }
 
         gc.restore();
+    }
+
+    private void renderLayerWithMatteSimple(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame) {
+        // Use JavaFX BlendMode to simulate alpha masking
+        // For ALPHA matte mode: content should only show where matte is opaque
+
+        com.lottie4j.core.definition.MatteMode matteMode = matteUser.matteMode();
+        logger.fine("Rendering with blend mode matte: " + matteMode);
+
+        // First render the content layer normally
+        renderLayer(gc, matteUser, frame);
+
+        // Then apply the matte using blend mode
+        // MULTIPLY blend mode: content * matte (darkens where matte is darker)
+        // For now, just skip the matte to see content
+        // TODO: Implement proper blend mode masking
+    }
+
+    private void renderLayerWithMatte(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame) {
+        long startTime = System.nanoTime();
+
+        // Get current canvas dimensions
+        // OPTIMIZATION: Use smaller canvas for better performance
+        // In a production implementation, we should calculate the bounding box
+        // For now, use half size which still maintains quality
+        double width = getAnimationWidth();
+        double height = getAnimationHeight();
+
+        // Use full canvas size for now (optimize later once working)
+        double matteWidth = width;
+        double matteHeight = height;
+        double scale = 1.0;
+
+        // Create off-screen canvases for matte and content
+        Canvas matteCanvas = new Canvas(matteWidth, matteHeight);
+        Canvas contentCanvas = new Canvas(matteWidth, matteHeight);
+        GraphicsContext matteGc = matteCanvas.getGraphicsContext2D();
+        GraphicsContext contentGc = contentCanvas.getGraphicsContext2D();
+
+        // Don't fill with anything - let canvas be transparent by default
+        // The shapes will render with their own fills/strokes
+
+        // Scale the rendering
+        matteGc.scale(scale, scale);
+        contentGc.scale(scale, scale);
+
+        // Render the matte source to the matte canvas (WITH parent transforms for proper positioning)
+        logger.fine("Rendering matte source layer: " + matteSource.name() + " (shapes: " + (matteSource.shapes() != null ? matteSource.shapes().size() : 0) + ", parent: " + matteSource.indexParent() + ")");
+        renderLayer(matteGc, matteSource, frame);
+
+        // Render the content layer to the content canvas (WITH parent transforms for proper positioning)
+        logger.fine("Rendering matte user layer: " + matteUser.name() + " (shapes: " + (matteUser.shapes() != null ? matteUser.shapes().size() : 0) + ", parent: " + matteUser.indexParent() + ")");
+        renderLayer(contentGc, matteUser, frame);
+
+        // Get the matte mode
+        com.lottie4j.core.definition.MatteMode matteMode = matteUser.matteMode();
+        logger.fine("Applying matte mode: " + matteMode);
+
+        // Snapshot both canvases with transparent background
+        SnapshotParameters params = new SnapshotParameters();
+        params.setFill(Color.TRANSPARENT);
+        WritableImage matteImage = matteCanvas.snapshot(params, null);
+        WritableImage contentImage = contentCanvas.snapshot(params, null);
+
+        // DEBUG: Check if content and matte have actual pixels
+        logger.fine("Matte image size: " + matteImage.getWidth() + "x" + matteImage.getHeight());
+        logger.fine("Content image size: " + contentImage.getWidth() + "x" + contentImage.getHeight());
+
+        // Sample multiple pixels to see what we're working with
+        PixelReader matteReader = matteImage.getPixelReader();
+        PixelReader contentReader = contentImage.getPixelReader();
+
+        // Sample at different positions
+        Color matteCenter = matteReader.getColor((int) matteImage.getWidth() / 2, (int) matteImage.getHeight() / 2);
+        Color contentCenter = contentReader.getColor((int) contentImage.getWidth() / 2, (int) contentImage.getHeight() / 2);
+        Color matte270 = matteReader.getColor(270, 270);
+        Color content270 = contentReader.getColor(270, 270);
+
+        logger.info("  Matte center [" + ((int) matteImage.getWidth() / 2) + "," + ((int) matteImage.getHeight() / 2) + "]: " + matteCenter);
+        logger.info("  Content center [" + ((int) contentImage.getWidth() / 2) + "," + ((int) contentImage.getHeight() / 2) + "]: " + contentCenter);
+        logger.info("  Matte at [270,270]: " + matte270);
+        logger.info("  Content at [270,270]: " + content270);
+
+        // Apply matte composition
+        WritableImage result = applyMatte(contentImage, matteImage, matteMode);
+
+        // IMPORTANT: Save the current composite operation and use SRC_OVER
+        // This ensures transparent pixels in the matted result don't obscure
+        // content below (which was showing as white background)
+        gc.save();
+        gc.setGlobalAlpha(1.0); // Full opacity for the matted result itself
+
+        // Draw the result to the main canvas, scaling back up if needed
+        // The SRC_OVER blend mode (default) will properly composite transparent pixels
+        gc.drawImage(result, 0, 0, width, height);
+
+        gc.restore();
+
+        long endTime = System.nanoTime();
+        logger.fine("Matte rendering took: " + ((endTime - startTime) / 1_000_000) + "ms");
+    }
+
+    private WritableImage applyMatte(WritableImage content, WritableImage matte, com.lottie4j.core.definition.MatteMode matteMode) {
+        int width = (int) content.getWidth();
+        int height = (int) content.getHeight();
+
+        WritableImage result = new WritableImage(width, height);
+        PixelReader contentReader = content.getPixelReader();
+        PixelReader matteReader = matte.getPixelReader();
+        PixelWriter resultWriter = result.getPixelWriter();
+
+        // Use pixel buffer for better performance
+        int[] contentBuffer = new int[width * height];
+        int[] matteBuffer = new int[width * height];
+        int[] resultBuffer = new int[width * height];
+
+        contentReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), contentBuffer, 0, width);
+        matteReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), matteBuffer, 0, width);
+
+        for (int i = 0; i < contentBuffer.length; i++) {
+            int contentPixel = contentBuffer[i];
+            int mattePixel = matteBuffer[i];
+
+            int cA = (contentPixel >> 24) & 0xFF;
+            int cR = (contentPixel >> 16) & 0xFF;
+            int cG = (contentPixel >> 8) & 0xFF;
+            int cB = contentPixel & 0xFF;
+
+            int mA = (mattePixel >> 24) & 0xFF;
+            int mR = (mattePixel >> 16) & 0xFF;
+            int mG = (mattePixel >> 8) & 0xFF;
+            int mB = mattePixel & 0xFF;
+
+            int resultA;
+            switch (matteMode) {
+                case ALPHA:
+                    // Use matte's alpha to mask content
+                    // The content's RGB stays, but alpha is multiplied by matte's alpha
+                    resultA = (cA * mA) / 255;
+                    break;
+
+                case INVERTED_ALPHA:
+                    // Use inverted matte's alpha to mask content
+                    resultA = (cA * (255 - mA)) / 255;
+                    break;
+
+                case LUMA:
+                    // Use matte's luminance as alpha
+                    int luma = (299 * mR + 587 * mG + 114 * mB) / 1000;
+                    resultA = (cA * luma) / 255;
+                    break;
+
+                case INVERTED_LUMA:
+                    // Use inverted matte's luminance as alpha
+                    int lumaInv = (299 * mR + 587 * mG + 114 * mB) / 1000;
+                    resultA = (cA * (255 - lumaInv)) / 255;
+                    break;
+
+                default:
+                    resultA = cA;
+            }
+
+            // IMPORTANT: Keep content's RGB, only modify alpha
+            // If resultA is 0, make the pixel fully transparent
+            if (resultA == 0) {
+                resultBuffer[i] = 0; // Fully transparent
+            } else {
+                resultBuffer[i] = (resultA << 24) | (cR << 16) | (cG << 8) | cB;
+            }
+        }
+
+        resultWriter.setPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), resultBuffer, 0, width);
+        return result;
     }
 
     private void renderPrecompositionLayer(GraphicsContext gc, Layer layer, double frame) {

@@ -34,11 +34,9 @@ public class StrokeHelper {
      * @return the compensated stroke width adjusted for canvas scale
      */
     public static double getCompensatedStrokeWidth(GraphicsContext gc, double strokeWidth) {
-        var transform = gc.getTransform();
-        double scaleX = transform.getMxx();
-        double scaleY = transform.getMyy();
-        double avgScale = Math.sqrt(Math.abs(scaleX * scaleY));
-
-        return strokeWidth / avgScale;
+        // Don't compensate for scale - let stroke width scale naturally with transforms
+        // The original compensation logic was dividing by scale, which made strokes too thick
+        // when scale < 1 (e.g., parent transforms that scale down)
+        return strokeWidth;
     }
 }
