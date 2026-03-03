@@ -7,6 +7,7 @@ import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
+import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.core.model.shape.shape.Path;
 import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.core.model.shape.style.GradientFill;
@@ -20,6 +21,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -148,18 +150,65 @@ public class PathRenderer implements ShapeRenderer {
             var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
 
             if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
-                var strokeColor = strokeStyle.get().getColor(frame);
-                double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+                // Check for TrimPath - if present, we need special handling
+                var trimPath = getTrimPath(parentGroup);
+                if (trimPath.isPresent()) {
+                    double trimStart = trimPath.get().segmentStart() != null ?
+                            trimPath.get().segmentStart().getValue(0, frame) : 0;
+                    double trimEnd = trimPath.get().segmentEnd() != null ?
+                            trimPath.get().segmentEnd().getValue(0, frame) : 100;
 
-                logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
-                           " (compensated: " + compensatedWidth + ")");
-                gc.setStroke(strokeColor);
-                gc.setLineWidth(compensatedWidth);
+                    // Handle NaN values (animation interpolation bug at exact keyframe boundaries)
+                    if (Double.isNaN(trimStart)) {
+                        logger.warning("  TrimPath start is NaN at frame " + frame + ", defaulting to 0");
+                        trimStart = 0;
+                    }
+                    if (Double.isNaN(trimEnd)) {
+                        logger.warning("  TrimPath end is NaN at frame " + frame + ", using start value as fallback");
+                        // When end is NaN in a reversed path (start > end), use 0 to show full path
+                        // When end is NaN in a normal path, use start value to show nothing
+                        trimEnd = (trimStart > 50) ? 0 : trimStart;
+                    }
 
-                // Apply line cap and join
-                applyStrokeStyle(gc, strokeStyle.get().stroke);
+                    // Handle different trim cases
+                    logger.fine("  Path TrimPath: start=" + trimStart + ", end=" + trimEnd + " at frame " + frame);
+                    if (Math.abs(trimStart - trimEnd) < 0.01) {
+                        // Empty path - start and end are essentially the same
+                        logger.fine("  Path TrimPath is empty (start=" + trimStart + ", end=" + trimEnd + ") - skipping");
+                    } else if (trimStart >= 100 && trimEnd >= 100) {
+                        // Full path
+                        var strokeColor = strokeStyle.get().getColor(frame);
+                        double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+                        logger.fine("  TrimPath full path, rendering stroke: " + strokeColor + ", width: " + strokeWidth);
+                        gc.setStroke(strokeColor);
+                        gc.setLineWidth(compensatedWidth);
+                        applyStrokeStyle(gc, strokeStyle.get().stroke);
+                        gc.stroke();
+                    } else if (trimStart > trimEnd) {
+                        // Reversed trim: render from 0 to trimEnd, then from trimStart to 100
+                        // For simplicity, render the visible portion from trimEnd to trimStart
+                        logger.fine("  Reversed TrimPath (start=" + trimStart + ", end=" + trimEnd + ") - rendering from end to start");
+                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                trimEnd, trimStart, strokeStyle.get(), strokeWidth, frame);
+                    } else {
+                        // Normal trim: render from trimStart to trimEnd
+                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                trimStart, trimEnd, strokeStyle.get(), strokeWidth, frame);
+                    }
+                } else {
+                    var strokeColor = strokeStyle.get().getColor(frame);
+                    double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-                gc.stroke();
+                    logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
+                            " (compensated: " + compensatedWidth + ")");
+                    gc.setStroke(strokeColor);
+                    gc.setLineWidth(compensatedWidth);
+
+                    // Apply line cap and join
+                    applyStrokeStyle(gc, strokeStyle.get().stroke);
+
+                    gc.stroke();
+                }
             } else {
                 logger.fine("  Skipping stroke with width: " + strokeWidth);
             }
@@ -204,6 +253,284 @@ public class PathRenderer implements ShapeRenderer {
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<TrimPath> getTrimPath(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof TrimPath trimPath) {
+                return Optional.of(trimPath);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void renderTrimmedPath(GraphicsContext gc, List<List<Double>> vertices,
+                                   List<List<Double>> tangentsIn, List<List<Double>> tangentsOut,
+                                   Boolean closed, double trimStart, double trimEnd,
+                                   StrokeStyle strokeStyle, double strokeWidth, double frame) {
+        if (vertices.isEmpty()) return;
+
+        // Calculate segment lengths
+        List<Double> segmentLengths = new ArrayList<>();
+        double totalLength = 0;
+
+        for (int i = 0; i < vertices.size(); i++) {
+            int nextIdx = (i + 1) % vertices.size();
+            if (!closed && nextIdx == 0) break; // Don't include closing segment for open paths
+
+            double segmentLength = calculateSegmentLength(vertices, tangentsIn, tangentsOut, i, nextIdx);
+            segmentLengths.add(segmentLength);
+            totalLength += segmentLength;
+        }
+
+        if (totalLength == 0) return;
+
+        // Convert trim percentages to lengths
+        double startLength = (trimStart / 100.0) * totalLength;
+        double endLength = (trimEnd / 100.0) * totalLength;
+
+        logger.fine("  Rendering trimmed path: totalLength=" + totalLength + ", start=" + startLength + ", end=" + endLength);
+
+        // Build new path with only the trimmed portion
+        gc.save();
+        gc.beginPath();
+
+        double currentLength = 0;
+        boolean pathStarted = false;
+        int segmentsRendered = 0;
+
+        for (int i = 0; i < segmentLengths.size(); i++) {
+            double segmentLength = segmentLengths.get(i);
+            double segmentStart = currentLength;
+            double segmentEnd = currentLength + segmentLength;
+
+            int nextIdx = (i + 1) % vertices.size();
+            List<Double> vertex = vertices.get(i);
+            List<Double> nextVertex = vertices.get(nextIdx);
+
+            // Check if this segment overlaps with trim range
+            if (segmentEnd > startLength && segmentStart < endLength) {
+                double t0 = Math.max(0, (startLength - segmentStart) / segmentLength);
+                double t1 = Math.min(1, (endLength - segmentStart) / segmentLength);
+
+                logger.fine("    Segment " + i + ": segmentStart=" + segmentStart + ", segmentEnd=" + segmentEnd +
+                           ", t0=" + t0 + ", t1=" + t1);
+
+                // Get points at t0 and t1
+                double[] point0 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t0);
+                double[] point1 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t1);
+
+                logger.fine("    Point0: (" + point0[0] + ", " + point0[1] + "), Point1: (" + point1[0] + ", " + point1[1] + ")");
+
+                if (!pathStarted) {
+                    gc.moveTo(point0[0], point0[1]);
+                    pathStarted = true;
+                    logger.fine("    Path started with moveTo");
+                }
+
+                segmentsRendered++;
+
+                // Check if this is a bezier segment
+                if (tangentsIn != null && tangentsOut != null &&
+                        i < tangentsOut.size() && nextIdx < tangentsIn.size()) {
+                    List<Double> prevTangentOut = tangentsOut.get(i);
+                    List<Double> currentTangentIn = tangentsIn.get(nextIdx);
+
+                    if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
+                        // Subdivide the bezier curve for the trimmed portion
+                        double[] subdividedCP = subdivideBezierCurve(
+                                vertex.get(0), vertex.get(1),
+                                vertex.get(0) + prevTangentOut.get(0), vertex.get(1) + prevTangentOut.get(1),
+                                nextVertex.get(0) + currentTangentIn.get(0), nextVertex.get(1) + currentTangentIn.get(1),
+                                nextVertex.get(0), nextVertex.get(1),
+                                t0, t1
+                        );
+                        gc.bezierCurveTo(subdividedCP[0], subdividedCP[1], subdividedCP[2], subdividedCP[3], point1[0], point1[1]);
+                    } else {
+                        gc.lineTo(point1[0], point1[1]);
+                    }
+                } else {
+                    gc.lineTo(point1[0], point1[1]);
+                }
+            }
+
+            currentLength += segmentLength;
+        }
+
+        // Apply stroke
+        if (!pathStarted) {
+            logger.warning("  TrimPath: No path segments found to render (pathStarted=false)");
+        } else {
+            var strokeColor = strokeStyle.getColor(frame);
+            double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+
+            logger.fine("  Applying stroke: segmentsRendered=" + segmentsRendered +
+                       ", color=" + strokeColor + ", width=" + compensatedWidth);
+
+            if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
+                gc.setStroke(strokeColor);
+                gc.setLineWidth(compensatedWidth);
+                applyStrokeStyle(gc, strokeStyle.stroke);
+                gc.stroke();
+                logger.fine("  Stroke applied successfully");
+            } else {
+                logger.warning("  Stroke width too small to render: " + compensatedWidth);
+            }
+        }
+
+        gc.restore();
+    }
+
+    private double calculateSegmentLength(List<List<Double>> vertices,
+                                          List<List<Double>> tangentsIn,
+                                          List<List<Double>> tangentsOut,
+                                          int i, int nextIdx) {
+        List<Double> p0 = vertices.get(i);
+        List<Double> p3 = vertices.get(nextIdx);
+
+        // Check if we have bezier curves
+        if (tangentsIn != null && tangentsOut != null &&
+                i < tangentsOut.size() && nextIdx < tangentsIn.size()) {
+            List<Double> tangOut = tangentsOut.get(i);
+            List<Double> tangIn = tangentsIn.get(nextIdx);
+
+            if (tangOut.size() >= 2 && tangIn.size() >= 2) {
+                // Bezier curve - approximate length with sampling
+                double x0 = p0.get(0), y0 = p0.get(1);
+                double x1 = x0 + tangOut.get(0), y1 = y0 + tangOut.get(1);
+                double x2 = p3.get(0) + tangIn.get(0), y2 = p3.get(1) + tangIn.get(1);
+                double x3 = p3.get(0), y3 = p3.get(1);
+
+                return approximateBezierLength(x0, y0, x1, y1, x2, y2, x3, y3);
+            }
+        }
+
+        // Straight line
+        double dx = p3.get(0) - p0.get(0);
+        double dy = p3.get(1) - p0.get(1);
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    private double approximateBezierLength(double x0, double y0, double x1, double y1,
+                                           double x2, double y2, double x3, double y3) {
+        // Sample the curve at multiple points
+        int samples = 10;
+        double length = 0;
+        double prevX = x0, prevY = y0;
+
+        for (int i = 1; i <= samples; i++) {
+            double t = i / (double) samples;
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double mt = 1 - t;
+            double mt2 = mt * mt;
+            double mt3 = mt2 * mt;
+
+            double x = mt3 * x0 + 3 * mt2 * t * x1 + 3 * mt * t2 * x2 + t3 * x3;
+            double y = mt3 * y0 + 3 * mt2 * t * y1 + 3 * mt * t2 * y2 + t3 * y3;
+
+            double dx = x - prevX;
+            double dy = y - prevY;
+            length += Math.sqrt(dx * dx + dy * dy);
+
+            prevX = x;
+            prevY = y;
+        }
+
+        return length;
+    }
+
+    private double[] evaluateBezierSegment(List<List<Double>> vertices,
+                                           List<List<Double>> tangentsIn,
+                                           List<List<Double>> tangentsOut,
+                                           int i, int nextIdx, double t) {
+        List<Double> p0 = vertices.get(i);
+        List<Double> p3 = vertices.get(nextIdx);
+
+        // Check if we have bezier curves
+        if (tangentsIn != null && tangentsOut != null &&
+                i < tangentsOut.size() && nextIdx < tangentsIn.size()) {
+            List<Double> tangOut = tangentsOut.get(i);
+            List<Double> tangIn = tangentsIn.get(nextIdx);
+
+            if (tangOut.size() >= 2 && tangIn.size() >= 2) {
+                // Bezier curve
+                double x0 = p0.get(0), y0 = p0.get(1);
+                double x1 = x0 + tangOut.get(0), y1 = y0 + tangOut.get(1);
+                double x2 = p3.get(0) + tangIn.get(0), y2 = p3.get(1) + tangIn.get(1);
+                double x3 = p3.get(0), y3 = p3.get(1);
+
+                double t2 = t * t;
+                double t3 = t2 * t;
+                double mt = 1 - t;
+                double mt2 = mt * mt;
+                double mt3 = mt2 * mt;
+
+                double x = mt3 * x0 + 3 * mt2 * t * x1 + 3 * mt * t2 * x2 + t3 * x3;
+                double y = mt3 * y0 + 3 * mt2 * t * y1 + 3 * mt * t2 * y2 + t3 * y3;
+
+                return new double[]{x, y};
+            }
+        }
+
+        // Linear interpolation
+        double x = p0.get(0) + t * (p3.get(0) - p0.get(0));
+        double y = p0.get(1) + t * (p3.get(1) - p0.get(1));
+        return new double[]{x, y};
+    }
+
+    /**
+     * Subdivide a cubic bezier curve from parameter t0 to t1
+     * Returns the two new control points [cp1x, cp1y, cp2x, cp2y]
+     * Using proper bezier subdivision formula based on derivatives
+     */
+    private double[] subdivideBezierCurve(double x0, double y0, double x1, double y1,
+                                          double x2, double y2, double x3, double y3,
+                                          double t0, double t1) {
+        // For a cubic bezier B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
+        // Extract the portion from t0 to t1 and reparameterize to [0,1]
+
+        double dt = t1 - t0;
+
+        // Evaluate bezier and its derivative at t0
+        double mt0 = 1 - t0;
+        double mt0_2 = mt0 * mt0;
+        double mt0_3 = mt0_2 * mt0;
+        double t0_2 = t0 * t0;
+        double t0_3 = t0_2 * t0;
+
+        // Derivative at t0 (tangent direction)
+        double dpx = 3 * mt0_2 * (x1 - x0) + 6 * mt0 * t0 * (x2 - x1) + 3 * t0_2 * (x3 - x2);
+        double dpy = 3 * mt0_2 * (y1 - y0) + 6 * mt0 * t0 * (y2 - y1) + 3 * t0_2 * (y3 - y2);
+
+        // First control point: start point + (dt/3) * tangent
+        double p0x = mt0_3 * x0 + 3 * mt0_2 * t0 * x1 + 3 * mt0 * t0_2 * x2 + t0_3 * x3;
+        double p0y = mt0_3 * y0 + 3 * mt0_2 * t0 * y1 + 3 * mt0 * t0_2 * y2 + t0_3 * y3;
+        double cp1x = p0x + (dt / 3.0) * dpx;
+        double cp1y = p0y + (dt / 3.0) * dpy;
+
+        // Evaluate bezier and derivative at t1
+        double mt1 = 1 - t1;
+        double mt1_2 = mt1 * mt1;
+        double mt1_3 = mt1_2 * mt1;
+        double t1_2 = t1 * t1;
+        double t1_3 = t1_2 * t1;
+
+        double p3x = mt1_3 * x0 + 3 * mt1_2 * t1 * x1 + 3 * mt1 * t1_2 * x2 + t1_3 * x3;
+        double p3y = mt1_3 * y0 + 3 * mt1_2 * t1 * y1 + 3 * mt1 * t1_2 * y2 + t1_3 * y3;
+
+        // Derivative at t1
+        double dpx1 = 3 * mt1_2 * (x1 - x0) + 6 * mt1 * t1 * (x2 - x1) + 3 * t1_2 * (x3 - x2);
+        double dpy1 = 3 * mt1_2 * (y1 - y0) + 6 * mt1 * t1 * (y2 - y1) + 3 * t1_2 * (y3 - y2);
+
+        // Second control point: end point - (dt/3) * tangent
+        double cp2x = p3x - (dt / 3.0) * dpx1;
+        double cp2y = p3y - (dt / 3.0) * dpy1;
+
+        return new double[]{cp1x, cp1y, cp2x, cp2y};
     }
 
     private BezierDefinition getBezierDefinition(Path shape, double frame) {

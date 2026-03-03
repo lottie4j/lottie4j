@@ -92,8 +92,11 @@ public class EllipseRenderer implements ShapeRenderer {
                 var fillStyle = getFillStyle(parentGroup);
                 if (fillStyle.isPresent()) {
                     var fillColor = fillStyle.get().getColor(frame);
+                    logger.info("Ellipse fill found - color: " + fillColor + ", position: (" + renderX + "," + renderY + "), size: " + width + "x" + height);
                     gc.setFill(fillColor);
                     gc.fillOval(renderX, renderY, width, height);
+                } else {
+                    logger.info("Ellipse NO fill found for parentGroup");
                 }
             }
 
@@ -208,7 +211,32 @@ public class EllipseRenderer implements ShapeRenderer {
 
         logger.fine("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
 
-        // Only stroke is affected by trim paths (not fill)
+        // Fill the entire ellipse (not affected by trim path)
+        var gradientFillStyle = getGradientFillStyle(parentGroup);
+        if (gradientFillStyle.isPresent()) {
+            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            gc.setFill(gradientPaint);
+            double opacity = gradientFillStyle.get().getOpacity(frame);
+            if (opacity < 1.0) {
+                double currentAlpha = gc.getGlobalAlpha();
+                gc.setGlobalAlpha(currentAlpha * opacity);
+            }
+            logger.info("TrimPath ellipse gradient fill - position: (" + x + "," + y + "), size: " + width + "x" + height);
+            gc.fillOval(x, y, width, height);
+            gc.setGlobalAlpha(1.0); // Reset
+        } else {
+            var fillStyle = getFillStyle(parentGroup);
+            if (fillStyle.isPresent()) {
+                var fillColor = fillStyle.get().getColor(frame);
+                logger.info("TrimPath ellipse fill found - color: " + fillColor + ", position: (" + x + "," + y + "), size: " + width + "x" + height);
+                gc.setFill(fillColor);
+                gc.fillOval(x, y, width, height);
+            } else {
+                logger.info("TrimPath ellipse NO fill found for parentGroup");
+            }
+        }
+
+        // Only stroke is affected by trim paths
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
             var strokeWidth = strokeStyle.get().getStrokeWidth(frame);

@@ -314,6 +314,36 @@ public class LottiePlayer extends Canvas {
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
         gc.save();
 
+        // Check layer opacity - skip rendering if transparent
+        if (layer.transform() != null && layer.transform().opacity() != null) {
+            double opacity = layer.transform().opacity().getValue(0, frame);
+            if (opacity <= 0) {
+                logger.fine("Skipping layer " + layer.name() + " - opacity is " + opacity);
+                gc.restore();
+                return;
+            }
+        }
+
+        // Log transform values for Tick layer at frame 88
+        if ("Tick".equals(layer.name()) && Math.abs(frame - 88.0) < 0.5) {
+            if (layer.transform() != null) {
+                if (layer.transform().position() != null) {
+                    double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
+                    double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
+                    logger.warning("Tick layer at frame " + frame + " - position: (" + x + ", " + y + ")");
+                }
+                if (layer.transform().rotation() != null) {
+                    double rot = layer.transform().rotation().getValue(0, frame);
+                    logger.warning("Tick layer at frame " + frame + " - rotation: " + rot);
+                }
+                if (layer.transform().scale() != null) {
+                    double sx = layer.transform().scale().getValue(AnimatedValueType.X, frame);
+                    double sy = layer.transform().scale().getValue(AnimatedValueType.Y, frame);
+                    logger.warning("Tick layer at frame " + frame + " - scale: (" + sx + ", " + sy + ")");
+                }
+            }
+        }
+
         // Apply parent transforms recursively
         applyParentTransforms(gc, layer, frame);
 
@@ -727,7 +757,16 @@ public class LottiePlayer extends Canvas {
                 }
             }
 
+            // Check group opacity - skip rendering if transparent
             if (groupTransform != null) {
+                if (groupTransform.opacity() != null) {
+                    double opacity = groupTransform.opacity().getValue(0, frame);
+                    if (opacity <= 0) {
+                        logger.fine("Skipping group " + group.name() + " - opacity is " + opacity);
+                        gc.restore();
+                        return;
+                    }
+                }
                 applyGroupTransform(gc, groupTransform, frame);
             }
 
@@ -1083,11 +1122,32 @@ public class LottiePlayer extends Canvas {
         if (layer.transform().position() != null) {
             double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
             double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
+
+            // Check for NaN values (animation interpolation bug at exact keyframe boundaries)
+            if (Double.isNaN(x) || Double.isNaN(y)) {
+                logger.warning("Position contains NaN at frame " + frame + " for layer " + layer.name() +
+                              " - trying fallback frame " + (frame + 0.001));
+                // Try a slightly offset frame to get a valid value
+                double fallbackX = layer.transform().position().getValue(AnimatedValueType.X, frame + 0.001);
+                double fallbackY = layer.transform().position().getValue(AnimatedValueType.Y, frame + 0.001);
+
+                if (!Double.isNaN(fallbackX) && !Double.isNaN(fallbackY)) {
+                    x = fallbackX;
+                    y = fallbackY;
+                    logger.warning("Using fallback position: (" + x + ", " + y + ")");
+                } else {
+                    logger.warning("Fallback also returned NaN - skipping layer rendering");
+                    gc.restore();
+                    return;
+                }
+            }
+
             logger.finer("Translating by position: " + x + ", " + y);
 
             // Check for extreme values that might push content off-screen
-            if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
-                logger.warning("WARNING: Large translation values detected! x=" + x + ", y=" + y);
+            if (Math.abs(x) > 10000 || Math.abs(y) > 10000) {
+                logger.warning("WARNING: Extreme translation values detected for layer " + layer.name() +
+                              " at frame " + frame + "! x=" + x + ", y=" + y + " - layer may be off-screen");
             }
 
             gc.translate(x, y);

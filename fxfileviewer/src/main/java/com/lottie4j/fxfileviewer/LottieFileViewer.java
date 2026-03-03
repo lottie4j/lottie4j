@@ -6,6 +6,7 @@ import com.lottie4j.fxfileviewer.component.LottieTreeView;
 import com.lottie4j.fxfileviewer.util.CompactFormatter;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -23,7 +24,6 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.application.Platform;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,11 +32,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * JavaFX Lottie Animation Viewer
@@ -211,6 +211,7 @@ public class LottieFileViewer extends Application {
         // Frame controls
         var frameControls = new HBox(10);
         frameSlider = new Slider();
+        frameSlider.setPrefWidth(350);
         frameSlider.setDisable(true);
         frameSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (lottiePlayer != null && !lottiePlayer.isPlaying()) {
