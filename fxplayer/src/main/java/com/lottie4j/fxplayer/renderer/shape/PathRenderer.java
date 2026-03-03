@@ -111,12 +111,9 @@ public class PathRenderer implements ShapeRenderer {
                     double cp2y = firstVertex.get(1) + firstTangentIn.get(1);
 
                     gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
-                } else {
-                    gc.closePath();
                 }
-            } else {
-                gc.closePath();
             }
+            gc.closePath();
         }
 
         // Apply fill and stroke from parent group
