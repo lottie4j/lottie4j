@@ -12,6 +12,9 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -20,14 +23,20 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.application.Platform;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * JavaFX Lottie Animation Viewer
@@ -69,10 +78,14 @@ public class LottieFileViewer extends Application {
     private Slider frameSlider;
     private Label frameLabel;
     private Label fpsLabel;
+    private HBox playersBox;
     private LottiePlayer lottiePlayer;
     private WebEngine webEngine;
     private WebView webView;
     private Color backgroundColor = Color.WHITE;
+    private File currentAnimationFile;
+    private Button screenshotButton;
+    private Button screenshotAllButton;
 
     @Override
     public void start(Stage primaryStage) {
@@ -92,7 +105,7 @@ public class LottieFileViewer extends Application {
         webView.setMaxSize(500, 500);
 
         // Create HBox to hold both players side by side
-        var playersBox = new HBox(10);
+        playersBox = new HBox(10);
         playersBox.setPadding(new Insets(10));
         playersBox.setAlignment(Pos.CENTER);
 
@@ -227,7 +240,16 @@ public class LottieFileViewer extends Application {
             updateBackgroundColor();
         });
 
-        controlPanel.getChildren().addAll(playbackControls, colorPicker, fpsLabel, frameControls);
+        // Screenshot buttons
+        screenshotButton = new Button("Screenshot");
+        screenshotButton.setDisable(true);
+        screenshotButton.setOnAction(e -> takeScreenshot());
+
+        screenshotAllButton = new Button("Screenshot All");
+        screenshotAllButton.setDisable(true);
+        screenshotAllButton.setOnAction(e -> takeAllScreenshots());
+
+        controlPanel.getChildren().addAll(playbackControls, colorPicker, screenshotButton, screenshotAllButton, fpsLabel, frameControls);
         return controlPanel;
     }
 
@@ -251,6 +273,8 @@ public class LottieFileViewer extends Application {
         startButton.setDisable(false);
         pauseButton.setDisable(true);
         frameSlider.setDisable(false);
+        screenshotButton.setDisable(false);
+        screenshotAllButton.setDisable(false);
 
         // Setup frame slider
         frameSlider.setMin(getInPoint());
@@ -267,6 +291,9 @@ public class LottieFileViewer extends Application {
         if (lottiePlayer != null && lottiePlayer.isPlaying()) {
             pauseAnimation();
         }
+
+        // Store current animation file for screenshot naming
+        currentAnimationFile = file;
 
         try {
             animation = LottieFileLoader.load(file);
@@ -517,5 +544,233 @@ public class LottieFileViewer extends Application {
         } catch (Exception e) {
             logger.warning("Failed to update JS background color: " + e.getMessage());
         }
+    }
+
+    private void takeScreenshot() {
+        if (lottiePlayer == null || webView == null || currentAnimationFile == null) {
+            return;
+        }
+
+        takeScreenshotPlayers();
+    }
+
+    private void takeAllScreenshots() {
+        if (lottiePlayer == null || webView == null || currentAnimationFile == null || animation == null) {
+            return;
+        }
+
+        // Pause animation if playing
+        boolean wasPlaying = lottiePlayer.isPlaying();
+        if (wasPlaying) {
+            pauseAnimation();
+        }
+
+        // Disable buttons during screenshot capture
+        screenshotButton.setDisable(true);
+        screenshotAllButton.setDisable(true);
+
+        // Run screenshot capture in separate thread
+        new Thread(() -> {
+            try {
+                int startFrame = getInPoint();
+                int endFrame = getOutPoint();
+
+                // Save all frames
+                for (int frame = startFrame; frame <= endFrame; frame++) {
+                    final int currentFrame = frame;
+                    CountDownLatch latch = new CountDownLatch(1);
+
+                    // Update UI on JavaFX thread
+                    Platform.runLater(() -> {
+                        try {
+                            this.currentFrame = currentFrame;
+                            lottiePlayer.seekToFrame(currentFrame);
+                            frameSlider.setValue(currentFrame);
+                            updateFrameLabel();
+
+                            // Sync JS player
+                            try {
+                                webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
+                            } catch (Exception e) {
+                                logger.warning("Failed to seek JS animation to frame " + currentFrame + ": " + e.getMessage());
+                            }
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
+
+                    // Wait for UI update
+                    latch.await();
+
+                    // Wait for rendering to complete
+                    Thread.sleep(100);
+
+                    // Take screenshot on JavaFX thread
+                    CountDownLatch screenshotLatch = new CountDownLatch(1);
+
+                    Platform.runLater(() -> {
+                        try {
+                            takeScreenshotPlayers();
+                        } finally {
+                            screenshotLatch.countDown();
+                        }
+                    });
+
+                    // Wait for screenshot to complete
+                    screenshotLatch.await();
+                }
+
+                int totalFrames = endFrame - startFrame + 1;
+                logger.info("All screenshots saved (" + totalFrames + " frames)");
+
+                // Re-enable buttons on JavaFX thread
+                Platform.runLater(() -> {
+                    screenshotButton.setDisable(false);
+                    screenshotAllButton.setDisable(false);
+                });
+
+            } catch (InterruptedException e) {
+                logger.severe("Failed to save screenshots: " + e.getMessage());
+                Platform.runLater(() -> {
+                    showError("Failed to save screenshots: " + e.getMessage());
+                    screenshotButton.setDisable(false);
+                    screenshotAllButton.setDisable(false);
+                });
+            }
+        }).start();
+    }
+
+    private void takeScreenshotPlayers() {
+        try {
+            // Create the screenshot directory if it doesn't exist
+            Path screenshotDir = Path.of("screenshot");
+            Files.createDirectories(screenshotDir);
+
+            // Get base filename without extension
+            String baseName = currentAnimationFile.getName().replaceFirst("[.][^.]+$", "");
+            String filename = baseName + "_frame_" + currentFrame + ".png";
+
+            // Capture JavaFX and JavaScript player
+            WritableImage playerImage = playersBox.snapshot(null, null);
+            File screenshotFile = screenshotDir.resolve(filename).toFile();
+
+            // Save
+            saveWritableImage(playerImage, screenshotFile);
+
+            logger.info("Screenshot saved: " + filename);
+        } catch (IOException e) {
+            logger.severe("Failed to save screenshot: " + e.getMessage());
+            showError("Failed to save screenshot: " + e.getMessage());
+        }
+    }
+
+    private void saveWritableImage(WritableImage image, File file) throws IOException {
+        int width = (int) image.getWidth();
+        int height = (int) image.getHeight();
+        PixelReader pixelReader = image.getPixelReader();
+
+        // Get pixel data in ARGB format
+        int[] pixels = new int[width * height];
+        pixelReader.getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixels, 0, width);
+
+        // Write PNG file manually
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            writePNG(fos, pixels, width, height);
+        }
+    }
+
+    private void writePNG(FileOutputStream fos, int[] pixels, int width, int height) throws IOException {
+        // PNG signature
+        fos.write(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+
+        // IHDR chunk
+        writeChunk(fos, "IHDR", createIHDR(width, height));
+
+        // IDAT chunk (image data)
+        writeChunk(fos, "IDAT", compressImageData(pixels, width, height));
+
+        // IEND chunk
+        writeChunk(fos, "IEND", new byte[0]);
+    }
+
+    private byte[] createIHDR(int width, int height) {
+        ByteBuffer buffer = ByteBuffer.allocate(13);
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        buffer.putInt(width);
+        buffer.putInt(height);
+        buffer.put((byte) 8);  // bit depth
+        buffer.put((byte) 6);  // color type (RGBA)
+        buffer.put((byte) 0);  // compression method
+        buffer.put((byte) 0);  // filter method
+        buffer.put((byte) 0);  // interlace method
+        return buffer.array();
+    }
+
+    private byte[] compressImageData(int[] pixels, int width, int height) throws IOException {
+        // Convert ARGB pixels to RGBA bytes with filter byte per scanline
+        int rowBytes = width * 4 + 1;  // 4 bytes per pixel + 1 filter byte
+        byte[] imageData = new byte[rowBytes * height];
+
+        for (int y = 0; y < height; y++) {
+            int rowStart = y * rowBytes;
+            imageData[rowStart] = 0;  // filter type: none
+
+            for (int x = 0; x < width; x++) {
+                int pixel = pixels[y * width + x];
+                int idx = rowStart + 1 + x * 4;
+
+                // Convert ARGB to RGBA
+                imageData[idx] = (byte) ((pixel >> 16) & 0xFF);  // R
+                imageData[idx + 1] = (byte) ((pixel >> 8) & 0xFF);  // G
+                imageData[idx + 2] = (byte) (pixel & 0xFF);  // B
+                imageData[idx + 3] = (byte) ((pixel >> 24) & 0xFF);  // A
+            }
+        }
+
+        // Compress with deflate
+        return deflate(imageData);
+    }
+
+    private byte[] deflate(byte[] data) throws IOException {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater();
+        deflater.setInput(data);
+        deflater.finish();
+
+        byte[] buffer = new byte[data.length + 100];
+        int compressedSize = deflater.deflate(buffer);
+        deflater.end();
+
+        byte[] result = new byte[compressedSize];
+        System.arraycopy(buffer, 0, result, 0, compressedSize);
+        return result;
+    }
+
+    private void writeChunk(FileOutputStream fos, String type, byte[] data) throws IOException {
+        // Write length
+        writeInt(fos, data.length);
+
+        // Write type
+        fos.write(type.getBytes());
+
+        // Write data
+        fos.write(data);
+
+        // Write CRC
+        int crc = calculateCRC(type.getBytes(), data);
+        writeInt(fos, crc);
+    }
+
+    private void writeInt(FileOutputStream fos, int value) throws IOException {
+        fos.write((value >> 24) & 0xFF);
+        fos.write((value >> 16) & 0xFF);
+        fos.write((value >> 8) & 0xFF);
+        fos.write(value & 0xFF);
+    }
+
+    private int calculateCRC(byte[] type, byte[] data) {
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        crc.update(type);
+        crc.update(data);
+        return (int) crc.getValue();
     }
 }
