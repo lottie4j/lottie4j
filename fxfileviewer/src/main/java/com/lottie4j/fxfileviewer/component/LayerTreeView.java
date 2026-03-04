@@ -14,9 +14,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * TreeView for Lottie layers with visibility checkboxes and thumbnail previews.
@@ -24,7 +25,7 @@ import java.util.logging.Logger;
  */
 public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
 
-    private static final Logger logger = Logger.getLogger(LayerTreeView.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LayerTreeView.class.getName());
 
     private final Animation animation;
     private final LottiePlayer lottiePlayer;
@@ -149,7 +150,7 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
                 if (layer != null && layer.matteMode() != null) {
                     // Matte source is typically the previous layer (index - 1)
                     visibleIndices.add(entry.getKey() - 1);
-                    logger.fine("Auto-including matte source layer " + (entry.getKey() - 1) +
+                    logger.debug("Auto-including matte source layer " + (entry.getKey() - 1) +
                             " for layer " + entry.getKey());
                 }
             }

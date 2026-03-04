@@ -14,13 +14,14 @@ import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.logging.Logger;
 
 public class RectangleRenderer implements ShapeRenderer {
 
-    private static final Logger logger = Logger.getLogger(RectangleRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(RectangleRenderer.class.getName());
 
     /**
      * {@inheritDoc}
@@ -30,14 +31,14 @@ public class RectangleRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Rectangle rectangle)) {
-            logger.warning("RectangleRenderer called with non-Rectangle shape: " + shape.getClass().getSimpleName());
+            logger.warn("RectangleRenderer called with non-Rectangle shape: " + shape.getClass().getSimpleName());
             return;
         }
 
-        logger.fine("RectangleRenderer.render called for: " + rectangle.name());
+        logger.debug("RectangleRenderer.render called for: " + rectangle.name());
 
         if (rectangle.size() == null) {
-            logger.warning("Rectangle missing size data");
+            logger.warn("Rectangle missing size data");
             return;
         }
 
@@ -123,7 +124,7 @@ public class RectangleRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
                 double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-                logger.fine("Drawing rectangle stroke with color and width: "
+                logger.debug("Drawing rectangle stroke with color and width: "
                         + strokeStyle.get().getColor(frame)
                         + strokeWidth + " (compensated: " + compensatedWidth + ")");
                 gc.setStroke(strokeStyle.get().getColor(frame));

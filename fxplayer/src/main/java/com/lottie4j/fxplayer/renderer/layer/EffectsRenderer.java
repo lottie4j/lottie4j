@@ -5,7 +5,8 @@ import com.lottie4j.core.model.Layer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.GaussianBlur;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Renderer for layer effects such as Gaussian Blur.
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
  */
 public class EffectsRenderer {
 
-    private static final Logger logger = Logger.getLogger(EffectsRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(EffectsRenderer.class.getName());
 
     /**
      * Extracts the Gaussian Blur radius from layer effects at a specific frame.
@@ -57,7 +58,7 @@ public class EffectsRenderer {
                             } else {
                                 blurRadius = rawBlur / 3.5;  // Light blur
                             }
-                            logger.finer("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name() + " at frame " + frame);
+                            logger.debug("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name() + " at frame " + frame);
                         }
                         break;
                     }

@@ -3,6 +3,7 @@ module com.lottie4j.core {
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jdk8;
     requires java.logging;
+    requires org.slf4j;
 
     exports com.lottie4j.core.model.bezier;
     exports com.lottie4j.core.definition;

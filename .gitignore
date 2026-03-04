@@ -8,6 +8,5 @@
 *.iml
 todo.txt
 /target/
-/lottie4j.log
-/lottie4j.log.lck
 /screenshot/
+/*.log

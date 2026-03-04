@@ -2,7 +2,7 @@ package com.lottie4j.fxplayer.util;
 
 import javafx.scene.paint.Color;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
 
 public final class ColorParser {
 
@@ -37,7 +37,7 @@ public final class ColorParser {
                 return Color.color(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
             }
         } catch (Exception e) {
-            logger.warning("Error parsing color string '" + colorStr + "': " + e.getMessage());
+            logger.warn("Error parsing color string '" + colorStr + "': " + e.getMessage());
         }
         return null;
     }

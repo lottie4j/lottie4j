@@ -17,13 +17,14 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.StrokeLineCap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.logging.Logger;
 
 public class EllipseRenderer implements ShapeRenderer {
 
-    private static final Logger logger = Logger.getLogger(EllipseRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(EllipseRenderer.class.getName());
 
     /**
      * {@inheritDoc}
@@ -33,12 +34,12 @@ public class EllipseRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Ellipse ellipse)) {
-            logger.warning("EllipseRenderer called with non-Ellipse shape: " + shape.getClass().getSimpleName());
+            logger.warn("EllipseRenderer called with non-Ellipse shape: " + shape.getClass().getSimpleName());
             return;
         }
 
         if (ellipse.size() == null) {
-            logger.warning("Ellipse missing size data");
+            logger.warn("Ellipse missing size data");
             return;
         }
 
@@ -212,7 +213,7 @@ public class EllipseRenderer implements ShapeRenderer {
         double end = trimPath.segmentEnd() != null ? trimPath.segmentEnd().getValue(0, frame) : 100;
         double offset = trimPath.offset() != null ? trimPath.offset().getValue(0, frame) : 0;
 
-        logger.fine("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
+        logger.debug("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
 
         // Convert to normalized 0-1 range
         start = start / 100.0;
@@ -252,7 +253,7 @@ public class EllipseRenderer implements ShapeRenderer {
             arcExtent -= 360;
         }
 
-        logger.fine("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
+        logger.debug("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
 
         // Fill the entire ellipse (not affected by trim path)
         var gradientFillStyle = getGradientFillStyle(parentGroup);

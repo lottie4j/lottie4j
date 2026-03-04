@@ -20,20 +20,21 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 
 public class PathRenderer implements ShapeRenderer {
 
-    private static final Logger logger = Logger.getLogger(PathRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PathRenderer.class.getName());
 
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Path path)) {
-            logger.warning("PathRenderer called with non-Path shape: " + shape.getClass().getSimpleName());
+            logger.warn("PathRenderer called with non-Path shape: " + shape.getClass().getSimpleName());
             return;
         }
 
@@ -50,12 +51,12 @@ public class PathRenderer implements ShapeRenderer {
         List<List<Double>> tangentsOut = bezierDef.tangentsOut();
 
         if (vertices.size() == 8) {
-            logger.warning("*** 8-VERTEX F-LOGO PATH: " + path.name() + " ***");
+            logger.warn("*** 8-VERTEX F-LOGO PATH: " + path.name() + " ***");
         }
-        logger.fine("Path '" + path.name() + "' - vertices: " + vertices.size() +
+        logger.debug("Path '" + path.name() + "' - vertices: " + vertices.size() +
                 ", closed: " + bezierDef.closed());
         if (!vertices.isEmpty()) {
-            logger.finer("  First vertex: " + vertices.get(0));
+            logger.debug("  First vertex: " + vertices.get(0));
         }
 
         boolean first = true;
@@ -130,7 +131,7 @@ public class PathRenderer implements ShapeRenderer {
             Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
-            logger.finer("  Applying gradient fill, opacity: " + opacity);
+            logger.debug("  Applying gradient fill, opacity: " + opacity);
             if (opacity < 1.0) {
                 double currentAlpha = gc.getGlobalAlpha();
                 gc.setGlobalAlpha(currentAlpha * opacity);
@@ -141,11 +142,11 @@ public class PathRenderer implements ShapeRenderer {
             var fillStyle = getFillStyle(parentGroup);
             if (fillStyle.isPresent()) {
                 var fillColor = fillStyle.get().getColor(frame);
-                logger.fine("  Applying fill: " + fillColor);
+                logger.debug("  Applying fill: " + fillColor);
                 gc.setFill(fillColor);
                 gc.fill();
             } else {
-                logger.fine("  No fill style found");
+                logger.debug("  No fill style found");
             }
         }
 
@@ -164,26 +165,26 @@ public class PathRenderer implements ShapeRenderer {
 
                     // Handle NaN values (animation interpolation bug at exact keyframe boundaries)
                     if (Double.isNaN(trimStart)) {
-                        logger.warning("  TrimPath start is NaN at frame " + frame + ", defaulting to 0");
+                        logger.warn("  TrimPath start is NaN at frame " + frame + ", defaulting to 0");
                         trimStart = 0;
                     }
                     if (Double.isNaN(trimEnd)) {
-                        logger.warning("  TrimPath end is NaN at frame " + frame + ", using start value as fallback");
+                        logger.warn("  TrimPath end is NaN at frame " + frame + ", using start value as fallback");
                         // When end is NaN in a reversed path (start > end), use 0 to show full path
                         // When end is NaN in a normal path, use start value to show nothing
                         trimEnd = (trimStart > 50) ? 0 : trimStart;
                     }
 
                     // Handle different trim cases
-                    logger.fine("  Path TrimPath: start=" + trimStart + ", end=" + trimEnd + " at frame " + frame);
+                    logger.debug("  Path TrimPath: start=" + trimStart + ", end=" + trimEnd + " at frame " + frame);
                     if (Math.abs(trimStart - trimEnd) < 0.01) {
                         // Empty path - start and end are essentially the same
-                        logger.fine("  Path TrimPath is empty (start=" + trimStart + ", end=" + trimEnd + ") - skipping");
+                        logger.debug("  Path TrimPath is empty (start=" + trimStart + ", end=" + trimEnd + ") - skipping");
                     } else if (trimStart >= 100 && trimEnd >= 100) {
                         // Full path
                         var strokeColor = strokeStyle.get().getColor(frame);
                         double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
-                        logger.fine("  TrimPath full path, rendering stroke: " + strokeColor + ", width: " + strokeWidth);
+                        logger.debug("  TrimPath full path, rendering stroke: " + strokeColor + ", width: " + strokeWidth);
                         gc.setStroke(strokeColor);
                         gc.setLineWidth(compensatedWidth);
                         applyStrokeStyle(gc, strokeStyle.get().stroke());
@@ -191,7 +192,7 @@ public class PathRenderer implements ShapeRenderer {
                     } else if (trimStart > trimEnd) {
                         // Reversed trim: render from 0 to trimEnd, then from trimStart to 100
                         // For simplicity, render the visible portion from trimEnd to trimStart
-                        logger.fine("  Reversed TrimPath (start=" + trimStart + ", end=" + trimEnd + ") - rendering from end to start");
+                        logger.debug("  Reversed TrimPath (start=" + trimStart + ", end=" + trimEnd + ") - rendering from end to start");
                         renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
                                 trimEnd, trimStart, strokeStyle.get(), strokeWidth, frame);
                     } else {
@@ -203,7 +204,7 @@ public class PathRenderer implements ShapeRenderer {
                     var strokeColor = strokeStyle.get().getColor(frame);
                     double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-                    logger.fine("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
+                    logger.debug("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
                             " (compensated: " + compensatedWidth + ")");
                     gc.setStroke(strokeColor);
                     gc.setLineWidth(compensatedWidth);
@@ -214,10 +215,10 @@ public class PathRenderer implements ShapeRenderer {
                     gc.stroke();
                 }
             } else {
-                logger.fine("  Skipping stroke with width: " + strokeWidth);
+                logger.debug("  Skipping stroke with width: " + strokeWidth);
             }
         } else {
-            logger.fine("  No stroke style found");
+            logger.debug("  No stroke style found");
         }
 
         gc.restore();
@@ -296,7 +297,7 @@ public class PathRenderer implements ShapeRenderer {
         double startLength = (trimStart / 100.0) * totalLength;
         double endLength = (trimEnd / 100.0) * totalLength;
 
-        logger.fine("  Rendering trimmed path: totalLength=" + totalLength + ", start=" + startLength + ", end=" + endLength);
+        logger.debug("  Rendering trimmed path: totalLength=" + totalLength + ", start=" + startLength + ", end=" + endLength);
 
         // Build new path with only the trimmed portion
         gc.save();
@@ -320,19 +321,19 @@ public class PathRenderer implements ShapeRenderer {
                 double t0 = Math.max(0, (startLength - segmentStart) / segmentLength);
                 double t1 = Math.min(1, (endLength - segmentStart) / segmentLength);
 
-                logger.fine("    Segment " + i + ": segmentStart=" + segmentStart + ", segmentEnd=" + segmentEnd +
+                logger.debug("    Segment " + i + ": segmentStart=" + segmentStart + ", segmentEnd=" + segmentEnd +
                         ", t0=" + t0 + ", t1=" + t1);
 
                 // Get points at t0 and t1
                 double[] point0 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t0);
                 double[] point1 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t1);
 
-                logger.fine("    Point0: (" + point0[0] + ", " + point0[1] + "), Point1: (" + point1[0] + ", " + point1[1] + ")");
+                logger.debug("    Point0: (" + point0[0] + ", " + point0[1] + "), Point1: (" + point1[0] + ", " + point1[1] + ")");
 
                 if (!pathStarted) {
                     gc.moveTo(point0[0], point0[1]);
                     pathStarted = true;
-                    logger.fine("    Path started with moveTo");
+                    logger.debug("    Path started with moveTo");
                 }
 
                 segmentsRendered++;
@@ -366,12 +367,12 @@ public class PathRenderer implements ShapeRenderer {
 
         // Apply stroke
         if (!pathStarted) {
-            logger.warning("  TrimPath: No path segments found to render (pathStarted=false)");
+            logger.warn("  TrimPath: No path segments found to render (pathStarted=false)");
         } else {
             var strokeColor = strokeStyle.getColor(frame);
             double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-            logger.fine("  Applying stroke: segmentsRendered=" + segmentsRendered +
+            logger.debug("  Applying stroke: segmentsRendered=" + segmentsRendered +
                     ", color=" + strokeColor + ", width=" + compensatedWidth);
 
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
@@ -379,9 +380,9 @@ public class PathRenderer implements ShapeRenderer {
                 gc.setLineWidth(compensatedWidth);
                 applyStrokeStyle(gc, strokeStyle.stroke());
                 gc.stroke();
-                logger.fine("  Stroke applied successfully");
+                logger.debug("  Stroke applied successfully");
             } else {
-                logger.warning("  Stroke width too small to render: " + compensatedWidth);
+                logger.warn("  Stroke width too small to render: " + compensatedWidth);
             }
         }
 

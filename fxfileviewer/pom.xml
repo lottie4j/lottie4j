@@ -15,11 +15,11 @@
     <dependencies>
         <dependency>
             <groupId>com.lottie4j</groupId>
-            <artifactId>core</artifactId>
+            <artifactId>fxplayer</artifactId>
             <version>1.0.1-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
+        <!-- JavaFX dependencies -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
@@ -36,11 +36,21 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <!-- Log4j2 implementation for SLF4J -->
         <dependency>
-            <groupId>com.lottie4j</groupId>
-            <artifactId>fxplayer</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.24.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.24.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+            <version>2.24.3</version>
         </dependency>
     </dependencies>
 

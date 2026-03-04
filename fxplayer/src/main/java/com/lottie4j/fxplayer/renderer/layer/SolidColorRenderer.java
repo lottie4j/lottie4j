@@ -5,7 +5,8 @@ import com.lottie4j.fxplayer.util.ColorParser;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Renderer for solid color layers.
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
  */
 public class SolidColorRenderer {
 
-    private static final Logger logger = Logger.getLogger(SolidColorRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SolidColorRenderer.class.getName());
 
     /**
      * Renders a solid color layer as a filled rectangle.
@@ -25,14 +26,14 @@ public class SolidColorRenderer {
      */
     public void render(GraphicsContext gc, Layer layer, int animationWidth, int animationHeight) {
         if (layer.solidColor() == null) {
-            logger.warning("Solid color layer has no color: " + layer.name());
+            logger.warn("Solid color layer has no color: " + layer.name());
             return;
         }
 
         // Parse the solid color (format: "RRGGBBAA" or similar hex string)
         Color color = ColorParser.parse(layer.solidColor(), logger);
         if (color == null) {
-            logger.warning("Could not parse solid color: " + layer.solidColor());
+            logger.warn("Could not parse solid color: " + layer.solidColor());
             return;
         }
 
@@ -45,7 +46,7 @@ public class SolidColorRenderer {
         gc.setFill(color);
         gc.fillRect(-width, -height, width * 3, height * 3);
 
-        logger.fine("Rendered solid color layer: " + layer.name() + " color=" + color + " size=" + width + "x" + height);
+        logger.debug("Rendered solid color layer: " + layer.name() + " color=" + color + " size=" + width + "x" + height);
     }
 }
 

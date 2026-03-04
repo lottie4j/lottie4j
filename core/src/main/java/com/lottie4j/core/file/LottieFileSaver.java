@@ -5,11 +5,13 @@ import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Asset;
 import com.lottie4j.core.model.Layer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+
 
 /**
  * Utility class for exporting Lottie animations and individual layers to JSON files.
@@ -17,7 +19,7 @@ import java.util.logging.Logger;
  */
 public class LottieFileSaver {
 
-    private static final Logger logger = Logger.getLogger(LottieFileSaver.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LottieFileSaver.class.getName());
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
@@ -61,7 +63,7 @@ public class LottieFileSaver {
             mapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, export);
             logger.info("Successfully exported layer to: " + outputFile.getAbsolutePath());
         } catch (Exception e) {
-            logger.severe("Failed to export layer to JSON: " + e.getMessage());
+            logger.error("Failed to export layer to JSON: " + e.getMessage());
             throw new RuntimeException("Export failed", e);
         }
     }

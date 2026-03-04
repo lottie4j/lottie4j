@@ -13,11 +13,12 @@ import javafx.scene.canvas.GraphicsContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PrecompRenderer {
 
-    private static final Logger logger = Logger.getLogger(PrecompRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PrecompRenderer.class.getName());
 
     private final TransformApplier transformApplier;
     private final TextRenderer textRenderer;
@@ -59,23 +60,23 @@ public class PrecompRenderer {
                                           ShapeGroupRenderer shapeGroupRenderer,
                                           ShapeRendererDelegate shapeRendererDelegate) {
         if (layer.referenceId() == null) {
-            logger.warning("Precomposition layer has no referenceId: " + layer.name());
+            logger.warn("Precomposition layer has no referenceId: " + layer.name());
             return;
         }
 
         Asset asset = assetsById.get(layer.referenceId());
         if (asset == null) {
-            logger.warning("Asset not found for referenceId: " + layer.referenceId());
+            logger.warn("Asset not found for referenceId: " + layer.referenceId());
             return;
         }
 
         if (asset.layers() == null || asset.layers().isEmpty()) {
-            logger.warning("Precomposition asset has no layers: " + layer.referenceId());
+            logger.warn("Precomposition asset has no layers: " + layer.referenceId());
             return;
         }
 
         double localFrame = FrameTiming.toLocalFrame(layer, frame);
-        logger.finer("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size()
+        logger.debug("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size()
                 + " layers at localFrame=" + localFrame + " (global=" + frame + ")");
 
         Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
@@ -90,7 +91,7 @@ public class PrecompRenderer {
             if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
                 continue;
             }
-            logger.fine("Rendering precomp layer [" + i + "] ind=" + precompLayer.indexLayer()
+            logger.debug("Rendering precomp layer [" + i + "] ind=" + precompLayer.indexLayer()
                     + " name='" + precompLayer.name() + "'");
             renderPrecompLayer(gc,
                     precompLayer,
@@ -142,7 +143,7 @@ public class PrecompRenderer {
         } else if (layer.layerType() != LayerType.NULL) {
             renderPrecompShapes(layer, frame, shapeGroupRenderer, shapeRendererDelegate);
         } else {
-            logger.finer("Skipping shape rendering for NULL layer: " + layer.name());
+            logger.debug("Skipping shape rendering for NULL layer: " + layer.name());
         }
 
         gc.restore();
@@ -161,17 +162,17 @@ public class PrecompRenderer {
                                      ShapeGroupRenderer shapeGroupRenderer,
                                      ShapeRendererDelegate shapeRendererDelegate) {
         if (layer.shapes() == null || layer.shapes().isEmpty()) {
-            logger.finer("Layer has no shapes");
+            logger.debug("Layer has no shapes");
             return;
         }
 
-        logger.fine("Layer has " + layer.shapes().size() + " shapes");
+        logger.debug("Layer has " + layer.shapes().size() + " shapes");
 
         TrimPath layerTrimPath = null;
         for (BaseShape shape : layer.shapes()) {
             if (shape instanceof TrimPath trim) {
                 layerTrimPath = trim;
-                logger.finer("Found layer-level TrimPath");
+                logger.debug("Found layer-level TrimPath");
             }
         }
 
@@ -188,7 +189,7 @@ public class PrecompRenderer {
                 case STYLE -> {
                     // Styles are consumed by parent group renderers.
                 }
-                default -> logger.finer("Unsupported shape type: " + shape.type().shapeGroup());
+                default -> logger.debug("Unsupported shape type: " + shape.type().shapeGroup());
             }
         }
     }
@@ -211,7 +212,7 @@ public class PrecompRenderer {
 
         Layer parent = precompLayersByIndex.get(layer.indexParent());
         if (parent == null) {
-            logger.warning("Parent layer not found in precomp: " + layer.indexParent());
+            logger.warn("Parent layer not found in precomp: " + layer.indexParent());
             return;
         }
 

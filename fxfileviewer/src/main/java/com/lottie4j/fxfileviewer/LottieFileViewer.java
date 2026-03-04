@@ -5,7 +5,6 @@ import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.component.LayerTileView;
 import com.lottie4j.fxfileviewer.component.LayerTreeView;
 import com.lottie4j.fxfileviewer.component.LottieTreeView;
-import com.lottie4j.fxfileviewer.util.CompactFormatter;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -26,6 +25,8 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,10 +36,6 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -51,24 +48,7 @@ import java.util.zip.Deflater;
  * for example, `"/basic/box-moving-changing-color.json"`.
  */
 public class LottieFileViewer extends Application {
-    private static final Logger logger = Logger.getLogger(LottieFileViewer.class.getName());
-
-    static {
-        Logger rootLogger = LogManager.getLogManager().getLogger("");
-        Logger.getLogger("com.lottie4j").setLevel(Level.FINE);
-        rootLogger.getHandlers()[0].setLevel(Level.FINE);
-        rootLogger.getHandlers()[0].setFormatter(new CompactFormatter());
-
-        // Add file handler
-        try {
-            FileHandler fileHandler = new FileHandler("lottie4j.log");
-            fileHandler.setLevel(Level.FINE);
-            fileHandler.setFormatter(new CompactFormatter());
-            rootLogger.addHandler(fileHandler);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private static final Logger logger = LoggerFactory.getLogger(LottieFileViewer.class.getName());
 
     private Canvas canvas;
     private GraphicsContext gc;
@@ -147,7 +127,7 @@ public class LottieFileViewer extends Application {
             var fileName = args.getUnnamed().get(0);
             var r = this.getClass().getResource(fileName);
             if (r == null) {
-                logger.warning("The Lottie file can not be found: " + fileName);
+                logger.warn("The Lottie file can not be found: " + fileName);
                 return;
             }
             loadAnimation(new File(r.getFile()));
@@ -234,7 +214,7 @@ public class LottieFileViewer extends Application {
                 try {
                     webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
                 } catch (Exception e) {
-                    logger.warning("Failed to seek JS animation: " + e.getMessage());
+                    logger.warn("Failed to seek JS animation: " + e.getMessage());
                 }
             }
         });
@@ -407,7 +387,7 @@ public class LottieFileViewer extends Application {
             setupAnimationControls();
             currentFrame = getInPoint();
         } catch (IOException e) {
-            logger.severe("Failed to load animation: " + e.getMessage());
+            logger.error("Failed to load animation: " + e.getMessage());
             showError("Failed to load animation: " + e.getMessage());
         }
     }
@@ -424,7 +404,7 @@ public class LottieFileViewer extends Application {
             try {
                 webEngine.executeScript("window.playAnimation()");
             } catch (Exception e) {
-                logger.warning("Failed to start JS animation: " + e.getMessage());
+                logger.warn("Failed to start JS animation: " + e.getMessage());
             }
         }
     }
@@ -439,7 +419,7 @@ public class LottieFileViewer extends Application {
             try {
                 webEngine.executeScript("window.pauseAnimation()");
             } catch (Exception e) {
-                logger.warning("Failed to pause JS animation: " + e.getMessage());
+                logger.warn("Failed to pause JS animation: " + e.getMessage());
             }
         }
     }
@@ -576,7 +556,7 @@ public class LottieFileViewer extends Application {
 
             webEngine.loadContent(html);
         } catch (IOException e) {
-            logger.severe("Failed to load Lottie file in WebView: " + e.getMessage());
+            logger.error("Failed to load Lottie file in WebView: " + e.getMessage());
         }
     }
 
@@ -604,7 +584,7 @@ public class LottieFileViewer extends Application {
                     (int) (backgroundColor.getBlue() * 255));
             webEngine.executeScript("window.setBackgroundColor('" + colorHex + "')");
         } catch (Exception e) {
-            logger.warning("Failed to update JS background color: " + e.getMessage());
+            logger.warn("Failed to update JS background color: " + e.getMessage());
         }
     }
 
@@ -654,7 +634,7 @@ public class LottieFileViewer extends Application {
                             try {
                                 webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
                             } catch (Exception e) {
-                                logger.warning("Failed to seek JS animation to frame " + currentFrame + ": " + e.getMessage());
+                                logger.warn("Failed to seek JS animation to frame " + currentFrame + ": " + e.getMessage());
                             }
                         } finally {
                             latch.countDown();
@@ -692,7 +672,7 @@ public class LottieFileViewer extends Application {
                 });
 
             } catch (InterruptedException e) {
-                logger.severe("Failed to save screenshots: " + e.getMessage());
+                logger.error("Failed to save screenshots: " + e.getMessage());
                 Platform.runLater(() -> {
                     showError("Failed to save screenshots: " + e.getMessage());
                     screenshotButton.setDisable(false);
@@ -721,7 +701,7 @@ public class LottieFileViewer extends Application {
 
             logger.info("Screenshot saved: " + filename);
         } catch (IOException e) {
-            logger.severe("Failed to save screenshot: " + e.getMessage());
+            logger.error("Failed to save screenshot: " + e.getMessage());
             showError("Failed to save screenshot: " + e.getMessage());
         }
     }

@@ -22,10 +22,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * Tile view for Lottie layers with live-updating thumbnails.
@@ -33,7 +34,7 @@ import java.util.logging.Logger;
  */
 public class LayerTileView extends ScrollPane {
 
-    private static final Logger logger = Logger.getLogger(LayerTileView.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LayerTileView.class.getName());
     private static final int TILE_SIZE = 150;
     private static final int TILE_SPACING = 10;
 
@@ -347,7 +348,7 @@ public class LayerTileView extends ScrollPane {
                 previewImage.setImage(snapshot);
 
             } catch (Exception e) {
-                logger.warning("Failed to update preview for layer " + layerIndex + ": " + e.getMessage());
+                logger.warn("Failed to update preview for layer " + layerIndex + ": " + e.getMessage());
             }
         }
 
@@ -372,7 +373,7 @@ public class LayerTileView extends ScrollPane {
                     logger.info("Layer exported to: " + file.getAbsolutePath());
                 }
             } catch (Exception e) {
-                logger.severe("Failed to export layer: " + e.getMessage());
+                logger.error("Failed to export layer: " + e.getMessage());
             }
         }
     }

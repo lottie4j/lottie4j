@@ -39,6 +39,7 @@
 
         <!-- Dependencies -->
         <javafx.version>21.0.7</javafx.version>
+        <slf4j.version>2.0.17</slf4j.version>
 
         <!-- Test dependencies -->
         <junit.version>5.9.2</junit.version>
@@ -51,6 +52,12 @@
     </modules>
 
     <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>

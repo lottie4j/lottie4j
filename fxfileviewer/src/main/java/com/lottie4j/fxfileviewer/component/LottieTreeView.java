@@ -9,15 +9,11 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 
-import java.util.logging.Logger;
-
 /**
  * Tree table view component for displaying Lottie animation properties in a hierarchical structure.
  * Shows animation metadata including name, dimensions, layers, and nested property values.
  */
 public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty> {
-
-    private static final Logger logger = Logger.getLogger(LottieTreeView.class.getName());
 
     private final String fileName;
     private final Animation animation;

@@ -17,7 +17,8 @@ import javafx.scene.canvas.GraphicsContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Renderer for shape groups with support for transforms, trim paths, and combined path rendering.
@@ -25,7 +26,7 @@ import java.util.logging.Logger;
  */
 public class ShapeGroupRenderer {
 
-    private static final Logger logger = Logger.getLogger(ShapeGroupRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ShapeGroupRenderer.class.getName());
 
     private final TransformApplier transformApplier;
     private final ShapeRendererFactory shapeRendererFactory;
@@ -51,11 +52,11 @@ public class ShapeGroupRenderer {
      */
     public void renderShapeTypeGroup(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath) {
         if (shape instanceof Transform) {
-            logger.warning("Don't know how to render a Transform group yet");
+            logger.warn("Don't know how to render a Transform group yet");
             return;
         }
         if (shape instanceof Group group) {
-            logger.fine("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
+            logger.debug("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
             gc.save();
 
             // Extract Transform and TrimPath from the group's shapes
@@ -74,7 +75,7 @@ public class ShapeGroupRenderer {
                 if (groupTransform.opacity() != null) {
                     double opacity = groupTransform.opacity().getValue(0, frame);
                     if (opacity <= 0) {
-                        logger.fine("Skipping group " + group.name() + " - opacity is " + opacity);
+                        logger.debug("Skipping group " + group.name() + " - opacity is " + opacity);
                         gc.restore();
                         return;
                     }
@@ -106,7 +107,7 @@ public class ShapeGroupRenderer {
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
                         }
-                        default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
+                        default -> logger.warn("Not defined how to render shape type: " + item.type().shapeGroup());
                     }
                 }
             }
@@ -176,7 +177,7 @@ public class ShapeGroupRenderer {
             return false;
         }
 
-        logger.fine("Rendering " + paths.size() + " combined paths with fill rule for group: " + group.name());
+        logger.debug("Rendering " + paths.size() + " combined paths with fill rule for group: " + group.name());
 
         // Set fill rule
         javafx.scene.shape.FillRule fxFillRule = fill.fillRule() == FillRule.EVEN_ODD ?
@@ -308,7 +309,7 @@ public class ShapeGroupRenderer {
     private BezierDefinition getInterpolatedBezier(AnimatedBezier animatedBezier, double frame) {
         // This method should already exist in PathRenderer - we need to extract it or duplicate it
         // For now, return null and we'll need to implement it
-        logger.warning("Animated bezier not yet supported in combined path rendering");
+        logger.warn("Animated bezier not yet supported in combined path rendering");
         return null;
     }
 
@@ -323,7 +324,7 @@ public class ShapeGroupRenderer {
     private void renderShape(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
         if (renderer == null) {
-            logger.warning("No renderer found for shape: " + shape.getClass().getSimpleName());
+            logger.warn("No renderer found for shape: " + shape.getClass().getSimpleName());
             return;
         }
         renderer.render(gc, shape, parentGroup, frame);

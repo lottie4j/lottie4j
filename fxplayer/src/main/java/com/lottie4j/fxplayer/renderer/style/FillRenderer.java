@@ -5,12 +5,11 @@ import com.lottie4j.core.model.shape.style.Fill;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FillRenderer {
-    private static final Logger logger = Logger.getLogger(FillRenderer.class.getName());
-
-    /**
+        /**
      * Applies fill color and opacity from a Lottie fill style to the graphics context.
      *
      * @param gc    destination graphics context

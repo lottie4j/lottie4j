@@ -14,13 +14,14 @@ import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.logging.Logger;
 
 public class PolystarRenderer implements ShapeRenderer {
 
-    private static final Logger logger = Logger.getLogger(PolystarRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PolystarRenderer.class.getName());
 
     /**
      * {@inheritDoc}
@@ -30,12 +31,12 @@ public class PolystarRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Polystar polystar)) {
-            logger.warning("PolystarRenderer called with non-Polystar shape: " + shape.getClass().getSimpleName());
+            logger.warn("PolystarRenderer called with non-Polystar shape: " + shape.getClass().getSimpleName());
             return;
         }
 
         if (polystar.points() == null) {
-            logger.warning("Polystar has no points defined");
+            logger.warn("Polystar has no points defined");
             return;
         }
 
@@ -55,7 +56,7 @@ public class PolystarRenderer implements ShapeRenderer {
                 (int) Math.round(polystar.points().getValue(0, frame)) : 5;
 
         if (numPoints < 3) {
-            logger.warning("Polystar must have at least 3 points, got: " + numPoints);
+            logger.warn("Polystar must have at least 3 points, got: " + numPoints);
             numPoints = 3;
         }
 

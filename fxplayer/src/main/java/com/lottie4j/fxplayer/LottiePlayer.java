@@ -21,18 +21,20 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import org.slf4j.LoggerFactory;
+
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
 
 /**
  * JavaFX Canvas component for playing Lottie animations
  */
 public class LottiePlayer extends Canvas {
 
-    private static final Logger logger = Logger.getLogger(LottiePlayer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LottiePlayer.class.getName());
 
     private final Animation animation;
     private final GraphicsContext gc;
@@ -226,11 +228,11 @@ public class LottiePlayer extends Canvas {
      * @param visibleLayerIndices Set of layer indices to render, null to render all layers
      */
     public void renderFrame(GraphicsContext gc, double frame, Set<Integer> visibleLayerIndices) {
-        logger.finer("=== RENDER START ===");
-        logger.finer("Canvas dimensions: " + getWidth() + "x" + getHeight());
-        logger.finer("Rendering frame: " + frame);
+        logger.debug("=== RENDER START ===");
+        logger.debug("Canvas dimensions: " + getWidth() + "x" + getHeight());
+        logger.debug("Rendering frame: " + frame);
         if (visibleLayerIndices != null) {
-            logger.finer("Visible layers: " + visibleLayerIndices);
+            logger.debug("Visible layers: " + visibleLayerIndices);
         }
 
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
@@ -244,18 +246,18 @@ public class LottiePlayer extends Canvas {
         }
 
         if (animation == null) {
-            logger.warning("No animation to render");
+            logger.warn("No animation to render");
             return;
         }
 
         if (animation.layers() == null || animation.layers().isEmpty()) {
-            logger.warning("No layers in animation");
+            logger.warn("No layers in animation");
             gc.setFill(Color.BLACK);
             gc.fillText("No layers found in animation", 10, 30);
             return;
         }
 
-        logger.finer("Animation has " + animation.layers().size() + " layers");
+        logger.debug("Animation has " + animation.layers().size() + " layers");
 
         // Calculate scaling to fit canvas while maintaining aspect ratio
         double scaleX = gc.getCanvas().getWidth() / getAnimationWidth();
@@ -263,9 +265,9 @@ public class LottiePlayer extends Canvas {
         double scale = Math.min(scaleX, scaleY);
         double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
         double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
-        logger.finer("Animation size: " + getAnimationWidth() + "x" + getAnimationHeight());
-        logger.finer("Canvas size: " + gc.getCanvas().getWidth() + "x" + gc.getCanvas().getHeight());
-        logger.finer("Scale: " + scale + ", Offset: " + offsetX + ", " + offsetY);
+        logger.debug("Animation size: " + getAnimationWidth() + "x" + getAnimationHeight());
+        logger.debug("Canvas size: " + gc.getCanvas().getWidth() + "x" + gc.getCanvas().getHeight());
+        logger.debug("Scale: " + scale + ", Offset: " + offsetX + ", " + offsetY);
 
         gc.save();
         gc.translate(offsetX, offsetY);
@@ -278,12 +280,12 @@ public class LottiePlayer extends Canvas {
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
-            logger.finer("Processing layer: " + layer.name());
+            logger.debug("Processing layer: " + layer.name());
 
             // Skip layer if not in visible set (when filtering is active)
             Integer layerIndex = layer.indexLayer() != null ? layer.indexLayer().intValue() : i;
             if (visibleLayerIndices != null && !visibleLayerIndices.contains(layerIndex)) {
-                logger.finer("Skipping layer " + layer.name() + " (filtered out)");
+                logger.debug("Skipping layer " + layer.name() + " (filtered out)");
                 continue;
             }
 
@@ -295,28 +297,28 @@ public class LottiePlayer extends Canvas {
                         Layer matteSource = animation.layers().get(i + 1);
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
-                            logger.fine("Rendering matted layer " + i + ": " + layer.name() + " with matte from " + matteSource.name());
+                            logger.debug("Rendering matted layer " + i + ": " + layer.name() + " with matte from " + matteSource.name());
                             matteRenderer.renderLayerWithMatte(gc, layer, matteSource, frame,
                                     getAnimationWidth(), getAnimationHeight(), this::renderLayer);
                             continue;
                         }
                     }
-                    logger.warning("Layer " + layer.name() + " has matte mode but no valid matte source found");
+                    logger.warn("Layer " + layer.name() + " has matte mode but no valid matte source found");
                 }
 
                 // Skip matte source layers (td=1) - they should not be rendered directly
                 if (layer.matteTarget() != null && layer.matteTarget() == 1) {
-                    logger.fine("Skipping matte source layer: " + layer.name());
+                    logger.debug("Skipping matte source layer: " + layer.name());
                     continue;
                 }
 
                 // Skip layers whose parent uses mattes or is a matte source
                 if (shouldSkipDueToParent(layer)) {
-                    logger.fine("Skipping layer with skipped parent: " + layer.name());
+                    logger.debug("Skipping layer with skipped parent: " + layer.name());
                     continue;
                 }
 
-                logger.fine("Rendering layer: " + layer.name());
+                logger.debug("Rendering layer: " + layer.name());
                 renderLayer(gc, layer, frame);
             }
         }
@@ -371,7 +373,7 @@ public class LottiePlayer extends Canvas {
         if (layer.transform() != null && layer.transform().opacity() != null) {
             double opacity = layer.transform().opacity().getValue(0, frame);
             if (opacity <= 0) {
-                logger.fine("Skipping layer " + layer.name() + " - opacity is " + opacity);
+                logger.debug("Skipping layer " + layer.name() + " - opacity is " + opacity);
                 gc.restore();
                 return;
             }
@@ -383,16 +385,16 @@ public class LottiePlayer extends Canvas {
                 if (layer.transform().position() != null) {
                     double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
                     double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-                    logger.warning("Tick layer at frame " + frame + " - position: (" + x + ", " + y + ")");
+                    logger.warn("Tick layer at frame " + frame + " - position: (" + x + ", " + y + ")");
                 }
                 if (layer.transform().rotation() != null) {
                     double rot = layer.transform().rotation().getValue(0, frame);
-                    logger.warning("Tick layer at frame " + frame + " - rotation: " + rot);
+                    logger.warn("Tick layer at frame " + frame + " - rotation: " + rot);
                 }
                 if (layer.transform().scale() != null) {
                     double sx = layer.transform().scale().getValue(AnimatedValueType.X, frame);
                     double sy = layer.transform().scale().getValue(AnimatedValueType.Y, frame);
-                    logger.warning("Tick layer at frame " + frame + " - scale: (" + sx + ", " + sy + ")");
+                    logger.warn("Tick layer at frame " + frame + " - scale: (" + sx + ", " + sy + ")");
                 }
             }
         }
@@ -423,14 +425,14 @@ public class LottiePlayer extends Canvas {
         else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
-                logger.fine("Layer has " + layer.shapes().size() + " shapes");
+                logger.debug("Layer has " + layer.shapes().size() + " shapes");
 
                 // First pass: collect any layer-level modifiers (like TrimPath)
                 TrimPath layerTrimPath = null;
                 for (BaseShape shape : layer.shapes()) {
                     if (shape instanceof TrimPath trim) {
                         layerTrimPath = trim;
-                        logger.finer("Found layer-level TrimPath");
+                        logger.debug("Found layer-level TrimPath");
                     }
                 }
 
@@ -443,7 +445,7 @@ public class LottiePlayer extends Canvas {
                         continue;
                     }
 
-                    logger.fine("Shape class: " + shape.getClass().getSimpleName() + ", type: " + shape.type() + ", shapeGroup: " + shape.type().shapeGroup());
+                    logger.debug("Shape class: " + shape.getClass().getSimpleName() + ", type: " + shape.type() + ", shapeGroup: " + shape.type().shapeGroup());
 
                     switch (shape.type().shapeGroup()) {
                         case GROUP -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, frame, layerTrimPath);
@@ -451,14 +453,14 @@ public class LottiePlayer extends Canvas {
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
                         }
-                        default -> logger.warning("Unsupported shape type: " + shape.type().shapeGroup());
+                        default -> logger.warn("Unsupported shape type: " + shape.type().shapeGroup());
                     }
                 }
             } else {
-                logger.finer("Layer has no shapes");
+                logger.debug("Layer has no shapes");
             }
         } else {
-            logger.finer("Skipping shape rendering for NULL layer: " + layer.name());
+            logger.debug("Skipping shape rendering for NULL layer: " + layer.name());
         }
 
         gc.restore();
@@ -485,7 +487,7 @@ public class LottiePlayer extends Canvas {
 
         Layer parent = layersByIndex.get(layer.indexParent());
         if (parent == null) {
-            logger.warning("Parent layer not found: " + layer.indexParent());
+            logger.warn("Parent layer not found: " + layer.indexParent());
             return;
         }
 
@@ -499,7 +501,7 @@ public class LottiePlayer extends Canvas {
     private void renderShapeTypeShape(BaseShape shape, Group parentGroup, double frame) {
         ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
         if (renderer == null) {
-            logger.warning("No renderer found for shape: " + shape.getClass().getSimpleName());
+            logger.warn("No renderer found for shape: " + shape.getClass().getSimpleName());
             return;
         }
         renderer.render(gc, shape, parentGroup, frame);
