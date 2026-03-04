@@ -1,6 +1,5 @@
 package com.lottie4j.fxplayer;
 
-import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
@@ -10,28 +9,20 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
-import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
-import com.lottie4j.fxplayer.renderer.layer.PrecompRenderer;
-import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
-import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
-import com.lottie4j.fxplayer.renderer.shape.*;
-import com.lottie4j.fxplayer.util.ColorParser;
+import com.lottie4j.fxplayer.renderer.layer.*;
+import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
+import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
+import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.LayerActivity;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.effect.GaussianBlur;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -52,10 +43,11 @@ public class LottiePlayer extends Canvas {
     private final TextRenderer textRenderer = new TextRenderer();
     private final TransformApplier transformApplier = new TransformApplier();
     private final PrecompRenderer precompRenderer = new PrecompRenderer(transformApplier, textRenderer, imageRenderer);
-    private final ShapeRenderer pathRenderer = new PathRenderer();
-    private final ShapeRenderer ellipseRenderer = new EllipseRenderer();
-    private final ShapeRenderer rectangleRenderer = new RectangleRenderer();
-    private final ShapeRenderer polystarRenderer = new PolystarRenderer();
+    private final ShapeRendererFactory shapeRendererFactory = new ShapeRendererFactory();
+    private final ShapeGroupRenderer shapeGroupRenderer = new ShapeGroupRenderer(transformApplier, shapeRendererFactory);
+    private final SolidColorRenderer solidColorRenderer = new SolidColorRenderer();
+    private final EffectsRenderer effectsRenderer = new EffectsRenderer();
+    private final MatteRenderer matteRenderer = new MatteRenderer();
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -304,7 +296,8 @@ public class LottiePlayer extends Canvas {
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
                             logger.fine("Rendering matted layer " + i + ": " + layer.name() + " with matte from " + matteSource.name());
-                            renderLayerWithMatteSimple(gc, layer, matteSource, frame);
+                            matteRenderer.renderLayerWithMatte(gc, layer, matteSource, frame,
+                                    getAnimationWidth(), getAnimationHeight(), this::renderLayer);
                             continue;
                         }
                     }
@@ -362,9 +355,9 @@ public class LottiePlayer extends Canvas {
 
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
         // Check for Gaussian Blur effect and render with blur if needed
-        double blurRadius = getGaussianBlurRadius(layer, frame);
+        double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
-            renderLayerWithGaussianBlur(gc, layer, frame, blurRadius);
+            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, this::renderLayerInternal);
             return;
         }
 
@@ -420,7 +413,7 @@ public class LottiePlayer extends Canvas {
         }
         // Handle solid color layers
         else if (layer.layerType() == LayerType.SOLD_COLOR) {
-            renderSolidColorLayer(gc, layer);
+            solidColorRenderer.render(gc, layer, getAnimationWidth(), getAnimationHeight());
         }
         // Handle text layers
         else if (layer.layerType() == LayerType.TEXT) {
@@ -453,7 +446,7 @@ public class LottiePlayer extends Canvas {
                     logger.fine("Shape class: " + shape.getClass().getSimpleName() + ", type: " + shape.type() + ", shapeGroup: " + shape.type().shapeGroup());
 
                     switch (shape.type().shapeGroup()) {
-                        case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
+                        case GROUP -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, frame, layerTrimPath);
                         case SHAPE -> renderShapeTypeShape(shape, null, frame);
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
@@ -471,179 +464,6 @@ public class LottiePlayer extends Canvas {
         gc.restore();
     }
 
-    private void renderLayerWithMatteSimple(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame) {
-        // Use JavaFX BlendMode to simulate alpha masking
-        // For ALPHA matte mode: content should only show where matte is opaque
-
-        com.lottie4j.core.definition.MatteMode matteMode = matteUser.matteMode();
-        logger.fine("Rendering with blend mode matte: " + matteMode);
-
-        // First render the content layer normally
-        renderLayer(gc, matteUser, frame);
-
-        // Then apply the matte using blend mode
-        // MULTIPLY blend mode: content * matte (darkens where matte is darker)
-        // For now, just skip the matte to see content
-        // TODO: Implement proper blend mode masking
-    }
-
-    private void renderLayerWithMatte(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame) {
-        long startTime = System.nanoTime();
-
-        // Get current canvas dimensions
-        // OPTIMIZATION: Use smaller canvas for better performance
-        // In a production implementation, we should calculate the bounding box
-        // For now, use half size which still maintains quality
-        double width = getAnimationWidth();
-        double height = getAnimationHeight();
-
-        // Use full canvas size for now (optimize later once working)
-        double matteWidth = width;
-        double matteHeight = height;
-        double scale = 1.0;
-
-        // Create off-screen canvases for matte and content
-        Canvas matteCanvas = new Canvas(matteWidth, matteHeight);
-        Canvas contentCanvas = new Canvas(matteWidth, matteHeight);
-        GraphicsContext matteGc = matteCanvas.getGraphicsContext2D();
-        GraphicsContext contentGc = contentCanvas.getGraphicsContext2D();
-
-        // Don't fill with anything - let canvas be transparent by default
-        // The shapes will render with their own fills/strokes
-
-        // Scale the rendering
-        matteGc.scale(scale, scale);
-        contentGc.scale(scale, scale);
-
-        // Render the matte source to the matte canvas (WITH parent transforms for proper positioning)
-        logger.fine("Rendering matte source layer: " + matteSource.name() + " (shapes: " + (matteSource.shapes() != null ? matteSource.shapes().size() : 0) + ", parent: " + matteSource.indexParent() + ")");
-        renderLayer(matteGc, matteSource, frame);
-
-        // Render the content layer to the content canvas (WITH parent transforms for proper positioning)
-        logger.fine("Rendering matte user layer: " + matteUser.name() + " (shapes: " + (matteUser.shapes() != null ? matteUser.shapes().size() : 0) + ", parent: " + matteUser.indexParent() + ")");
-        renderLayer(contentGc, matteUser, frame);
-
-        // Get the matte mode
-        com.lottie4j.core.definition.MatteMode matteMode = matteUser.matteMode();
-        logger.fine("Applying matte mode: " + matteMode);
-
-        // Snapshot both canvases with transparent background
-        SnapshotParameters params = new SnapshotParameters();
-        params.setFill(Color.TRANSPARENT);
-        WritableImage matteImage = matteCanvas.snapshot(params, null);
-        WritableImage contentImage = contentCanvas.snapshot(params, null);
-
-        // DEBUG: Check if content and matte have actual pixels
-        logger.fine("Matte image size: " + matteImage.getWidth() + "x" + matteImage.getHeight());
-        logger.fine("Content image size: " + contentImage.getWidth() + "x" + contentImage.getHeight());
-
-        // Sample multiple pixels to see what we're working with
-        PixelReader matteReader = matteImage.getPixelReader();
-        PixelReader contentReader = contentImage.getPixelReader();
-
-        // Sample at different positions
-        Color matteCenter = matteReader.getColor((int) matteImage.getWidth() / 2, (int) matteImage.getHeight() / 2);
-        Color contentCenter = contentReader.getColor((int) contentImage.getWidth() / 2, (int) contentImage.getHeight() / 2);
-        Color matte270 = matteReader.getColor(270, 270);
-        Color content270 = contentReader.getColor(270, 270);
-
-        logger.info("  Matte center [" + ((int) matteImage.getWidth() / 2) + "," + ((int) matteImage.getHeight() / 2) + "]: " + matteCenter);
-        logger.info("  Content center [" + ((int) contentImage.getWidth() / 2) + "," + ((int) contentImage.getHeight() / 2) + "]: " + contentCenter);
-        logger.info("  Matte at [270,270]: " + matte270);
-        logger.info("  Content at [270,270]: " + content270);
-
-        // Apply matte composition
-        WritableImage result = applyMatte(contentImage, matteImage, matteMode);
-
-        // IMPORTANT: Save the current composite operation and use SRC_OVER
-        // This ensures transparent pixels in the matted result don't obscure
-        // content below (which was showing as white background)
-        gc.save();
-        gc.setGlobalAlpha(1.0); // Full opacity for the matted result itself
-
-        // Draw the result to the main canvas, scaling back up if needed
-        // The SRC_OVER blend mode (default) will properly composite transparent pixels
-        gc.drawImage(result, 0, 0, width, height);
-
-        gc.restore();
-
-        long endTime = System.nanoTime();
-        logger.fine("Matte rendering took: " + ((endTime - startTime) / 1_000_000) + "ms");
-    }
-
-    private WritableImage applyMatte(WritableImage content, WritableImage matte, com.lottie4j.core.definition.MatteMode matteMode) {
-        int width = (int) content.getWidth();
-        int height = (int) content.getHeight();
-
-        WritableImage result = new WritableImage(width, height);
-        PixelReader contentReader = content.getPixelReader();
-        PixelReader matteReader = matte.getPixelReader();
-        PixelWriter resultWriter = result.getPixelWriter();
-
-        // Use pixel buffer for better performance
-        int[] contentBuffer = new int[width * height];
-        int[] matteBuffer = new int[width * height];
-        int[] resultBuffer = new int[width * height];
-
-        contentReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), contentBuffer, 0, width);
-        matteReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), matteBuffer, 0, width);
-
-        for (int i = 0; i < contentBuffer.length; i++) {
-            int contentPixel = contentBuffer[i];
-            int mattePixel = matteBuffer[i];
-
-            int cA = (contentPixel >> 24) & 0xFF;
-            int cR = (contentPixel >> 16) & 0xFF;
-            int cG = (contentPixel >> 8) & 0xFF;
-            int cB = contentPixel & 0xFF;
-
-            int mA = (mattePixel >> 24) & 0xFF;
-            int mR = (mattePixel >> 16) & 0xFF;
-            int mG = (mattePixel >> 8) & 0xFF;
-            int mB = mattePixel & 0xFF;
-
-            int resultA;
-            switch (matteMode) {
-                case ALPHA:
-                    // Use matte's alpha to mask content
-                    // The content's RGB stays, but alpha is multiplied by matte's alpha
-                    resultA = (cA * mA) / 255;
-                    break;
-
-                case INVERTED_ALPHA:
-                    // Use inverted matte's alpha to mask content
-                    resultA = (cA * (255 - mA)) / 255;
-                    break;
-
-                case LUMA:
-                    // Use matte's luminance as alpha
-                    int luma = (299 * mR + 587 * mG + 114 * mB) / 1000;
-                    resultA = (cA * luma) / 255;
-                    break;
-
-                case INVERTED_LUMA:
-                    // Use inverted matte's luminance as alpha
-                    int lumaInv = (299 * mR + 587 * mG + 114 * mB) / 1000;
-                    resultA = (cA * (255 - lumaInv)) / 255;
-                    break;
-
-                default:
-                    resultA = cA;
-            }
-
-            // IMPORTANT: Keep content's RGB, only modify alpha
-            // If resultA is 0, make the pixel fully transparent
-            if (resultA == 0) {
-                resultBuffer[i] = 0; // Fully transparent
-            } else {
-                resultBuffer[i] = (resultA << 24) | (cR << 16) | (cG << 8) | cB;
-            }
-        }
-
-        resultWriter.setPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), resultBuffer, 0, width);
-        return result;
-    }
-
     private void renderPrecompositionLayer(GraphicsContext gc, Layer layer, double frame) {
         precompRenderer.renderPrecompositionLayer(
                 gc,
@@ -652,8 +472,8 @@ public class LottiePlayer extends Canvas {
                 assetsById,
                 animation,
                 this::isLayerActiveAtFrame,
-                this::renderSolidColorLayer,
-                this::renderShapeTypeGroup,
+                (solid_gc, solid_layer) -> solidColorRenderer.render(solid_gc, solid_layer, getAnimationWidth(), getAnimationHeight()),
+                (shape, f, trimPath) -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, f, trimPath),
                 this::renderShapeTypeShape
         );
     }
@@ -669,8 +489,6 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        // logger.fine("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
-
         // Recursively apply parent's parent transforms first
         applyParentTransforms(gc, parent, frame);
 
@@ -678,24 +496,8 @@ public class LottiePlayer extends Canvas {
         applyLayerTransform(gc, parent, frame);
     }
 
-    private ShapeRenderer getShapeRenderer(BaseShape shape) {
-        if (shape instanceof com.lottie4j.core.model.shape.shape.Path) {
-            return pathRenderer;
-        }
-        if (shape instanceof com.lottie4j.core.model.shape.shape.Ellipse) {
-            return ellipseRenderer;
-        }
-        if (shape instanceof com.lottie4j.core.model.shape.shape.Rectangle) {
-            return rectangleRenderer;
-        }
-        if (shape instanceof com.lottie4j.core.model.shape.shape.Polystar) {
-            return polystarRenderer;
-        }
-        return null;
-    }
-
     private void renderShapeTypeShape(BaseShape shape, Group parentGroup, double frame) {
-        ShapeRenderer renderer = getShapeRenderer(shape);
+        ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
         if (renderer == null) {
             logger.warning("No renderer found for shape: " + shape.getClass().getSimpleName());
             return;
@@ -703,247 +505,6 @@ public class LottiePlayer extends Canvas {
         renderer.render(gc, shape, parentGroup, frame);
     }
 
-    public void renderShapeTypeGroup(BaseShape shape, double frame, TrimPath layerTrimPath) {
-        if (shape instanceof Transform) {
-            logger.warning("Don't know how to render a Transform group yet");
-            return;
-        }
-        if (shape instanceof Group group) {
-            logger.fine("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
-            gc.save();
-
-            // Extract Transform and TrimPath from the group's shapes
-            Transform groupTransform = null;
-            TrimPath groupTrimPath = null;
-            for (BaseShape item : group.shapes()) {
-                if (item instanceof Transform transform) {
-                    groupTransform = transform;
-                } else if (item instanceof TrimPath trim) {
-                    groupTrimPath = trim;
-                }
-            }
-
-            // Check group opacity - skip rendering if transparent
-            if (groupTransform != null) {
-                if (groupTransform.opacity() != null) {
-                    double opacity = groupTransform.opacity().getValue(0, frame);
-                    if (opacity <= 0) {
-                        logger.fine("Skipping group " + group.name() + " - opacity is " + opacity);
-                        gc.restore();
-                        return;
-                    }
-                }
-                applyGroupTransform(gc, groupTransform, frame);
-            }
-
-            // Use group-level TrimPath if present, otherwise use layer-level TrimPath
-            TrimPath effectiveTrimPath = groupTrimPath != null ? groupTrimPath : layerTrimPath;
-            // if (effectiveTrimPath != null) {
-            //     logger.fine("Using TrimPath for group: " + group.name());
-            // }
-
-            // Create a synthetic group that includes the effective trim path for renderers
-            Group effectiveGroup = createGroupWithTrimPath(group, effectiveTrimPath);
-
-            // Check if this group has multiple Path shapes with a single Fill (needs combined rendering)
-            boolean hasMultiplePaths = renderGroupWithCombinedPaths(group, effectiveGroup, frame, effectiveTrimPath);
-
-            if (!hasMultiplePaths) {
-                // Render all non-transform/non-modifier shapes in reverse order
-                // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
-                for (int i = group.shapes().size() - 1; i >= 0; i--) {
-                    BaseShape item = group.shapes().get(i);
-                    if (item instanceof Transform || item instanceof TrimPath) {
-                        continue; // Skip modifiers, they're applied to the shapes
-                    }
-
-                    switch (item.type().shapeGroup()) {
-                        case GROUP -> renderShapeTypeGroup(item, frame, effectiveTrimPath);
-                        case SHAPE -> renderShapeTypeShape(item, effectiveGroup, frame);
-                        case STYLE -> {
-                            // Skip - styles (Fill, Stroke, etc.) are handled within groups
-                        }
-                        default -> logger.warning("Not defined how to render shape type: " + item.type().shapeGroup());
-                    }
-                }
-            }
-
-            gc.restore();
-        }
-    }
-
-    private Group createGroupWithTrimPath(Group original, TrimPath trimPath) {
-        if (trimPath == null) {
-            return original;
-        }
-        // Create a new group that includes the TrimPath in its shapes list
-        java.util.List<BaseShape> newShapes = new java.util.ArrayList<>(original.shapes());
-        if (!newShapes.contains(trimPath)) {
-            newShapes.add(trimPath);
-        }
-        return new Group(
-                original.name(),
-                original.matchName(),
-                original.hidden(),
-                original.blendMode(),
-                original.index(),
-                original.clazz(),
-                original.id(),
-                original.d(),
-                original.cix(),
-                original.numberOfProperties(),
-                newShapes
-        );
-    }
-
-    /**
-     * Handle groups with multiple Path shapes that share a single Fill.
-     * These need to be rendered together with a fill rule to create holes/rings.
-     * Returns true if the group was rendered as combined paths, false otherwise.
-     */
-    private boolean renderGroupWithCombinedPaths(Group group, Group effectiveGroup, double frame, TrimPath effectiveTrimPath) {
-        // Count Path shapes and check for Fill
-        java.util.List<com.lottie4j.core.model.shape.shape.Path> paths = new java.util.ArrayList<>();
-        com.lottie4j.core.model.shape.style.Fill fill = null;
-
-        for (BaseShape item : group.shapes()) {
-            if (item instanceof com.lottie4j.core.model.shape.shape.Path path) {
-                paths.add(path);
-            } else if (item instanceof com.lottie4j.core.model.shape.style.Fill f) {
-                fill = f;
-            }
-        }
-
-        // Only use combined rendering if we have multiple paths with a fill
-        if (paths.size() < 2 || fill == null) {
-            return false;
-        }
-
-        logger.fine("Rendering " + paths.size() + " combined paths with fill rule for group: " + group.name());
-
-        // Set fill rule
-        javafx.scene.shape.FillRule fxFillRule = fill.fillRule() == com.lottie4j.core.definition.FillRule.EVEN_ODD ?
-                javafx.scene.shape.FillRule.EVEN_ODD : javafx.scene.shape.FillRule.NON_ZERO;
-
-        gc.save();
-        gc.setFillRule(fxFillRule);
-        gc.beginPath();
-
-        // Add all paths to the canvas path in reverse order (last to first)
-        for (int i = paths.size() - 1; i >= 0; i--) {
-            addPathToCanvas(paths.get(i), frame);
-        }
-
-        // Apply fill color and opacity
-        var fillColor = new com.lottie4j.fxplayer.element.FillStyle(fill).getColor(frame);
-        gc.setFill(fillColor);
-
-        double fillOpacity = fill.opacity() != null ? fill.opacity().getValue(0, frame) / 100.0 : 1.0;
-        if (fillOpacity < 1.0) {
-            double currentAlpha = gc.getGlobalAlpha();
-            gc.setGlobalAlpha(currentAlpha * fillOpacity);
-        }
-
-        gc.fill();
-        gc.restore();
-
-        // Render any nested groups
-        for (int i = group.shapes().size() - 1; i >= 0; i--) {
-            BaseShape item = group.shapes().get(i);
-            if (item.type().shapeGroup() == com.lottie4j.core.definition.ShapeGroup.GROUP) {
-                renderShapeTypeGroup(item, frame, effectiveTrimPath);
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Add a Path shape's bezier curves to the current canvas path
-     */
-    private void addPathToCanvas(com.lottie4j.core.model.shape.shape.Path path, double frame) {
-        if (path.bezier() == null) return;
-
-        com.lottie4j.core.model.bezier.BezierDefinition bezierDef;
-        if (path.bezier() instanceof com.lottie4j.core.model.bezier.FixedBezier fixedBezier) {
-            bezierDef = fixedBezier.bezier();
-        } else if (path.bezier() instanceof com.lottie4j.core.model.bezier.AnimatedBezier animatedBezier) {
-            bezierDef = getInterpolatedBezier(animatedBezier, frame);
-        } else {
-            return;
-        }
-
-        if (bezierDef == null || bezierDef.vertices() == null || bezierDef.vertices().isEmpty()) return;
-
-        List<java.util.List<Double>> vertices = bezierDef.vertices();
-        List<java.util.List<Double>> tangentsIn = bezierDef.tangentsIn();
-        List<java.util.List<Double>> tangentsOut = bezierDef.tangentsOut();
-
-        boolean first = true;
-        for (int i = 0; i < vertices.size(); i++) {
-            java.util.List<Double> vertex = vertices.get(i);
-            if (vertex.size() < 2) continue;
-
-            double x = vertex.get(0);
-            double y = vertex.get(1);
-
-            if (first) {
-                gc.moveTo(x, y);
-                first = false;
-            } else {
-                if (tangentsIn != null && tangentsOut != null &&
-                        i - 1 < tangentsOut.size() && i < tangentsIn.size()) {
-                    java.util.List<Double> prevTangentOut = tangentsOut.get(i - 1);
-                    java.util.List<Double> currentTangentIn = tangentsIn.get(i);
-
-                    if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
-                        java.util.List<Double> prevVertex = vertices.get(i - 1);
-                        double cp1x = prevVertex.get(0) + prevTangentOut.get(0);
-                        double cp1y = prevVertex.get(1) + prevTangentOut.get(1);
-                        double cp2x = x + currentTangentIn.get(0);
-                        double cp2y = y + currentTangentIn.get(1);
-                        gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
-                    } else {
-                        gc.lineTo(x, y);
-                    }
-                } else {
-                    gc.lineTo(x, y);
-                }
-            }
-        }
-
-        // Handle closing bezier curve
-        if (bezierDef.closed() != null && bezierDef.closed() && vertices.size() > 1) {
-            int lastIdx = vertices.size() - 1;
-            if (tangentsIn != null && tangentsOut != null &&
-                    lastIdx < tangentsOut.size() && 0 < tangentsIn.size()) {
-                java.util.List<Double> lastTangentOut = tangentsOut.get(lastIdx);
-                java.util.List<Double> firstTangentIn = tangentsIn.get(0);
-                if (lastTangentOut.size() >= 2 && firstTangentIn.size() >= 2) {
-                    java.util.List<Double> lastVertex = vertices.get(lastIdx);
-                    java.util.List<Double> firstVertex = vertices.get(0);
-                    double cp1x = lastVertex.get(0) + lastTangentOut.get(0);
-                    double cp1y = lastVertex.get(1) + lastTangentOut.get(1);
-                    double cp2x = firstVertex.get(0) + firstTangentIn.get(0);
-                    double cp2y = firstVertex.get(1) + firstTangentIn.get(1);
-                    gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
-                    // Note: Don't call closePath() here - JavaFX will handle it
-                } else {
-                    gc.closePath();
-                }
-            } else {
-                gc.closePath();
-            }
-        }
-    }
-
-    private com.lottie4j.core.model.bezier.BezierDefinition getInterpolatedBezier(
-            com.lottie4j.core.model.bezier.AnimatedBezier animatedBezier, double frame) {
-        // This method should already exist in PathRenderer - we need to extract it or duplicate it
-        // For now, return null and we'll need to implement it
-        logger.warning("Animated bezier not yet supported in combined path rendering");
-        return null;
-    }
 
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
         transformApplier.applyGroupTransform(gc, transform, frame);
@@ -1008,94 +569,5 @@ public class LottiePlayer extends Canvas {
         }
     }
 
-    private void renderSolidColorLayer(GraphicsContext gc, Layer layer) {
-        if (layer.solidColor() == null) {
-            logger.warning("Solid color layer has no color: " + layer.name());
-            return;
-        }
-
-        // Parse the solid color (format: "RRGGBBAA" or similar hex string)
-        Color color = parseColorString(layer.solidColor());
-        if (color == null) {
-            logger.warning("Could not parse solid color: " + layer.solidColor());
-            return;
-        }
-
-        // Get the layer dimensions if specified, otherwise use animation dimensions
-        double width = layer.width() != null ? layer.width() : getAnimationWidth();
-        double height = layer.height() != null ? layer.height() : getAnimationHeight();
-
-        // Fill from negative coordinates to ensure full coverage in precompositions
-        // This is important because solid color should fill the entire composition
-        gc.setFill(color);
-        gc.fillRect(-width, -height, width * 3, height * 3);
-
-        logger.fine("Rendered solid color layer: " + layer.name() + " color=" + color + " size=" + width + "x" + height);
-    }
-
-    private Color parseColorString(String colorStr) {
-        return ColorParser.parse(colorStr, logger);
-    }
-
-    private double getGaussianBlurRadius(Layer layer, double frame) {
-        // Default to no blur
-        double blurRadius = 0.0;
-
-        // Check if the layer has effects
-        if (layer.effects() == null) {
-            return blurRadius;
-        }
-
-        for (var effect : layer.effects()) {
-            // Look for Gaussian Blur effect (type 14)
-            if (effect.type() != EffectType.GAUSSIAN_BLUR) {
-                continue;
-            }
-
-            // Skip if effect is disabled
-            if (effect.enabled() != null && effect.enabled() == 0) {
-                continue;
-            }
-
-            // Look for "Blurriness" property in the effect values
-            if (effect.values() != null) {
-                for (var effectValue : effect.values()) {
-                    if (effectValue != null && "Blurriness".equals(effectValue.name())) {
-                        if (effectValue.value() != null) {
-                            double rawBlur = effectValue.value().getValue(0, frame);
-                            // Scale blur radius for JavaFX - After Effects blurriness is much stronger
-                            // Use much higher divisors to match the visual strength
-                            if (rawBlur > 100) {
-                                blurRadius = rawBlur / 10.0;  // Heavy blur - strong scale down
-                            } else if (rawBlur > 50) {
-                                blurRadius = rawBlur / 6.0;  // Medium blur
-                            } else {
-                                blurRadius = rawBlur / 3.5;  // Light blur
-                            }
-                            logger.finer("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name() + " at frame " + frame);
-                        }
-                        break;
-                    }
-                }
-            }
-            break;
-        }
-
-        return blurRadius;
-    }
-
-    private void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius) {
-        gc.save();
-
-        // Apply the Gaussian blur effect
-        GaussianBlur blur = new GaussianBlur(blurRadius);
-        gc.setEffect(blur);
-
-        // Render the layer normally
-        renderLayerInternal(gc, layer, frame);
-
-        gc.setEffect(null);
-        gc.restore();
-    }
 }
 
