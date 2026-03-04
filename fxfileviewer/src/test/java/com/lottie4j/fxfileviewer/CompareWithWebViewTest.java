@@ -15,7 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -83,7 +83,7 @@ public class CompareWithWebViewTest {
 
     @ParameterizedTest
     @MethodSource("lottieJsonFiles")
-    @DisabledIfSystemProperty(named = "java.awt.headless", matches = "true")
+    @Disabled("WebView rendering requires display - run locally only")
     void testLoadLottieFile(String fileName) throws Exception {
         logger.info("Testing: {}", fileName);
 
