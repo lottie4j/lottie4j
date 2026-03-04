@@ -5,10 +5,12 @@ import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.HBox;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
@@ -116,20 +118,25 @@ public class CompareWithWebViewTest {
 
         Files.createDirectories(outputDir);
 
+        // Use actual animation dimensions (matching LottieFileDebugViewer approach)
+        int animWidth = animation.width() != null ? animation.width() : CANVAS_WIDTH;
+        int animHeight = animation.height() != null ? animation.height() : CANVAS_HEIGHT;
+
         Platform.runLater(() -> {
             try {
-                // Create LottiePlayer
-                LottiePlayer player = new LottiePlayer(animation, CANVAS_WIDTH, CANVAS_HEIGHT);
+                // Create LottiePlayer with actual animation dimensions
+                LottiePlayer player = new LottiePlayer(animation, animWidth, animHeight);
 
-                // Create WebView and add to scene (required for rendering)
+                // Create WebView with same dimensions
                 WebView webView = new WebView();
-                webView.setPrefSize(CANVAS_WIDTH, CANVAS_HEIGHT);
-                webView.setMaxSize(CANVAS_WIDTH, CANVAS_HEIGHT);
-                webView.setMinSize(CANVAS_WIDTH, CANVAS_HEIGHT);
+                webView.setPrefSize(animWidth, animHeight);
+                webView.setMaxSize(animWidth, animHeight);
+                webView.setMinSize(animWidth, animHeight);
 
-                // Create scene with WebView (needed for proper rendering)
-                javafx.scene.layout.StackPane root = new javafx.scene.layout.StackPane(webView);
-                javafx.scene.Scene scene = new javafx.scene.Scene(root, CANVAS_WIDTH, CANVAS_HEIGHT);
+                // Add both player and webView to scene (matching LottieFileDebugViewer approach)
+                HBox playersBox = new HBox(10);
+                playersBox.getChildren().addAll(player, webView);
+                Scene scene = new Scene(playersBox, animWidth * 2 + 10, animHeight);
                 primaryStage.setScene(scene);
                 primaryStage.show();
 
@@ -137,41 +144,25 @@ public class CompareWithWebViewTest {
                 webView.getEngine().setOnAlert(event -> System.out.println("JS Alert: " + event.getData()));
                 webView.getEngine().setOnError(event -> System.err.println("JS Error: " + event.getMessage()));
 
-                // Load Lottie animation in WebView
-                String htmlContent = generateLottieHtml(lottieFile);
+                // Load Lottie animation in WebView using actual dimensions
+                String htmlContent = generateLottieHtml(lottieFile, animWidth, animHeight);
                 System.out.println("Loading HTML content into WebView...");
 
                 // Set up listener BEFORE loading content
                 webView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-                    System.out.println("WebView load state: " + newState);
                     if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                        System.out.println("WebView loaded successfully");
                         try {
-                            // Additional wait for lottie animation to initialize
-                            Thread.sleep(1000);
+                            // Wait for lottie animation to initialize
+                            Thread.sleep(500);
 
-                            // Debug: Check if lottie library and animation loaded
-                            Object lottieExists = webView.getEngine().executeScript("typeof lottie !== 'undefined'");
-                            Object animReady = webView.getEngine().executeScript("window.isAnimationReady()");
-                            System.out.println("Lottie library loaded: " + lottieExists);
-                            System.out.println("Animation ready: " + animReady);
-
-                            // Debug: Check actual dimensions
-                            Object containerWidth = webView.getEngine().executeScript("document.getElementById('lottie').offsetWidth");
-                            Object containerHeight = webView.getEngine().executeScript("document.getElementById('lottie').offsetHeight");
-                            Object svgCount = webView.getEngine().executeScript("document.querySelectorAll('svg').length");
-                            System.out.println("Lottie container size: " + containerWidth + "x" + containerHeight);
-                            System.out.println("SVG elements found: " + svgCount);
+                            // Debug: Check WebView rendering
+                            Object containerWidth = webView.getEngine().executeScript("document.getElementById('lottie-container').offsetWidth");
+                            Object containerHeight = webView.getEngine().executeScript("document.getElementById('lottie-container').offsetHeight");
+                            Object svgWidth = webView.getEngine().executeScript("document.querySelector('svg') ? document.querySelector('svg').getAttribute('width') : 'no svg'");
+                            Object svgHeight = webView.getEngine().executeScript("document.querySelector('svg') ? document.querySelector('svg').getAttribute('height') : 'no svg'");
+                            System.out.println("Container size: " + containerWidth + "x" + containerHeight);
+                            System.out.println("SVG size: " + svgWidth + "x" + svgHeight);
                             System.out.println("WebView size: " + webView.getWidth() + "x" + webView.getHeight());
-
-                            if (!Boolean.TRUE.equals(animReady)) {
-                                System.err.println("Animation not ready after 1 second!");
-                                Object errorCheck = webView.getEngine().executeScript(
-                                        "typeof lottie === 'undefined' ? 'lottie not loaded' : " +
-                                                "(animation === null ? 'animation null' : 'animation exists')"
-                                );
-                                System.err.println("Error check: " + errorCheck);
-                            }
 
                             // Get frame range
                             int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
@@ -199,8 +190,8 @@ public class CompareWithWebViewTest {
                                 // Save images for debugging if similarity is low
                                 if (similarity < SIMILARITY_THRESHOLD) {
                                     System.out.printf("Similarity %.2f%% below threshold, saving frame %d%n", similarity, frame);
-                                    saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + frame + ".png"));
                                 }
+                                saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + frame + ".png"));
 
                                 System.out.printf("Frame %d: %.2f%% similar%n", frame, similarity);
                             }
@@ -236,87 +227,68 @@ public class CompareWithWebViewTest {
         assertTrue(latch.await(60, TimeUnit.SECONDS), "Frame comparison timed out");
     }
 
-    private String generateLottieHtml(File lottieFile) throws IOException {
+    private String generateLottieHtml(File lottieFile, int width, int height) throws IOException {
         String lottieJson = Files.readString(lottieFile.toPath());
+
+        // Escape JSON for embedding in JavaScript (matching LottieFileDebugViewer approach)
+        String escapedJson = lottieJson.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+
         return """
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta charset="UTF-8">
                     <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        html, body { width: 100%%; height: 100%%; overflow: hidden; background: white; }
-                        #lottie {
+                        body {
+                            margin: 0;
+                            padding: 0;
                             width: %dpx;
                             height: %dpx;
-                            position: absolute;
-                            top: 50%%;
-                            left: 50%%;
-                            transform: translate(-50%%, -50%%);
+                            background-color: #ffffff;
+                            overflow: hidden;
                         }
-                        #lottie svg {
-                            width: 100%% !important;
-                            height: 100%% !important;
+                        #lottie-container {
+                            width: %dpx;
+                            height: %dpx;
+                            margin: 0;
+                            padding: 0;
                         }
                     </style>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
                 </head>
                 <body>
-                    <div id="lottie"></div>
+                    <div id="lottie-container"></div>
                     <script>
-                        var animData = %s;
-                        var animation = null;
-                
-                        // Initialize after DOM and lottie library are loaded
-                        window.addEventListener('load', function() {
-                            if (typeof lottie !== 'undefined') {
-                                animation = lottie.loadAnimation({
-                                    container: document.getElementById('lottie'),
-                                    renderer: 'svg',
-                                    loop: false,
-                                    autoplay: false,
-                                    animationData: animData
-                                });
+                        var animationData = JSON.parse("%s");
+                        var animation = lottie.loadAnimation({
+                            container: document.getElementById('lottie-container'),
+                            renderer: 'svg',
+                            loop: false,
+                            autoplay: false,
+                            animationData: animationData,
+                            rendererSettings: {
+                                preserveAspectRatio: 'xMidYMid meet'
                             }
                         });
-                
-                        var currentFrame = -1;
-                        var renderComplete = false;
-                
-                        window.goToFrame = function(frame) {
-                            if (animation) {
-                                renderComplete = false;
-                                animation.goToAndStop(frame, true);
-                                currentFrame = frame;
-                
-                                // Force a small delay to allow render
-                                setTimeout(function() {
-                                    renderComplete = true;
-                                }, 50);
-                
-                                return true;
-                            }
-                            return false;
+
+                        window.seekToFrame = function(frame) {
+                            animation.goToAndStop(frame, true);
                         };
-                
+
                         window.isAnimationReady = function() {
                             return animation !== null;
-                        };
-                
-                        window.isRenderComplete = function() {
-                            return renderComplete;
-                        };
-                
-                        window.getCurrentFrame = function() {
-                            return currentFrame;
                         };
                     </script>
                 </body>
                 </html>
-                """.formatted(CANVAS_WIDTH, CANVAS_HEIGHT, lottieJson);
+                """.formatted(width, height, width, height, escapedJson);
     }
 
     private void setWebViewFrame(WebView webView, int frame) throws InterruptedException {
-        // Wait for animation to be ready
+        // Wait for animation to be ready (simple approach from LottieFileDebugViewer)
         int attempts = 0;
         while (attempts < 50) {
             Object ready = webView.getEngine().executeScript("window.isAnimationReady()");
@@ -327,32 +299,11 @@ public class CompareWithWebViewTest {
             attempts++;
         }
 
-        System.out.println("Setting WebView to frame: " + frame);
+        // Set the frame (matching LottieFileDebugViewer)
+        webView.getEngine().executeScript("window.seekToFrame(" + frame + ")");
 
-        // Set the frame
-        Object result = webView.getEngine().executeScript("window.goToFrame(" + frame + ")");
-        if (!Boolean.TRUE.equals(result)) {
-            throw new RuntimeException("Failed to set WebView frame to " + frame);
-        }
-
-        // Wait for render to complete
-        attempts = 0;
-        while (attempts < 20) {
-            Object renderComplete = webView.getEngine().executeScript("window.isRenderComplete()");
-            if (Boolean.TRUE.equals(renderComplete)) {
-                break;
-            }
-            Thread.sleep(50);
-            attempts++;
-        }
-
-        // Debug: Check what frame we're actually on
-        Object actualFrame = webView.getEngine().executeScript("window.getCurrentFrame()");
-        Object animationFrame = webView.getEngine().executeScript("animation ? animation.currentFrame : 'no animation'");
-        System.out.println("  Requested frame: " + frame + ", Current frame: " + actualFrame + ", Animation frame: " + animationFrame);
-
-        // Give WebView additional time to finish painting
-        Thread.sleep(200);
+        // Give WebView time to finish rendering (matching LottieFileDebugViewer's approach)
+        Thread.sleep(100);
     }
 
     private double compareImages(WritableImage img1, WritableImage img2) {

@@ -11,4 +11,6 @@ module com.lottie4j.fxdemo {
 
     exports com.lottie4j.fxfileviewer to javafx.scene, javafx.graphics, javafx.application;
     exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene;
+
+    opens com.lottie4j.fxfileviewer to org.junit.platform.commons;
 }
