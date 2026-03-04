@@ -146,7 +146,7 @@ public class TransformApplier {
             }
 
             if (scaleX <= 0 || scaleY <= 0) {
-                logger.warn("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
+                logger.debug("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
             }
 
             gc.scale(scaleX, scaleY);

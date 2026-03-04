@@ -52,7 +52,7 @@ public class ShapeGroupRenderer {
      */
     public void renderShapeTypeGroup(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath) {
         if (shape instanceof Transform) {
-            logger.warn("Don't know how to render a Transform group yet");
+            logger.debug("Don't know how to render a Transform group yet (TODO)");
             return;
         }
         if (shape instanceof Group group) {

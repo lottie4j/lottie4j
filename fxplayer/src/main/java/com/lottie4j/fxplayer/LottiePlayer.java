@@ -302,7 +302,7 @@ public class LottiePlayer extends Canvas {
                             continue;
                         }
                     }
-                    logger.warn("Layer {} has matte mode but no valid matte source found", layer.name());
+                    logger.debug("Layer {} has matte mode but no valid matte source found", layer.name());
                 }
 
                 // Skip matte source layers (td=1) - they should not be rendered directly

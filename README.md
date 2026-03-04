@@ -49,10 +49,7 @@ public class DemoApplication extends Application {
 
         Animation animation = LottieFileLoader.load(lottieFile);
 
-        var scene = new Scene(new LottiePlayer(animation),
-                animation.width() != null ? animation.width() : 500,
-                animation.height() != null ? animation.height() : 500
-        );
+        var scene = new Scene(new LottiePlayer(animation), 1200, 800);
         stage.setTitle(lottieFile.getName());
         stage.setScene(scene);
         stage.show();

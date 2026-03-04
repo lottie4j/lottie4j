@@ -36,7 +36,7 @@ public class LottieFileSimpleViewer extends Application {
         root.setTop(new ViewerMenuBar(primaryStage, this::loadAnimation));
 
         // Set up scene
-        var scene = new Scene(root, 1600, 800);
+        var scene = new Scene(root, 1600, 1200);
         primaryStage.setScene(scene);
         primaryStage.show();
 
