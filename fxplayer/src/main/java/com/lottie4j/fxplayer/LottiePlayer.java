@@ -394,6 +394,10 @@ public class LottiePlayer extends Canvas {
         else if (layer.layerType() == LayerType.IMAGE) {
             imageRenderer.render(gc, layer, animation);
         }
+        // Handle solid color layers
+        else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            renderSolidColorLayer(gc, layer);
+        }
         // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
         else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
@@ -662,6 +666,8 @@ public class LottiePlayer extends Canvas {
         // Handle different layer types
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             renderPrecompositionLayer(gc, layer, frame);
+        } else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            renderSolidColorLayer(gc, layer);
         } else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
@@ -1400,4 +1406,56 @@ public class LottiePlayer extends Canvas {
             render(currentFrameProperty.get(), visibleLayerIndices);
         }
     }
+
+    private void renderSolidColorLayer(GraphicsContext gc, Layer layer) {
+        if (layer.solidColor() == null) {
+            logger.warning("Solid color layer has no color: " + layer.name());
+            return;
+        }
+
+        // Parse the solid color (format: "RRGGBBAA" or similar hex string)
+        Color color = parseColorString(layer.solidColor());
+        if (color == null) {
+            logger.warning("Could not parse solid color: " + layer.solidColor());
+            return;
+        }
+
+        // Get the layer dimensions if specified, otherwise use animation dimensions
+        double width = layer.width() != null ? layer.width() : getAnimationWidth();
+        double height = layer.height() != null ? layer.height() : getAnimationHeight();
+
+        // Fill from negative coordinates to ensure full coverage in precompositions
+        // This is important because solid color should fill the entire composition
+        gc.setFill(color);
+        gc.fillRect(-width, -height, width * 3, height * 3);
+
+        logger.fine("Rendered solid color layer: " + layer.name() + " color=" + color + " size=" + width + "x" + height);
+    }
+
+    private Color parseColorString(String colorStr) {
+        try {
+            // Remove '#' if present
+            String hex = colorStr.startsWith("#") ? colorStr.substring(1) : colorStr;
+
+            // Handle different formats
+            if (hex.length() == 6) {
+                // RGB format: RRGGBB
+                int r = Integer.parseInt(hex.substring(0, 2), 16);
+                int g = Integer.parseInt(hex.substring(2, 4), 16);
+                int b = Integer.parseInt(hex.substring(4, 6), 16);
+                return Color.color(r / 255.0, g / 255.0, b / 255.0);
+            } else if (hex.length() == 8) {
+                // RGBA format: RRGGBBAA
+                int r = Integer.parseInt(hex.substring(0, 2), 16);
+                int g = Integer.parseInt(hex.substring(2, 4), 16);
+                int b = Integer.parseInt(hex.substring(4, 6), 16);
+                int a = Integer.parseInt(hex.substring(6, 8), 16);
+                return Color.color(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+            }
+        } catch (Exception e) {
+            logger.warning("Error parsing color string '" + colorStr + "': " + e.getMessage());
+        }
+        return null;
+    }
 }
+

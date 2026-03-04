@@ -51,8 +51,10 @@ public record Layer(
         @JsonProperty("refId") String referenceId,
         @JsonProperty("w") Integer width,
         @JsonProperty("h") Integer height,
-        @JsonProperty("tm") Animated timeRemapping
+        @JsonProperty("tm") Animated timeRemapping,
 
+        // Solid Color Layer
+        @JsonProperty("sc") String solidColor
 ) implements PropertyListing {
     @Override
     public PropertyListingList getList() {
@@ -79,6 +81,7 @@ public record Layer(
         list.add("Width", width);
         list.add("Height", height);
         list.add("Time remapping", timeRemapping);
+        list.add("Solid color", solidColor);
         list.addList("Masks", masks);
         list.addList("Effects", effects);
         list.addShapeList("Shapes", shapes);
