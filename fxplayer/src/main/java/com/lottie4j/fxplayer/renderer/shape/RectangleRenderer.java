@@ -58,7 +58,11 @@ public class RectangleRenderer implements ShapeRenderer {
             radius = Math.max(0, rectangle.roundedCornerRadius().getValue(0, frame));
             radius = Math.min(radius, Math.min(width, height) / 2.0);
         }
+        // Note: In JavaFX, arcWidth and arcHeight represent the diameter, not radius
+        // So we need to multiply radius by 2 to get the arc dimensions
         double arc = radius * 2.0;
+
+        logger.fine("Rectangle '" + rectangle.name() + "' rendering: width=" + width + ", height=" + height + ", radius=" + radius + ", arc=" + arc);
 
         // Check for gradient fill first, then regular fill
         var gradientFillStyle = getGradientFillStyle(parentGroup);

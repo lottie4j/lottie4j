@@ -1,7 +1,6 @@
 package com.lottie4j.fxplayer.element;
 
 import com.lottie4j.core.definition.GradientType;
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.style.GradientFill;
 import com.lottie4j.fxplayer.util.LottieValueHelper;
 import javafx.scene.paint.*;
@@ -28,13 +27,14 @@ public class GradientFillStyle {
         // Get start and end points
         double startX = 0, startY = 0, endX = 100, endY = 100;
         if (gradientFill.startingPoint() != null) {
-            startX = gradientFill.startingPoint().getValue(AnimatedValueType.X, frame);
-            startY = gradientFill.startingPoint().getValue(AnimatedValueType.Y, frame);
+            startX = gradientFill.startingPoint().getValue(com.lottie4j.core.model.AnimatedValueType.X, frame);
+            startY = gradientFill.startingPoint().getValue(com.lottie4j.core.model.AnimatedValueType.Y, frame);
         }
         if (gradientFill.endPoint() != null) {
-            endX = gradientFill.endPoint().getValue(AnimatedValueType.X, frame);
-            endY = gradientFill.endPoint().getValue(AnimatedValueType.Y, frame);
+            endX = gradientFill.endPoint().getValue(com.lottie4j.core.model.AnimatedValueType.X, frame);
+            endY = gradientFill.endPoint().getValue(com.lottie4j.core.model.AnimatedValueType.Y, frame);
         }
+
 
         // Get gradient colors
         List<Stop> stops = new ArrayList<>();
@@ -102,11 +102,37 @@ public class GradientFillStyle {
             );
         } else {
             // Create linear gradient (default)
-            // The coordinates need to be normalized (0-1 range) for JavaFX LinearGradient
-            // We'll use the actual start/end points from Lottie
+            // Use proportional mode with normalized coordinates
+            // The gradient start/end points define the direction across the shape
+            double dx = endX - startX;
+            double dy = endY - startY;
+            double length = Math.sqrt(dx * dx + dy * dy);
+
+            if (length < 0.001) {
+                // Degenerate gradient - fallback to first color
+                if (!stops.isEmpty()) {
+                    return stops.get(0).getColor();
+                }
+                return Color.BLACK;
+            }
+
+            // Normalize direction vector
+            double dirX = dx / length;
+            double dirY = dy / length;
+
+            // Create proportional gradient that spans from 0.5 - length/2 to 0.5 + length/2
+            // in the direction of the gradient
+            double pStart = 0.0; // Start at 0
+            double pEnd = 0.5 + 0.5;   // End at 1
+
+            double pStartX = 0.5 - dirX * 0.5;
+            double pStartY = 0.5 - dirY * 0.5;
+            double pEndX = 0.5 + dirX * 0.5;
+            double pEndY = 0.5 + dirY * 0.5;
+
             return new LinearGradient(
-                    startX, startY, endX, endY,
-                    false, // proportional = false (use absolute coordinates)
+                    pStartX, pStartY, pEndX, pEndY,
+                    true, // proportional = true
                     CycleMethod.NO_CYCLE,
                     stops
             );
