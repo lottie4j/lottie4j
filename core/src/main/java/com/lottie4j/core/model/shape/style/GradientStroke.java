@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.*;
+import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.StrokeDash;
@@ -27,8 +28,6 @@ public record GradientStroke(
         @JsonProperty("ln") String id,
 
         // Undefined
-
-        @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
 
         // GradientStroke
@@ -38,17 +37,12 @@ public record GradientStroke(
         @JsonProperty("ml2") Animated miterLimitAlternative,
         @JsonProperty("w") Animated strokeWidth,
         @JsonProperty("o") Animated opacity,
-        @JsonProperty("d") Animated startingPoint,
+        @JsonProperty("s") Animated startingPoint,
         @JsonProperty("e") Animated endPoint,
         @JsonProperty("t") GradientType gradientType,
-        @JsonProperty("g") List<Double> colors,
+        @JsonProperty("g") GradientColor colors,
         @JsonProperty("d") List<StrokeDash> strokeDashes
 ) implements BaseShape {
-    @Override
-    public ShapeType type() {
-        return ShapeType.GRADIENT_STROKE;
-    }
-
     @Override
     public PropertyListingList getList() {
         var list = new PropertyListingList("Gradient Stroke");
@@ -59,7 +53,6 @@ public record GradientStroke(
         list.add("Index", index);
         list.add("Clazz", clazz);
         list.add("ID", id);
-        list.add("d", d);
         list.add("cix", cix);
         list.add("Line cap", lineCap);
         list.add("Line join", lineJoin);
@@ -70,8 +63,28 @@ public record GradientStroke(
         list.add("Starting point", startingPoint);
         list.add("End point", endPoint);
         list.add("Gradient type", gradientType);
-        list.addDoubleList("Colors", colors);
+        list.add("Colors", colors);
         list.addList("Stroke dashes", strokeDashes);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.GRADIENT_STROKE;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record GradientColor(
+            @JsonProperty("p") Integer numberOfColors,
+            @JsonProperty("k") Animated colors
+    ) implements PropertyListing {
+        @Override
+        public PropertyListingList getList() {
+            var list = new PropertyListingList("Gradient Color");
+            list.add("Number of colors", numberOfColors);
+            list.add("Colors", colors);
+            return list;
+        }
     }
 }
