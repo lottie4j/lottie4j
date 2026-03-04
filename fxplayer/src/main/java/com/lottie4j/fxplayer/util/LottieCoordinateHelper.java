@@ -73,6 +73,15 @@ public class LottieCoordinateHelper {
                 ellipse.size().getValue(AnimatedValueType.HEIGHT, frame));
     }
 
+    /**
+     * Computes center-based and top-left coordinates for a shape snapshot.
+     *
+     * @param centerX center x-coordinate in Lottie space
+     * @param centerY center y-coordinate in Lottie space
+     * @param width   shape width
+     * @param height  shape height
+     * @return full coordinate record containing both center and top-left values
+     */
     private static LottiePosition calculate(double centerX, double centerY, double width, double height) {
         double topLeftX = centerX - (width / 2.0);
         double topLeftY = centerY - (height / 2.0);

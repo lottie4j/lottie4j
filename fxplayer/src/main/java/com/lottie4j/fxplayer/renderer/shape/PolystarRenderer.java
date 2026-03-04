@@ -22,6 +22,11 @@ public class PolystarRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(PolystarRenderer.class.getName());
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Renders a Lottie polystar (polygon or star) shape with fill and stroke support.
+     */
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Polystar polystar)) {
@@ -63,6 +68,19 @@ public class PolystarRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Renders a star shape with alternating outer and inner points.
+     *
+     * @param gc          graphics context
+     * @param centerX     star center x
+     * @param centerY     star center y
+     * @param outerRadius outer point radius
+     * @param rotation    rotation in radians
+     * @param numPoints   number of star points
+     * @param polystar    polystar shape definition
+     * @param frame       animation frame
+     * @param parentGroup parent group containing styles
+     */
     private void renderStar(GraphicsContext gc, double centerX, double centerY,
                             double outerRadius, double rotation, int numPoints,
                             Polystar polystar, double frame, Group parentGroup) {
@@ -104,6 +122,18 @@ public class PolystarRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Renders a regular polygon.
+     *
+     * @param gc          graphics context
+     * @param centerX     polygon center x
+     * @param centerY     polygon center y
+     * @param radius      vertex radius
+     * @param rotation    rotation in radians
+     * @param numPoints   number of vertices
+     * @param parentGroup parent group containing styles
+     * @param frame       animation frame
+     */
     private void renderPolygon(GraphicsContext gc, double centerX, double centerY,
                                double radius, double rotation, int numPoints,
                                Group parentGroup, double frame) {
@@ -123,6 +153,15 @@ public class PolystarRenderer implements ShapeRenderer {
         drawPolygonPath(gc, xPoints, yPoints, parentGroup, frame);
     }
 
+    /**
+     * Draws a polygon path and applies fill and stroke from parent group.
+     *
+     * @param gc          graphics context
+     * @param xPoints     x-coordinates of vertices
+     * @param yPoints     y-coordinates of vertices
+     * @param parentGroup parent group containing styles
+     * @param frame       animation frame
+     */
     private void drawPolygonPath(GraphicsContext gc, double[] xPoints, double[] yPoints,
                                  Group parentGroup, double frame) {
         if (xPoints.length == 0) return;
@@ -171,6 +210,12 @@ public class PolystarRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Extracts fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return fill style if present
+     */
     private Optional<FillStyle> getFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -183,6 +228,12 @@ public class PolystarRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts gradient fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return gradient fill style if present
+     */
     private Optional<GradientFillStyle> getGradientFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -195,6 +246,12 @@ public class PolystarRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts stroke style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return stroke style if present
+     */
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();

@@ -5,14 +5,22 @@ import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.util.LottieValueHelper;
 import javafx.scene.paint.Color;
 
-public class StrokeStyle {
+public record StrokeStyle(Stroke stroke) {
 
-    public final Stroke stroke;
-
-    public StrokeStyle(Stroke stroke) {
-        this.stroke = stroke;
+    /**
+     * Creates a stroke style wrapper for a Lottie stroke definition.
+     *
+     * @param stroke source stroke definition
+     */
+    public StrokeStyle {
     }
 
+    /**
+     * Resolves the stroke color at the given frame, including animated opacity.
+     *
+     * @param frame animation frame to sample
+     * @return resolved RGBA color, or black when stroke color is missing
+     */
     public Color getColor(double frame) {
         if (stroke.color() == null) {
             return Color.BLACK;
@@ -32,6 +40,12 @@ public class StrokeStyle {
         return Color.color(r, g, b, opacity);
     }
 
+    /**
+     * Resolves the stroke width at the given frame.
+     *
+     * @param frame animation frame to sample
+     * @return stroke width in layer units, or {@code 0} when not defined
+     */
     public Double getStrokeWidth(double frame) {
         if (stroke.strokeWidth() == null) {
             return 0D;

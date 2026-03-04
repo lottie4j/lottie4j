@@ -11,6 +11,7 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
+import com.lottie4j.fxplayer.renderer.layer.PrecompRenderer;
 import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.renderer.shape.*;
@@ -50,6 +51,7 @@ public class LottiePlayer extends Canvas {
     private final ImageRenderer imageRenderer = new ImageRenderer();
     private final TextRenderer textRenderer = new TextRenderer();
     private final TransformApplier transformApplier = new TransformApplier();
+    private final PrecompRenderer precompRenderer = new PrecompRenderer(transformApplier, textRenderer, imageRenderer);
     private final ShapeRenderer pathRenderer = new PathRenderer();
     private final ShapeRenderer ellipseRenderer = new EllipseRenderer();
     private final ShapeRenderer rectangleRenderer = new RectangleRenderer();
@@ -643,156 +645,17 @@ public class LottiePlayer extends Canvas {
     }
 
     private void renderPrecompositionLayer(GraphicsContext gc, Layer layer, double frame) {
-        if (layer.referenceId() == null) {
-            logger.warning("Precomposition layer has no referenceId: " + layer.name());
-            return;
-        }
-
-        Asset asset = assetsById.get(layer.referenceId());
-        if (asset == null) {
-            logger.warning("Asset not found for referenceId: " + layer.referenceId());
-            return;
-        }
-
-        if (asset.layers() == null || asset.layers().isEmpty()) {
-            logger.warning("Precomposition asset has no layers: " + layer.referenceId());
-            return;
-        }
-
-        // Precomp layers animate on their own local timeline.
-        double localFrame = toLocalFrame(layer, frame);
-
-        logger.finer("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers at localFrame=" + localFrame + " (global=" + frame + ")");
-
-        Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
-        for (Layer precompLayer : asset.layers()) {
-            if (precompLayer.indexLayer() != null) {
-                precompLayersByIndex.put(precompLayer.indexLayer().intValue(), precompLayer);
-            }
-        }
-
-        for (int i = asset.layers().size() - 1; i >= 0; i--) {
-            Layer precompLayer = asset.layers().get(i);
-            if (isLayerActiveAtFrame(precompLayer, localFrame)) {
-                logger.fine("Rendering precomp layer [" + i + "] ind=" + precompLayer.indexLayer() + " name='" + precompLayer.name() + "'");
-                renderPrecompLayer(gc, precompLayer, localFrame, precompLayersByIndex);
-            }
-        }
-    }
-
-    private double toLocalFrame(Layer layer, double parentFrame) {
-        return FrameTiming.toLocalFrame(layer, parentFrame);
-    }
-
-    private void renderPrecompLayer(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
-        gc.save();
-
-        // Apply parent transforms recursively within the precomp
-        applyPrecompParentTransforms(gc, layer, frame, precompLayersByIndex);
-
-        // Apply this layer's transform
-        applyLayerTransform(gc, layer, frame);
-
-        // Handle different layer types
-        if (layer.layerType() == LayerType.PRECOMPOSITION) {
-            renderPrecompositionLayer(gc, layer, frame);
-        } else if (layer.layerType() == LayerType.SOLD_COLOR) {
-            renderSolidColorLayer(gc, layer);
-        } else if (layer.layerType() == LayerType.TEXT) {
-            textRenderer.render(gc, layer, frame);
-        } else if (layer.layerType() != LayerType.NULL) {
-            // Render layer shapes
-            if (layer.shapes() != null && !layer.shapes().isEmpty()) {
-                logger.fine("Layer has " + layer.shapes().size() + " shapes");
-
-                // First pass: collect any layer-level modifiers (like TrimPath)
-                TrimPath layerTrimPath = null;
-                for (BaseShape shape : layer.shapes()) {
-                    if (shape instanceof TrimPath trim) {
-                        layerTrimPath = trim;
-                        logger.finer("Found layer-level TrimPath");
-                    }
-                }
-
-                // Second pass: render shapes in REVERSE order, passing down layer-level modifiers
-                // Lottie renders shapes from last to first (last appears behind, first appears on top)
-                List<BaseShape> shapes = layer.shapes();
-                for (int i = shapes.size() - 1; i >= 0; i--) {
-                    BaseShape shape = shapes.get(i);
-                    // Skip modifiers and styles - they're applied within groups/shapes
-                    if (shape instanceof TrimPath) {
-                        continue;
-                    }
-
-                    switch (shape.type().shapeGroup()) {
-                        case GROUP -> renderShapeTypeGroup(shape, frame, layerTrimPath);
-                        case SHAPE -> renderShapeTypeShape(shape, null, frame);
-                        case STYLE -> {
-                        } // Skip - styles (Fill, Stroke, etc.) are handled within groups
-                        default -> {
-                            logger.finer("Unsupported shape type: " + shape.type().shapeGroup());
-                        }
-                    }
-                }
-            } else {
-                logger.finer("Layer has no shapes");
-            }
-        } else {
-            logger.finer("Skipping shape rendering for NULL layer: " + layer.name());
-        }
-
-        gc.restore();
-    }
-
-    private void applyPrecompParentTransforms(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
-        if (layer.indexParent() == null) {
-            return; // No parent
-        }
-
-        Layer parent = precompLayersByIndex.get(layer.indexParent());
-        if (parent == null) {
-            logger.warning("Parent layer not found in precomp: " + layer.indexParent());
-            return;
-        }
-
-        // logger.fine("Applying parent transform from: " + parent.name() + " to child: " + layer.name());
-
-        // Recursively apply parent's parent transforms first
-        applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
-
-        // Then apply this parent's transform (but NOT opacity - opacity doesn't inherit)
-        applyLayerTransformWithoutOpacity(gc, parent, frame);
-    }
-
-    private void renderChildrenAfterParent(GraphicsContext gc, Layer parent, double frame,
-                                           List<Layer> allLayers,
-                                           Map<Integer, Layer> precompLayersByIndex,
-                                           Set<Integer> renderedIndices) {
-        Integer parentInd = parent.indexLayer() != null ? parent.indexLayer().intValue() : null;
-        if (parentInd == null) return;
-
-        // Find and render all direct children of this parent in REVERSE order
-        // Render from high index to low so that lower indices appear on top
-        for (int i = allLayers.size() - 1; i >= 0; i--) {
-            Layer layer = allLayers.get(i);
-            Integer childInd = layer.indexLayer() != null ? layer.indexLayer().intValue() : null;
-            if (childInd == null) continue;
-
-            // Check if this layer is a child of the parent
-            if (layer.indexParent() != null && layer.indexParent().intValue() == parentInd) {
-                // Skip if already rendered
-                if (renderedIndices.contains(childInd)) continue;
-
-                if (isLayerActiveAtFrame(layer, frame)) {
-                    logger.fine("  -> Rendering child layer ind=" + childInd + " name='" + layer.name() + "' after parent '" + parent.name() + "'");
-                    renderPrecompLayer(gc, layer, frame, precompLayersByIndex);
-                    renderedIndices.add(childInd);
-
-                    // Recursively render this child's children
-                    renderChildrenAfterParent(gc, layer, frame, allLayers, precompLayersByIndex, renderedIndices);
-                }
-            }
-        }
+        precompRenderer.renderPrecompositionLayer(
+                gc,
+                layer,
+                frame,
+                assetsById,
+                animation,
+                this::isLayerActiveAtFrame,
+                this::renderSolidColorLayer,
+                this::renderShapeTypeGroup,
+                this::renderShapeTypeShape
+        );
     }
 
     private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {

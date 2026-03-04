@@ -90,7 +90,11 @@ public class TextRenderer {
     }
 
     /**
-     * Get text keyframe at a specific frame
+     * Selects the latest text keyframe active at the requested frame.
+     *
+     * @param keyframes ordered text keyframes
+     * @param frame     current animation frame
+     * @return keyframe active at the frame, or the first keyframe when frame is before all keys
      */
     private TextKeyframe getKeyframeAtFrame(List<TextKeyframe> keyframes, double frame) {
         TextKeyframe current = keyframes.get(0);
@@ -105,7 +109,10 @@ public class TextRenderer {
     }
 
     /**
-     * Map Lottie text alignment to JavaFX TextAlignment
+     * Maps Lottie text justification metadata to JavaFX text alignment.
+     *
+     * @param keyframe keyframe containing style map metadata
+     * @return JavaFX text alignment equivalent
      */
     private TextAlignment mapJustification(TextKeyframe keyframe) {
         Map<String, Object> style = keyframe.getStyleMap();
@@ -126,7 +133,11 @@ public class TextRenderer {
     }
 
     /**
-     * Get fill color from text animators, with support for RGB and HSB
+     * Resolves animator-controlled fill color for the current frame.
+     *
+     * @param textData text block containing animator definitions
+     * @param frame    current animation frame
+     * @return animator color override, or {@code null} when no animator color applies
      */
     private Color getAnimatorFillColor(TextData textData, double frame) {
         if (textData.animators() == null) {
@@ -159,7 +170,11 @@ public class TextRenderer {
     }
 
     /**
-     * Apply text animator transform (position, scale, etc.)
+     * Applies animator-driven text transforms (position, scale, anchor) to the graphics context.
+     *
+     * @param gc       graphics context receiving transform operations
+     * @param textData text block containing animator definitions
+     * @param frame    current animation frame
      */
     private void applyTextAnimatorTransform(GraphicsContext gc, TextData textData, double frame) {
         if (textData.animators() == null) {
@@ -191,7 +206,11 @@ public class TextRenderer {
     }
 
     /**
-     * Get animated Vec2 (2D vector) from animator property
+     * Reads a potentially animated 2D vector property from animator JSON-like data.
+     *
+     * @param prop  raw animator property payload
+     * @param frame current animation frame
+     * @return resolved vector as {@code [x, y]}, or {@code null} when unavailable
      */
     private List<Double> getAnimatedVec2(Object prop, double frame) {
         if (!(prop instanceof Map<?, ?> raw)) {
@@ -212,6 +231,13 @@ public class TextRenderer {
         return null;
     }
 
+    /**
+     * Interpolates a keyframed 2D vector at the requested frame.
+     *
+     * @param keyframes keyframed vector payload
+     * @param frame     current animation frame
+     * @return interpolated vector as {@code [x, y]}, or {@code null} when data is invalid
+     */
     private List<Double> evalKeyframedVec2(List<?> keyframes, double frame) {
         Map<String, Object> prev = null;
         Map<String, Object> next = null;
@@ -266,6 +292,12 @@ public class TextRenderer {
         );
     }
 
+    /**
+     * Reads a 2D vector from a keyframe "s" value.
+     *
+     * @param sObj keyframe start value payload
+     * @return vector as {@code [x, y]}, or {@code null} when format is unsupported
+     */
     private List<Double> readVec2FromS(Object sObj) {
         if (sObj instanceof List<?> sList && sList.size() >= 2 && sList.get(0) instanceof Number x && sList.get(1) instanceof Number y) {
             return List.of(x.doubleValue(), y.doubleValue());
@@ -273,6 +305,13 @@ public class TextRenderer {
         return null;
     }
 
+    /**
+     * Resolves a scalar animator value from either static or keyframed data.
+     *
+     * @param k     raw scalar value payload
+     * @param frame current animation frame
+     * @return resolved scalar value, or {@code null} when unavailable
+     */
     private Double evalAnimatedNumber(Object k, double frame) {
         if (k instanceof Number n) {
             return n.doubleValue();
@@ -330,6 +369,12 @@ public class TextRenderer {
         return null;
     }
 
+    /**
+     * Reads a scalar value from a keyframe "s" payload.
+     *
+     * @param sObj keyframe start value
+     * @return scalar value, or {@code null} when unsupported
+     */
     private Double readScalarFromS(Object sObj) {
         if (sObj instanceof Number sn) {
             return sn.doubleValue();
@@ -340,11 +385,24 @@ public class TextRenderer {
         return null;
     }
 
+    /**
+     * Reads keyframe time from animator/keyframe map data.
+     *
+     * @param kf keyframe map
+     * @return keyframe time, or negative infinity when missing
+     */
     private double readTime(Map<String, Object> kf) {
         Object tObj = kf.get("t");
         return (tObj instanceof Number tn) ? tn.doubleValue() : Double.NEGATIVE_INFINITY;
     }
 
+    /**
+     * Resolves animated RGB color payload from static or keyframed data.
+     *
+     * @param prop  raw color property map
+     * @param frame current animation frame
+     * @return RGB array in Lottie value range, or {@code null} when not resolvable
+     */
     private double[] evalAnimatedColor(Object prop, double frame) {
         if (!(prop instanceof Map<?, ?> raw)) {
             return null;
@@ -411,6 +469,12 @@ public class TextRenderer {
         return null;
     }
 
+    /**
+     * Reads RGB values from a keyframe "s" payload.
+     *
+     * @param sObj keyframe start payload
+     * @return RGB array, or {@code null} when format is unsupported
+     */
     private double[] readColorFromS(Object sObj) {
         if (sObj instanceof List<?> list && list.size() >= 3 && list.get(0) instanceof Number r && list.get(1) instanceof Number g && list.get(2) instanceof Number b) {
             return new double[]{r.doubleValue(), g.doubleValue(), b.doubleValue()};
@@ -439,6 +503,13 @@ public class TextRenderer {
         return evalAnimatedNumber(k, frame);
     }
 
+    /**
+     * Finds the keyframe window that surrounds the requested frame.
+     *
+     * @param keyframes ordered text keyframes
+     * @param frame     current animation frame
+     * @return previous/next keyframe window for interpolation
+     */
     private KeyframeWindow getKeyframeWindow(List<TextKeyframe> keyframes, double frame) {
         TextKeyframe prev = null;
         TextKeyframe next = null;
@@ -456,6 +527,13 @@ public class TextRenderer {
         return new KeyframeWindow(prev, next);
     }
 
+    /**
+     * Interpolates font size between neighboring text keyframes.
+     *
+     * @param w     keyframe interpolation window
+     * @param frame current animation frame
+     * @return interpolated font size, or {@code null} when no size is available
+     */
     private Double interpolateFontSize(KeyframeWindow w, double frame) {
         if (w.prev() == null) {
             return null;
@@ -480,6 +558,13 @@ public class TextRenderer {
         return s0 + (s1 - s0) * u;
     }
 
+    /**
+     * Interpolates text fill color between neighboring text keyframes.
+     *
+     * @param w     keyframe interpolation window
+     * @param frame current animation frame
+     * @return interpolated JavaFX color, or {@code null} when source color is missing
+     */
     private Color interpolateKeyframeFill(KeyframeWindow w, double frame) {
         if (w.prev() == null) {
             return null;
@@ -508,6 +593,12 @@ public class TextRenderer {
         );
     }
 
+    /**
+     * Holds neighboring text keyframes used for interpolation at a given frame.
+     *
+     * @param prev active keyframe at or before the frame
+     * @param next next keyframe after the frame, or null
+     */
     private record KeyframeWindow(TextKeyframe prev, TextKeyframe next) {
     }
 }

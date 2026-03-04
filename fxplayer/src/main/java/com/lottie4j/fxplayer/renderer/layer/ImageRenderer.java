@@ -61,6 +61,9 @@ public class ImageRenderer {
 
     /**
      * Extract image from asset, supporting both external files and embedded data URIs
+     *
+     * @param asset asset that may contain embedded data URI or external file reference
+     * @return loaded image, or {@code null} when the asset cannot be resolved
      */
     private Image getImageFromAsset(Asset asset) {
         if (asset.fileName() == null) {
@@ -89,6 +92,9 @@ public class ImageRenderer {
 
     /**
      * Load image from a data URI (base64 encoded)
+     *
+     * @param dataUri URI in the form {@code data:image/<type>;base64,<payload>}
+     * @return loaded image, or {@code null} when decoding/loading fails
      */
     private Image loadImageFromDataUri(String dataUri) {
         try {
@@ -123,6 +129,9 @@ public class ImageRenderer {
 
     /**
      * Load image from file path
+     *
+     * @param filePath relative resource path or absolute/relative file system path
+     * @return loaded image, or {@code null} when the file cannot be read
      */
     private Image loadImageFromFile(String filePath) {
         try {
@@ -151,4 +160,3 @@ public class ImageRenderer {
         }
     }
 }
-

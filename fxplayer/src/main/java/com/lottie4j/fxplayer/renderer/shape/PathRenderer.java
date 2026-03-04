@@ -186,7 +186,7 @@ public class PathRenderer implements ShapeRenderer {
                         logger.fine("  TrimPath full path, rendering stroke: " + strokeColor + ", width: " + strokeWidth);
                         gc.setStroke(strokeColor);
                         gc.setLineWidth(compensatedWidth);
-                        applyStrokeStyle(gc, strokeStyle.get().stroke);
+                        applyStrokeStyle(gc, strokeStyle.get().stroke());
                         gc.stroke();
                     } else if (trimStart > trimEnd) {
                         // Reversed trim: render from 0 to trimEnd, then from trimStart to 100
@@ -209,7 +209,7 @@ public class PathRenderer implements ShapeRenderer {
                     gc.setLineWidth(compensatedWidth);
 
                     // Apply line cap and join
-                    applyStrokeStyle(gc, strokeStyle.get().stroke);
+                    applyStrokeStyle(gc, strokeStyle.get().stroke());
 
                     gc.stroke();
                 }
@@ -377,7 +377,7 @@ public class PathRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
                 gc.setStroke(strokeColor);
                 gc.setLineWidth(compensatedWidth);
-                applyStrokeStyle(gc, strokeStyle.stroke);
+                applyStrokeStyle(gc, strokeStyle.stroke());
                 gc.stroke();
                 logger.fine("  Stroke applied successfully");
             } else {

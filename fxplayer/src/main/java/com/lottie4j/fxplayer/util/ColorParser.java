@@ -6,9 +6,19 @@ import java.util.logging.Logger;
 
 public final class ColorParser {
 
+    /**
+     * Prevents instantiation of this utility class.
+     */
     private ColorParser() {
     }
 
+    /**
+     * Parses hex color strings in {@code RRGGBB} or {@code RRGGBBAA} format.
+     *
+     * @param colorStr input color string with or without a leading '#'
+     * @param logger   logger used for parse error diagnostics
+     * @return parsed JavaFX color, or {@code null} when parsing fails
+     */
     public static Color parse(String colorStr, Logger logger) {
         try {
             String hex = colorStr.startsWith("#") ? colorStr.substring(1) : colorStr;
@@ -32,4 +42,3 @@ public final class ColorParser {
         return null;
     }
 }
-

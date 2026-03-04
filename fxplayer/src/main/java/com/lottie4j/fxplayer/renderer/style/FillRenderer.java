@@ -10,6 +10,13 @@ import java.util.logging.Logger;
 public class FillRenderer {
     private static final Logger logger = Logger.getLogger(FillRenderer.class.getName());
 
+    /**
+     * Applies fill color and opacity from a Lottie fill style to the graphics context.
+     *
+     * @param gc    destination graphics context
+     * @param fill  fill style to sample
+     * @param frame animation frame to sample
+     */
     public void render(GraphicsContext gc, Fill fill, double frame) {
         if (fill.color() != null) {
             // Get RGB components individually

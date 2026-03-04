@@ -11,14 +11,36 @@ public class TransformApplier {
 
     private static final Logger logger = Logger.getLogger(TransformApplier.class.getName());
 
+    /**
+     * Applies the full transform stack for a layer, including animated opacity.
+     *
+     * @param gc    graphics context to transform
+     * @param layer layer providing transform values
+     * @param frame animation frame to sample
+     */
     public void applyLayerTransform(GraphicsContext gc, Layer layer, double frame) {
         applyLayerTransformInternal(gc, layer, frame, true);
     }
 
+    /**
+     * Applies layer transforms without inheriting opacity, used for parent-transform propagation.
+     *
+     * @param gc    graphics context to transform
+     * @param layer layer providing transform values
+     * @param frame animation frame to sample
+     */
     public void applyLayerTransformWithoutOpacity(GraphicsContext gc, Layer layer, double frame) {
         applyLayerTransformInternal(gc, layer, frame, false);
     }
 
+    /**
+     * Internal layer transform applier that optionally includes opacity.
+     *
+     * @param gc             graphics context to transform
+     * @param layer          layer providing transform values
+     * @param frame          animation frame to sample
+     * @param includeOpacity whether opacity should be multiplied into global alpha
+     */
     private void applyLayerTransformInternal(GraphicsContext gc, Layer layer, double frame, boolean includeOpacity) {
         if (layer.transform() == null) {
             logger.finer("No transform for layer: " + layer.name());
@@ -150,6 +172,13 @@ public class TransformApplier {
         }
     }
 
+    /**
+     * Applies a shape-group transform block to the graphics context.
+     *
+     * @param gc        graphics context to transform
+     * @param transform transform block from a Lottie group
+     * @param frame     animation frame to sample
+     */
     public void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
         logger.finer("Applying group transform");
 
@@ -190,4 +219,3 @@ public class TransformApplier {
         }
     }
 }
-

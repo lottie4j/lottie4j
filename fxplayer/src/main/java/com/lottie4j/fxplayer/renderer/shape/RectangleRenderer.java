@@ -22,6 +22,11 @@ public class RectangleRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(RectangleRenderer.class.getName());
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Renders a Lottie rectangle shape with support for rounded corners, gradients, and both fill and stroke styles.
+     */
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Rectangle rectangle)) {
@@ -132,6 +137,12 @@ public class RectangleRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Extracts fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return fill style if present
+     */
     private Optional<FillStyle> getFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -144,6 +155,12 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts gradient fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return gradient fill style if present
+     */
     private Optional<GradientFillStyle> getGradientFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -156,6 +173,12 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts gradient stroke style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return gradient stroke style if present
+     */
     private Optional<GradientStrokeStyle> getGradientStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -168,6 +191,12 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts stroke style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return stroke style if present
+     */
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -180,4 +209,3 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 }
-

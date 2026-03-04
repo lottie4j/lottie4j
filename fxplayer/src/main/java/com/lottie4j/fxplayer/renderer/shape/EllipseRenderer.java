@@ -25,6 +25,11 @@ public class EllipseRenderer implements ShapeRenderer {
 
     private static final Logger logger = Logger.getLogger(EllipseRenderer.class.getName());
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Renders a Lottie ellipse shape with optional fill, stroke, gradient, and trim path support.
+     */
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Ellipse ellipse)) {
@@ -59,7 +64,7 @@ public class EllipseRenderer implements ShapeRenderer {
         // Check for stroke style to determine line cap
         var strokeStyle = getStrokeStyle(parentGroup);
         if (strokeStyle.isPresent()) {
-            Stroke stroke = strokeStyle.get().stroke;
+            Stroke stroke = strokeStyle.get().stroke();
             // Set line cap: 1=butt, 2=round, 3=square
             if (stroke.lineCap() != null) {
                 switch (stroke.lineCap()) {
@@ -114,6 +119,12 @@ public class EllipseRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Extracts fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return fill style if present
+     */
     private Optional<FillStyle> getFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -126,6 +137,12 @@ public class EllipseRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts gradient fill style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return gradient fill style if present
+     */
     private Optional<GradientFillStyle> getGradientFillStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -138,6 +155,12 @@ public class EllipseRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts stroke style from parent group.
+     *
+     * @param group parent group containing styles
+     * @return stroke style if present
+     */
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -150,6 +173,12 @@ public class EllipseRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Extracts trim path modifier from parent group.
+     *
+     * @param group parent group containing modifiers
+     * @return trim path if present
+     */
     private Optional<TrimPath> getTrimPath(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -162,6 +191,20 @@ public class EllipseRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Renders an ellipse with trim path applied, converting it to an arc stroke.
+     *
+     * @param gc          graphics context
+     * @param x           top-left x coordinate
+     * @param y           top-left y coordinate
+     * @param width       ellipse width
+     * @param height      ellipse height
+     * @param centerX     center x coordinate
+     * @param centerY     center y coordinate
+     * @param trimPath    trim path modifier
+     * @param frame       animation frame
+     * @param parentGroup parent group containing styles
+     */
     private void renderWithTrimPath(GraphicsContext gc, double x, double y, double width, double height,
                                     double centerX, double centerY, TrimPath trimPath, double frame, Group parentGroup) {
         // Get trim values (all in 0-100 range in Lottie, or degrees for offset depending on version)

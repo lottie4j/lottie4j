@@ -15,10 +15,21 @@ public class GradientFillStyle {
 
     private final GradientFill gradientFill;
 
+    /**
+     * Creates a gradient fill style wrapper for a Lottie gradient fill definition.
+     *
+     * @param gradientFill source gradient fill definition
+     */
     public GradientFillStyle(GradientFill gradientFill) {
         this.gradientFill = gradientFill;
     }
 
+    /**
+     * Builds a JavaFX paint object from the gradient definition at the given frame.
+     *
+     * @param frame animation frame to sample
+     * @return linear/radial gradient paint, or black when gradient data is unavailable
+     */
     public Paint getPaint(double frame) {
         if (gradientFill == null || gradientFill.colors() == null) {
             return Color.BLACK;
@@ -113,6 +124,12 @@ public class GradientFillStyle {
         }
     }
 
+    /**
+     * Resolves gradient opacity at a specific frame.
+     *
+     * @param frame animation frame to sample
+     * @return normalized opacity in the range {@code [0, 1]}
+     */
     public double getOpacity(double frame) {
         if (gradientFill.opacity() != null) {
             return gradientFill.opacity().getValue(0, frame) / 100.0;

@@ -9,6 +9,9 @@ public class StrokeHelper {
 
     private static final double MINIMUM_STROKE_WIDTH = 0.001;
 
+    /**
+     * Prevents instantiation of this utility class.
+     */
     private StrokeHelper() {
         // Hide constructor
     }
@@ -29,7 +32,7 @@ public class StrokeHelper {
      * When the canvas is scaled, stroke widths are scaled too. This compensates for that
      * to maintain consistent visual stroke thickness relative to the original design.
      *
-     * @param gc the graphics context containing the current transform
+     * @param gc          the graphics context containing the current transform
      * @param strokeWidth the original stroke width from the Lottie file
      * @return the compensated stroke width adjusted for canvas scale
      */

@@ -9,10 +9,21 @@ public class FillStyle {
 
     private final Fill fill;
 
+    /**
+     * Creates a fill style wrapper for a Lottie fill definition.
+     *
+     * @param fill source fill definition; may be null
+     */
     public FillStyle(Fill fill) {
         this.fill = fill;
     }
 
+    /**
+     * Resolves the fill color at the provided frame, including animated opacity.
+     *
+     * @param frame animation frame to sample
+     * @return resolved RGBA color, or black when no fill color is available
+     */
     public Color getColor(double frame) {
         if (fill == null || fill.color() == null) {
             return Color.BLACK;

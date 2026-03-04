@@ -14,10 +14,21 @@ public class GradientStrokeStyle {
 
     private final GradientStroke gradientStroke;
 
+    /**
+     * Creates a gradient stroke style wrapper for a Lottie gradient stroke definition.
+     *
+     * @param gradientStroke source gradient stroke definition
+     */
     public GradientStrokeStyle(GradientStroke gradientStroke) {
         this.gradientStroke = gradientStroke;
     }
 
+    /**
+     * Builds the JavaFX paint for the stroke gradient at a specific frame.
+     *
+     * @param frame animation frame to sample
+     * @return linear/radial gradient paint, or black when gradient data is unavailable
+     */
     public Paint getPaint(double frame) {
         if (gradientStroke == null || gradientStroke.colors() == null) {
             return Color.BLACK;
@@ -94,6 +105,13 @@ public class GradientStrokeStyle {
         );
     }
 
+    /**
+     * Interpolates alpha for a color stop offset using the parsed alpha stop list.
+     *
+     * @param alphaStops ordered alpha stop pairs in the form {@code [offset, alpha]}
+     * @param offset     stop offset to resolve
+     * @return interpolated alpha value in the range {@code [0, 1]}
+     */
     private double interpolateAlpha(List<double[]> alphaStops, double offset) {
         if (alphaStops.isEmpty()) {
             return 1.0;
@@ -122,6 +140,12 @@ public class GradientStrokeStyle {
         return 1.0;
     }
 
+    /**
+     * Resolves animated stroke opacity at the given frame.
+     *
+     * @param frame animation frame to sample
+     * @return normalized opacity in the range {@code [0, 1]}
+     */
     public double getOpacity(double frame) {
         if (gradientStroke.opacity() != null) {
             return gradientStroke.opacity().getValue(0, frame) / 100.0;
@@ -129,6 +153,12 @@ public class GradientStrokeStyle {
         return 1.0;
     }
 
+    /**
+     * Resolves animated stroke width at the given frame.
+     *
+     * @param frame animation frame to sample
+     * @return stroke width in layer units, or {@code 0} when not defined
+     */
     public double getStrokeWidth(double frame) {
         if (gradientStroke.strokeWidth() != null) {
             return gradientStroke.strokeWidth().getValue(0, frame);
@@ -136,4 +166,3 @@ public class GradientStrokeStyle {
         return 0.0;
     }
 }
-
