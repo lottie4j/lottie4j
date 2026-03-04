@@ -11,17 +11,31 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * Utility class for exporting Lottie animations and individual layers to JSON files.
+ * Handles asset collection for precomposition layers to ensure self-contained exports.
+ */
 public class LottieFileSaver {
 
     private static final Logger logger = Logger.getLogger(LottieFileSaver.class.getName());
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
+    /**
+     * Prevents instantiation of this utility class.
+     */
     private LottieFileSaver() {
         // Hide constructor
     }
 
     /**
-     * Export a single layer as a standalone JSON animation file
+     * Export a single layer as a standalone JSON animation file.
+     * Automatically collects all required assets including nested precompositions.
+     *
+     * @param animation  source animation containing the layer
+     * @param layer      layer to export
+     * @param layerIndex index of the layer (used for naming if layer has no name)
+     * @param outputFile destination file for the exported JSON
+     * @throws RuntimeException if export fails
      */
     public static void saveLayer(Animation animation, Layer layer, int layerIndex, File outputFile) {
         try {
@@ -53,7 +67,11 @@ public class LottieFileSaver {
     }
 
     /**
-     * Collect all assets required by a layer (recursively for precompositions)
+     * Collect all assets required by a layer (recursively for precompositions).
+     *
+     * @param layer     layer whose assets should be collected
+     * @param animation source animation containing asset definitions
+     * @return list of required assets without duplicates
      */
     private static List<Asset> collectRequiredAssets(Layer layer, Animation animation) {
         var result = new java.util.LinkedHashSet<Asset>(); // Use LinkedHashSet to avoid duplicates
@@ -62,7 +80,11 @@ public class LottieFileSaver {
     }
 
     /**
-     * Recursive helper to collect all assets
+     * Recursive helper to collect all assets referenced by a layer and its children.
+     *
+     * @param layer     layer to analyze
+     * @param animation source animation containing asset definitions
+     * @param collected set accumulating unique assets
      */
     private static void collectRequiredAssetsRecursive(Layer layer, Animation animation, java.util.Set<Asset> collected) {
         if (layer.referenceId() != null && animation.assets() != null) {
