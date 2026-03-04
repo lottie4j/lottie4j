@@ -19,7 +19,7 @@ import java.util.List;
  */
 public class LottieFileSaver {
 
-    private static final Logger logger = LoggerFactory.getLogger(LottieFileSaver.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LottieFileSaver.class);
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
@@ -61,9 +61,9 @@ public class LottieFileSaver {
 
             // Write to file using Jackson - Animation record handles serialization
             mapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, export);
-            logger.info("Successfully exported layer to: " + outputFile.getAbsolutePath());
+            logger.info("Successfully exported layer to: {}", outputFile.getAbsolutePath());
         } catch (Exception e) {
-            logger.error("Failed to export layer to JSON: " + e.getMessage());
+            logger.error("Failed to export layer to JSON: {}", e.getMessage(), e);
             throw new RuntimeException("Export failed", e);
         }
     }

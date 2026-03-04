@@ -34,7 +34,7 @@ import java.util.*;
  */
 public class LayerTileView extends ScrollPane {
 
-    private static final Logger logger = LoggerFactory.getLogger(LayerTileView.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LayerTileView.class);
     private static final int TILE_SIZE = 150;
     private static final int TILE_SPACING = 10;
 
@@ -348,7 +348,7 @@ public class LayerTileView extends ScrollPane {
                 previewImage.setImage(snapshot);
 
             } catch (Exception e) {
-                logger.warn("Failed to update preview for layer " + layerIndex + ": " + e.getMessage());
+                logger.warn("Failed to update preview for layer {}: {}", layerIndex, e.getMessage());
             }
         }
 
@@ -370,10 +370,10 @@ public class LayerTileView extends ScrollPane {
                 if (file != null) {
                     // Export layer as JSON
                     LottieFileSaver.saveLayer(animation, layer, layerIndex, file);
-                    logger.info("Layer exported to: " + file.getAbsolutePath());
+                    logger.info("Layer exported to: {}", file.getAbsolutePath());
                 }
             } catch (Exception e) {
-                logger.error("Failed to export layer: " + e.getMessage());
+                logger.error("Failed to export layer: {}", e.getMessage());
             }
         }
     }

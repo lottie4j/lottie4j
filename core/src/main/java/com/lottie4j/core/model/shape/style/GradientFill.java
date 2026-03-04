@@ -68,7 +68,7 @@ public record GradientFill(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.GRADIENT_FILL;
     }
 

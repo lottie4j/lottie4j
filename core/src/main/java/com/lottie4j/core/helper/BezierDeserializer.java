@@ -8,11 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.Bezier;
 import com.lottie4j.core.model.bezier.FixedBezier;
-import com.lottie4j.core.model.keyframe.Keyframe;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Because animated and non-animated beziers have a different JSON-structure, it was not able to just use Jackson to parse these.
@@ -26,10 +23,7 @@ public class BezierDeserializer extends JsonDeserializer {
 
     @Override
     public Bezier deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-        List<Keyframe> rt = new ArrayList<>();
-
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-
         if (node.get("a") != null && node.get("a").asInt() == 1) {
             return mapper.convertValue(node, AnimatedBezier.class);
         }

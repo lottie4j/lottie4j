@@ -21,7 +21,7 @@ import java.util.Optional;
 
 public class RectangleRenderer implements ShapeRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(RectangleRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(RectangleRenderer.class);
 
     /**
      * {@inheritDoc}
@@ -31,11 +31,11 @@ public class RectangleRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Rectangle rectangle)) {
-            logger.warn("RectangleRenderer called with non-Rectangle shape: " + shape.getClass().getSimpleName());
+            logger.warn("RectangleRenderer called with non-Rectangle shape: {}", shape.getClass().getSimpleName());
             return;
         }
 
-        logger.debug("RectangleRenderer.render called for: " + rectangle.name());
+        logger.debug("RectangleRenderer.render called for: {}", rectangle.name());
 
         if (rectangle.size() == null) {
             logger.warn("Rectangle missing size data");

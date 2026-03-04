@@ -21,7 +21,7 @@ import java.util.Optional;
 
 public class PolystarRenderer implements ShapeRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(PolystarRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PolystarRenderer.class);
 
     /**
      * {@inheritDoc}

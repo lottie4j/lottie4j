@@ -39,12 +39,12 @@
             <AppenderRef ref="console"/>
         </Root>
 
-        <Logger name="com.lottie4j" additivity="false" level="debug">
+        <Logger name="com.lottie4j" additivity="false" level="info">
             <AppenderRef ref="fileLogger"/>
             <AppenderRef ref="console"/>
         </Logger>
 
-        <Logger name="com.lottie4j.fxfileviewer" additivity="false" level="debug">
+        <Logger name="com.lottie4j.fxfileviewer" additivity="false" level="info">
             <AppenderRef ref="fileLogger"/>
             <AppenderRef ref="console"/>
         </Logger>

@@ -4,13 +4,12 @@ import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import javafx.scene.canvas.GraphicsContext;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TransformApplier {
 
-    private static final Logger logger = LoggerFactory.getLogger(TransformApplier.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TransformApplier.class);
 
     /**
      * Applies the full transform stack for a layer, including animated opacity.
@@ -44,18 +43,18 @@ public class TransformApplier {
      */
     private void applyLayerTransformInternal(GraphicsContext gc, Layer layer, double frame, boolean includeOpacity) {
         if (layer.transform() == null) {
-            logger.debug("No transform for layer: " + layer.name());
+            logger.debug("No transform for layer: {}", layer.name());
             return;
         }
 
         if (includeOpacity && layer.transform().opacity() != null) {
             double opacity = layer.transform().opacity().getValue(0, frame);
-            logger.debug("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
+            logger.debug("Setting layer opacity: {} (normalized: {})", opacity, (opacity / 100.0));
             if (opacity > 0) {
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));
             }
         } else if (!includeOpacity) {
-            logger.debug("Skipping opacity transform inheritance for parent layer: " + layer.name());
+            logger.debug("Skipping opacity transform inheritance for parent layer: {}", layer.name());
         } else {
             logger.debug("No opacity transform");
         }
@@ -65,15 +64,15 @@ public class TransformApplier {
             double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
 
             if (includeOpacity && (Double.isNaN(x) || Double.isNaN(y))) {
-                logger.warn("Position contains NaN at frame " + frame + " for layer " + layer.name()
-                        + " - trying fallback frame " + (frame + 0.001));
+                logger.warn("Position contains NaN at frame {} for layer {} - trying fallback frame {}",
+                        frame, layer.name(), (frame + 0.001));
                 double fallbackX = layer.transform().position().getValue(AnimatedValueType.X, frame + 0.001);
                 double fallbackY = layer.transform().position().getValue(AnimatedValueType.Y, frame + 0.001);
 
                 if (!Double.isNaN(fallbackX) && !Double.isNaN(fallbackY)) {
                     x = fallbackX;
                     y = fallbackY;
-                    logger.warn("Using fallback position: (" + x + ", " + y + ")");
+                    logger.warn("Using fallback position: ({}, {})", x, y);
                 } else {
                     logger.warn("Fallback also returned NaN - skipping layer rendering");
                     gc.restore();
@@ -82,15 +81,15 @@ public class TransformApplier {
             }
 
             if (includeOpacity) {
-                logger.debug("Translating by position: " + x + ", " + y);
+                logger.debug("Translating by position: {}, {}", x, y);
                 if (Math.abs(x) > 10000 || Math.abs(y) > 10000) {
-                    logger.warn("WARNING: Extreme translation values detected for layer " + layer.name() + " at frame " + frame
-                            + "! x=" + x + ", y=" + y + " - layer may be off-screen");
+                    logger.warn("WARNING: Extreme translation values detected for layer {} at frame {}! x={}, y={} - layer may be off-screen",
+                            layer.name(), frame, x, y);
                 }
             } else {
-                logger.debug("Translating by position (without opacity): " + x + ", " + y);
+                logger.debug("Translating by position (without opacity): {}, {}", x, y);
                 if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
-                    logger.warn("WARNING: Large translation values detected! x=" + x + ", y=" + y);
+                    logger.warn("WARNING: Large translation values detected! x={}, y={}", x, y);
                 }
             }
             gc.translate(x, y);
@@ -101,9 +100,9 @@ public class TransformApplier {
         if (layer.transform().rotation() != null) {
             double rotationDegrees = layer.transform().rotation().getValue(0, frame);
             if (includeOpacity) {
-                logger.debug("Rotating by: " + rotationDegrees + " degrees");
+                logger.debug("Rotating by: {} degrees", rotationDegrees);
             } else {
-                logger.debug("Rotating by (without opacity): " + rotationDegrees + " degrees");
+                logger.debug("Rotating by (without opacity): {} degrees", rotationDegrees);
             }
             gc.rotate(rotationDegrees);
         } else {
@@ -117,9 +116,9 @@ public class TransformApplier {
             double rxDegrees = layer.transform().rx().getValue(0, frame);
             rx3DScale = Math.cos(Math.toRadians(rxDegrees));
             if (includeOpacity) {
-                logger.debug("Applying 3D X-axis rotation: " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
+                logger.debug("Applying 3D X-axis rotation: {} degrees (scaleY factor: {})", rxDegrees, rx3DScale);
             } else {
-                logger.debug("Applying 3D X-axis rotation (without opacity): " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
+                logger.debug("Applying 3D X-axis rotation (without opacity): {} degrees (scaleY factor: {})", rxDegrees, rx3DScale);
             }
         }
 
@@ -127,9 +126,9 @@ public class TransformApplier {
             double ryDegrees = layer.transform().ry().getValue(0, frame);
             ry3DScale = Math.cos(Math.toRadians(ryDegrees));
             if (includeOpacity) {
-                logger.debug("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
+                logger.debug("Applying 3D Y-axis rotation: {} degrees (scaleX factor: {})", ryDegrees, ry3DScale);
             } else {
-                logger.debug("Applying 3D Y-axis rotation (without opacity): " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
+                logger.debug("Applying 3D Y-axis rotation (without opacity): {} degrees (scaleX factor: {})", ryDegrees, ry3DScale);
             }
         }
 

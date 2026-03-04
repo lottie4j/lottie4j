@@ -5,11 +5,11 @@ import com.lottie4j.core.model.Asset;
 import com.lottie4j.core.model.Layer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Renders image layers from Lottie animations.
@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ImageRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImageRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ImageRenderer.class);
 
     /**
      * Render an image layer
@@ -113,17 +113,17 @@ public class ImageRenderer {
             Image image = new Image(inputStream);
 
             if (image.isError()) {
-                logger.warn("Failed to load image from data URI: " + image.getException());
+                logger.warn("Failed to load image from data URI: {}", image.getException());
                 return null;
             }
 
-            logger.debug("Successfully loaded image from data URI (" + imageData.length + " bytes)");
+            logger.debug("Successfully loaded image from data URI ({} bytes)", imageData.length);
             return image;
         } catch (IllegalArgumentException e) {
-            logger.warn("Failed to decode base64 image data: " + e.getMessage());
+            logger.warn("Failed to decode base64 image data: {}", e.getMessage());
             return null;
         } catch (Exception e) {
-            logger.warn("Error loading image from data URI: " + e.getMessage());
+            logger.warn("Error loading image from data URI: {}", e.getMessage());
             return null;
         }
     }
@@ -141,7 +141,7 @@ public class ImageRenderer {
             if (resource != null) {
                 Image image = new Image(resource);
                 if (!image.isError()) {
-                    logger.debug("Successfully loaded image from resources: " + filePath);
+                    logger.debug("Successfully loaded image from resources: {}", filePath);
                     return image;
                 }
             }
@@ -149,14 +149,14 @@ public class ImageRenderer {
             // Try as URL/file path
             Image image = new Image("file:" + filePath);
             if (!image.isError()) {
-                logger.debug("Successfully loaded image from file: " + filePath);
+                logger.debug("Successfully loaded image from file: {}", filePath);
                 return image;
             }
 
-            logger.warn("Could not load image: " + filePath);
+            logger.warn("Could not load image: {}", filePath);
             return null;
         } catch (Exception e) {
-            logger.warn("Error loading image from file: " + filePath + " - " + e.getMessage());
+            logger.warn("Error loading image from file {}: {}", filePath, e.getMessage());
             return null;
         }
     }

@@ -50,7 +50,7 @@ public record Pucker(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.PUCKER;
     }
 }

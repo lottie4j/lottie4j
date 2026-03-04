@@ -25,7 +25,7 @@ import java.util.*;
  */
 public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
 
-    private static final Logger logger = LoggerFactory.getLogger(LayerTreeView.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LayerTreeView.class);
 
     private final Animation animation;
     private final LottiePlayer lottiePlayer;
@@ -150,8 +150,8 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
                 if (layer != null && layer.matteMode() != null) {
                     // Matte source is typically the previous layer (index - 1)
                     visibleIndices.add(entry.getKey() - 1);
-                    logger.debug("Auto-including matte source layer " + (entry.getKey() - 1) +
-                            " for layer " + entry.getKey());
+                    logger.debug("Auto-including matte source layer {} for layer {}",
+                            entry.getKey() - 1, entry.getKey());
                 }
             }
         }

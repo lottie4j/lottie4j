@@ -66,7 +66,7 @@ public record Polystar(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.POLYSTAR;
     }
 }

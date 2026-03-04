@@ -59,7 +59,7 @@ public record Repeater(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.REPEATER;
     }
 }

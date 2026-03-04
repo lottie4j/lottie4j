@@ -34,7 +34,10 @@ public class GradientStrokeStyle {
             return Color.BLACK;
         }
 
-        double startX = 0, startY = 0, endX = 100, endY = 100;
+        double startX = 0;
+        double startY = 0;
+        double endX = 100;
+        double endY = 100;
         if (gradientStroke.startingPoint() != null) {
             startX = gradientStroke.startingPoint().getValue(AnimatedValueType.X, frame);
             startY = gradientStroke.startingPoint().getValue(AnimatedValueType.Y, frame);

@@ -24,7 +24,7 @@ import java.util.Optional;
 
 public class EllipseRenderer implements ShapeRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(EllipseRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(EllipseRenderer.class);
 
     /**
      * {@inheritDoc}
@@ -34,7 +34,7 @@ public class EllipseRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Ellipse ellipse)) {
-            logger.warn("EllipseRenderer called with non-Ellipse shape: " + shape.getClass().getSimpleName());
+            logger.warn("EllipseRenderer called with non-Ellipse shape: {}", shape.getClass().getSimpleName());
             return;
         }
 
@@ -98,7 +98,7 @@ public class EllipseRenderer implements ShapeRenderer {
                 var fillStyle = getFillStyle(parentGroup);
                 if (fillStyle.isPresent()) {
                     var fillColor = fillStyle.get().getColor(frame);
-                    logger.info("Ellipse fill found - color: " + fillColor + ", position: (" + renderX + "," + renderY + "), size: " + width + "x" + height);
+                    logger.info("Ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, renderX, renderY, width, height);
                     gc.setFill(fillColor);
                     gc.fillOval(renderX, renderY, width, height);
                 } else {
@@ -213,7 +213,7 @@ public class EllipseRenderer implements ShapeRenderer {
         double end = trimPath.segmentEnd() != null ? trimPath.segmentEnd().getValue(0, frame) : 100;
         double offset = trimPath.offset() != null ? trimPath.offset().getValue(0, frame) : 0;
 
-        logger.debug("Trim Path - Start: " + start + ", End: " + end + ", Offset: " + offset + " at frame " + frame);
+        logger.debug("Trim Path - Start: {}, End: {}, Offset: {} at frame {}", start, end, offset, frame);
 
         // Convert to normalized 0-1 range
         start = start / 100.0;
@@ -253,7 +253,7 @@ public class EllipseRenderer implements ShapeRenderer {
             arcExtent -= 360;
         }
 
-        logger.debug("Rendering arc - StartAngle: " + startAngle + "°, Extent: " + arcExtent + "°");
+        logger.debug("Rendering arc - StartAngle: {}°, Extent: {}°", startAngle, arcExtent);
 
         // Fill the entire ellipse (not affected by trim path)
         var gradientFillStyle = getGradientFillStyle(parentGroup);
@@ -265,14 +265,14 @@ public class EllipseRenderer implements ShapeRenderer {
                 double currentAlpha = gc.getGlobalAlpha();
                 gc.setGlobalAlpha(currentAlpha * opacity);
             }
-            logger.info("TrimPath ellipse gradient fill - position: (" + x + "," + y + "), size: " + width + "x" + height);
+            logger.info("TrimPath ellipse gradient fill - position: ({},{}), size: {}x{}", x, y, width, height);
             gc.fillOval(x, y, width, height);
             gc.setGlobalAlpha(1.0); // Reset
         } else {
             var fillStyle = getFillStyle(parentGroup);
             if (fillStyle.isPresent()) {
                 var fillColor = fillStyle.get().getColor(frame);
-                logger.info("TrimPath ellipse fill found - color: " + fillColor + ", position: (" + x + "," + y + "), size: " + width + "x" + height);
+                logger.info("TrimPath ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, x, y, width, height);
                 gc.setFill(fillColor);
                 gc.fillOval(x, y, width, height);
             } else {

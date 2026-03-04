@@ -35,9 +35,11 @@ public class GradientFillStyle {
             return Color.BLACK;
         }
 
-
         // Get start and end points
-        double startX = 0, startY = 0, endX = 100, endY = 100;
+        double startX = 0;
+        double startY = 0;
+        double endX = 100;
+        double endY = 100;
         if (gradientFill.startingPoint() != null) {
             startX = gradientFill.startingPoint().getValue(AnimatedValueType.X, frame);
             startY = gradientFill.startingPoint().getValue(AnimatedValueType.Y, frame);

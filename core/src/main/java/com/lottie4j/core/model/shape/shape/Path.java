@@ -56,7 +56,7 @@ public record Path(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.PATH;
     }
 }

@@ -11,8 +11,6 @@ import javafx.scene.text.TextAlignment;
 
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Renders text layers from Lottie animations.
@@ -20,7 +18,6 @@ import org.slf4j.LoggerFactory;
  */
 public class TextRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(TextRenderer.class.getName());
     private static final double DEFAULT_FONT_SIZE = 24;
     private static final String DEFAULT_FONT_FAMILY = "Arial";
 

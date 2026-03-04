@@ -70,7 +70,7 @@ public record Stroke(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.STROKE;
     }
 }

@@ -54,7 +54,7 @@ public record Group(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.GROUP;
     }
 }

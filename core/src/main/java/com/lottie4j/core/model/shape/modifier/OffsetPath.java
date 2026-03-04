@@ -56,7 +56,7 @@ public record OffsetPath(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.OFFSET_PATH;
     }
 }

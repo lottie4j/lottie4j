@@ -71,7 +71,7 @@ public record GradientStroke(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.GRADIENT_STROKE;
     }
 

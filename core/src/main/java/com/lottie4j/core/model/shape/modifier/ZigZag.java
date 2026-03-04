@@ -56,7 +56,7 @@ public record ZigZag(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.ZIG_ZAG;
     }
 }

@@ -55,7 +55,7 @@ public record Rectangle(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.RECTANGLE;
     }
 }

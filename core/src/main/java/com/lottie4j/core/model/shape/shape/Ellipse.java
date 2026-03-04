@@ -53,7 +53,7 @@ public record Ellipse(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.ELLIPSE;
     }
 }

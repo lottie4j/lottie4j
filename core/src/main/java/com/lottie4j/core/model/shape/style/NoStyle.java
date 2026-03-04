@@ -46,7 +46,7 @@ public record NoStyle(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.NO_STYLE;
     }
 }

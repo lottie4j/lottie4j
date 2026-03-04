@@ -71,7 +71,7 @@ public record Transform(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.TRANSFORM;
     }
 }

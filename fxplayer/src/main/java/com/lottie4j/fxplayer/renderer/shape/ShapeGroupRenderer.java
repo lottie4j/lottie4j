@@ -14,11 +14,11 @@ import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import javafx.scene.canvas.GraphicsContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Renderer for shape groups with support for transforms, trim paths, and combined path rendering.
@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ShapeGroupRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(ShapeGroupRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ShapeGroupRenderer.class);
 
     private final TransformApplier transformApplier;
     private final ShapeRendererFactory shapeRendererFactory;
@@ -56,7 +56,7 @@ public class ShapeGroupRenderer {
             return;
         }
         if (shape instanceof Group group) {
-            logger.debug("Rendering group: " + group.name() + " with " + group.shapes().size() + " items");
+            logger.debug("Rendering group: {} with {} items", group.name(), group.shapes().size());
             gc.save();
 
             // Extract Transform and TrimPath from the group's shapes
@@ -75,7 +75,7 @@ public class ShapeGroupRenderer {
                 if (groupTransform.opacity() != null) {
                     double opacity = groupTransform.opacity().getValue(0, frame);
                     if (opacity <= 0) {
-                        logger.debug("Skipping group " + group.name() + " - opacity is " + opacity);
+                        logger.debug("Skipping group {} - opacity is {}", group.name(), opacity);
                         gc.restore();
                         return;
                     }
@@ -101,13 +101,14 @@ public class ShapeGroupRenderer {
                         continue; // Skip modifiers, they're applied to the shapes
                     }
 
-                    switch (item.type().shapeGroup()) {
+                    switch (item.shapeType().shapeGroup()) {
                         case GROUP -> renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
                         case SHAPE -> renderShape(gc, item, effectiveGroup, frame);
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
                         }
-                        default -> logger.warn("Not defined how to render shape type: " + item.type().shapeGroup());
+                        default ->
+                                logger.warn("Not defined how to render shape type: {}", item.shapeType().shapeGroup());
                     }
                 }
             }
@@ -177,7 +178,7 @@ public class ShapeGroupRenderer {
             return false;
         }
 
-        logger.debug("Rendering " + paths.size() + " combined paths with fill rule for group: " + group.name());
+        logger.debug("Rendering {} combined paths with fill rule for group: {}", paths.size(), group.name());
 
         // Set fill rule
         javafx.scene.shape.FillRule fxFillRule = fill.fillRule() == FillRule.EVEN_ODD ?
@@ -208,7 +209,7 @@ public class ShapeGroupRenderer {
         // Render any nested groups
         for (int i = group.shapes().size() - 1; i >= 0; i--) {
             BaseShape item = group.shapes().get(i);
-            if (item.type().shapeGroup() == ShapeGroup.GROUP) {
+            if (item.shapeType().shapeGroup() == ShapeGroup.GROUP) {
                 renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
             }
         }
@@ -324,7 +325,7 @@ public class ShapeGroupRenderer {
     private void renderShape(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
         if (renderer == null) {
-            logger.warn("No renderer found for shape: " + shape.getClass().getSimpleName());
+            logger.warn("No renderer found for shape: {}", shape.getClass().getSimpleName());
             return;
         }
         renderer.render(gc, shape, parentGroup, frame);

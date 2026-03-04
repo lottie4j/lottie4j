@@ -50,7 +50,7 @@ public record Merge(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.MERGE;
     }
 }

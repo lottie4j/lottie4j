@@ -9,16 +9,16 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import javafx.scene.canvas.GraphicsContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class PrecompRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(PrecompRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PrecompRenderer.class);
 
     private final TransformApplier transformApplier;
     private final TextRenderer textRenderer;
@@ -183,13 +183,13 @@ public class PrecompRenderer {
                 continue;
             }
 
-            switch (shape.type().shapeGroup()) {
+            switch (shape.shapeType().shapeGroup()) {
                 case GROUP -> shapeGroupRenderer.render(shape, frame, layerTrimPath);
                 case SHAPE -> shapeRendererDelegate.render(shape, null, frame);
                 case STYLE -> {
                     // Styles are consumed by parent group renderers.
                 }
-                default -> logger.debug("Unsupported shape type: " + shape.type().shapeGroup());
+                default -> logger.debug("Unsupported shape type: " + shape.shapeType().shapeGroup());
             }
         }
     }

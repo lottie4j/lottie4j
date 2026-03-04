@@ -29,7 +29,7 @@ import java.util.Optional;
 
 public class PathRenderer implements ShapeRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(PathRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PathRenderer.class);
 
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
@@ -50,9 +50,6 @@ public class PathRenderer implements ShapeRenderer {
         List<List<Double>> tangentsIn = bezierDef.tangentsIn();
         List<List<Double>> tangentsOut = bezierDef.tangentsOut();
 
-        if (vertices.size() == 8) {
-            logger.warn("*** 8-VERTEX F-LOGO PATH: " + path.name() + " ***");
-        }
         logger.debug("Path '" + path.name() + "' - vertices: " + vertices.size() +
                 ", closed: " + bezierDef.closed());
         if (!vertices.isEmpty()) {

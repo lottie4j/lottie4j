@@ -9,7 +9,6 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +18,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MatteRenderer {
 
-    private static final Logger logger = LoggerFactory.getLogger(MatteRenderer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(MatteRenderer.class);
 
     /**
      * Renders a layer with simple blend-mode-based matte (simpler but less accurate).
@@ -105,8 +104,8 @@ public class MatteRenderer {
         WritableImage contentImage = contentCanvas.snapshot(params, null);
 
         // DEBUG: Check if content and matte have actual pixels
-        logger.debug("Matte image size: " + matteImage.getWidth() + "x" + matteImage.getHeight());
-        logger.debug("Content image size: " + contentImage.getWidth() + "x" + contentImage.getHeight());
+        logger.debug("Matte image size: {}x{}", matteImage.getWidth(), matteImage.getHeight());
+        logger.debug("Content image size: {}x{}", contentImage.getWidth(), contentImage.getHeight());
 
         // Sample multiple pixels to see what we're working with
         PixelReader matteReader = matteImage.getPixelReader();
@@ -118,10 +117,10 @@ public class MatteRenderer {
         Color matte270 = matteReader.getColor(270, 270);
         Color content270 = contentReader.getColor(270, 270);
 
-        logger.info("  Matte center [" + ((int) matteImage.getWidth() / 2) + "," + ((int) matteImage.getHeight() / 2) + "]: " + matteCenter);
-        logger.info("  Content center [" + ((int) contentImage.getWidth() / 2) + "," + ((int) contentImage.getHeight() / 2) + "]: " + contentCenter);
-        logger.info("  Matte at [270,270]: " + matte270);
-        logger.info("  Content at [270,270]: " + content270);
+        logger.debug("  Matte center [" + ((int) matteImage.getWidth() / 2) + "," + ((int) matteImage.getHeight() / 2) + "]: " + matteCenter);
+        logger.debug("  Content center [" + ((int) contentImage.getWidth() / 2) + "," + ((int) contentImage.getHeight() / 2) + "]: " + contentCenter);
+        logger.debug("  Matte at [270,270]: {}", matte270);
+        logger.debug("  Content at [270,270]: {}", content270);
 
         // Apply matte composition
         WritableImage result = applyMatte(contentImage, matteImage, matteMode);

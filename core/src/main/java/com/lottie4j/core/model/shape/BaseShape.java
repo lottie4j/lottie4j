@@ -56,5 +56,5 @@ public interface BaseShape {
         return name;
     }
 
-    ShapeType type();
+    ShapeType shapeType();
 }

@@ -5,6 +5,8 @@ import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationLoaderTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnimationLoaderTest.class);
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
@@ -22,8 +26,8 @@ class AnimationLoaderTest {
         var animation = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writeValueAsString(animation);
 
-        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + jsonFromObject);
+        logger.info("Original:\n{}", jsonFromFile.replace("\n", "").replace(" ", ""));
+        logger.info("Generated:\n{}", jsonFromObject);
 
         assertAll(
                 () -> assertInstanceOf(Animation.class, animation),

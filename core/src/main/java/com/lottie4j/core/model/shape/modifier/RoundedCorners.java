@@ -50,7 +50,7 @@ public record RoundedCorners(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.ROUNDED_CORNERS;
     }
 }

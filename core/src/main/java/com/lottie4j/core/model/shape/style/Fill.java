@@ -56,7 +56,7 @@ public record Fill(
     }
 
     @Override
-    public ShapeType type() {
+    public ShapeType shapeType() {
         return ShapeType.FILL;
     }
 }

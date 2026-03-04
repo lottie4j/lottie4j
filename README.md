@@ -56,6 +56,8 @@ public class DemoApplication extends Application {
         stage.setTitle(lottieFile.getName());
         stage.setScene(scene);
         stage.show();
+
+        animation.play();
     }
 }
 ```
