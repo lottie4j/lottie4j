@@ -1,5 +1,6 @@
 package com.lottie4j.core.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -29,6 +30,7 @@ public record Animation(
         @JsonProperty("layers") List<Layer> layers
 ) implements PropertyListing {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Animation");
         list.add("Version", version);

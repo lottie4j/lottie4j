@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.modifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,13 +36,8 @@ public record ZigZag(
         @JsonProperty("a") Animated amount,
         @JsonProperty("ml") Animated miterLimit
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.ZIG_ZAG;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Zig Zag");
         list.add("Match name", matchName);
@@ -57,5 +53,10 @@ public record ZigZag(
         list.add("Amount", amount);
         list.add("Miter limit", miterLimit);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.ZIG_ZAG;
     }
 }

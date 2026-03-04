@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.grouping;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -42,13 +43,8 @@ public record Transform(
         @JsonProperty("o") Animated opacity,
         @JsonProperty("or") Animated unknown
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.TRANSFORM;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Transform");
         list.add("Match name", matchName);
@@ -72,5 +68,10 @@ public record Transform(
         list.add("Opacity", opacity);
         list.add("Unknown", unknown);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.TRANSFORM;
     }
 }

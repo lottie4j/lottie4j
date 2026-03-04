@@ -1,6 +1,7 @@
 package com.lottie4j.core.model.bezier;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.lottie4j.core.helper.ListListSerializer;
 import com.lottie4j.core.info.PropertyListing;
@@ -25,6 +26,7 @@ public record BezierDefinition(
         List<List<Double>> tangentsOut
 ) implements PropertyListing {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Bezier Definition");
         list.add("Closed", closed);

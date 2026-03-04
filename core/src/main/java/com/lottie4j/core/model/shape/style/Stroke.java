@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.style;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -45,11 +46,7 @@ public record Stroke(
         @JsonProperty("c") Animated color
 ) implements BaseShape {
     @Override
-    public ShapeType type() {
-        return ShapeType.STROKE;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Stroke");
         list.add("Match name", matchName);
@@ -70,5 +67,10 @@ public record Stroke(
         list.add("Color", color);
         list.addList("Stroke dashes", strokeDashes);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.STROKE;
     }
 }

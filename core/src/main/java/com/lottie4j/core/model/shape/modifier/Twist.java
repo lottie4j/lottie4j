@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.modifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,13 +34,8 @@ public record Twist(
         @JsonProperty("a") Animated angle,
         @JsonProperty("c") Animated center
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.TWIST;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Twist");
         list.add("Match name", matchName);
@@ -54,5 +50,10 @@ public record Twist(
         list.add("Angle", angle);
         list.add("Center", center);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.TWIST;
     }
 }

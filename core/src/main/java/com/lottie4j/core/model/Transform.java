@@ -1,5 +1,6 @@
 package com.lottie4j.core.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -26,6 +27,7 @@ public record Transform(
         @JsonProperty("or") Animated unknown
 ) implements PropertyListing {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Transform");
         list.add("Anchor", anchor);

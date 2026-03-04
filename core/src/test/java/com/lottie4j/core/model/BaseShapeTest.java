@@ -2,8 +2,8 @@ package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.helper.ObjectMapperFactory;
-import com.lottie4j.core.loader.LottieFileLoader;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.modifier.Pucker;
 import com.lottie4j.core.model.shape.modifier.Repeater;

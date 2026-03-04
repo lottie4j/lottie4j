@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.grouping;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,13 +35,8 @@ public record Group(
         @JsonProperty("np") Integer numberOfProperties,
         @JsonProperty("it") List<BaseShape> shapes
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.GROUP;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Group");
         list.add("Match name", matchName);
@@ -55,5 +51,10 @@ public record Group(
         list.add("Number of properties", numberOfProperties);
         list.addShapeList("Shapes", shapes);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.GROUP;
     }
 }

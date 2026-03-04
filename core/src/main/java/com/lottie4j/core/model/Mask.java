@@ -1,5 +1,6 @@
 package com.lottie4j.core.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
@@ -16,6 +17,7 @@ public record Mask(
         // TODO EXTEND FURTHER
 ) implements PropertyListing {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Mask");
         list.add("Match name", matchName);

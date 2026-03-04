@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,13 +35,8 @@ public record Rectangle(
         @JsonProperty("s") Animated size,
         @JsonProperty("r") Animated roundedCornerRadius
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.RECTANGLE;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Rectangle");
         list.add("Match name", matchName);
@@ -56,6 +52,11 @@ public record Rectangle(
         list.add("Size", size);
         list.add("Rounded corner radius", roundedCornerRadius);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.RECTANGLE;
     }
 }
 

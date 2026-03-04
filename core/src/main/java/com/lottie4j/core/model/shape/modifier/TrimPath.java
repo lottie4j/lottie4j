@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.modifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,13 +36,8 @@ public record TrimPath(
         @JsonProperty("o") Animated offset,
         @JsonProperty("m") TrimMultipleShapes trimMultipleShapes
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.TRIM;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Trim Path");
         list.add("Match name", matchName);
@@ -58,5 +54,10 @@ public record TrimPath(
         list.add("Offset", offset);
         list.add("Trim multiple shapes", trimMultipleShapes);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.TRIM;
     }
 }

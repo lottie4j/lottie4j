@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.style;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,11 +44,7 @@ public record GradientFill(
         @JsonProperty("a") Animated highlightAngle
 ) implements BaseShape {
     @Override
-    public ShapeType type() {
-        return ShapeType.GRADIENT_FILL;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Gradient Fill");
         list.add("Match name", matchName);
@@ -68,6 +65,11 @@ public record GradientFill(
         list.add("Highlight length", highlightLength);
         list.add("Highlight angle", highlightAngle);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.GRADIENT_FILL;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

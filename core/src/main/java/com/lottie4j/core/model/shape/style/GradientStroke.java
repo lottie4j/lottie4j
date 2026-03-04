@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.style;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,6 +45,7 @@ public record GradientStroke(
         @JsonProperty("d") List<StrokeDash> strokeDashes
 ) implements BaseShape {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Gradient Stroke");
         list.add("Match name", matchName);

@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,11 +35,7 @@ public record Ellipse(
 ) implements BaseShape {
 
     @Override
-    public ShapeType type() {
-        return ShapeType.ELLIPSE;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Ellipse");
         list.add("Match name", matchName);
@@ -53,5 +50,10 @@ public record Ellipse(
         list.add("Position", position);
         list.add("Size", size);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.ELLIPSE;
     }
 }

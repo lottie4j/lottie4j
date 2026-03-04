@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.style;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,11 +30,7 @@ public record NoStyle(
         @JsonProperty("cix") Integer cix
 ) implements BaseShape {
     @Override
-    public ShapeType type() {
-        return ShapeType.NO_STYLE;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("No Style");
         list.add("Match name", matchName);
@@ -46,5 +43,10 @@ public record NoStyle(
         list.add("d", d);
         list.add("cix", cix);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.NO_STYLE;
     }
 }

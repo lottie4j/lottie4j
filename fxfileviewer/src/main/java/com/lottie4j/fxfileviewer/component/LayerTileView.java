@@ -1,5 +1,6 @@
 package com.lottie4j.fxfileviewer.component;
 
+import com.lottie4j.core.file.LottieFileSaver;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.fxplayer.LottiePlayer;
@@ -15,9 +16,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.*;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
+import java.io.File;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -199,9 +205,9 @@ public class LayerTileView extends ScrollPane {
     private Layer getLayerByIndex(int index) {
         if (animation.layers() == null) return null;
         return animation.layers().stream()
-            .filter(l -> l.indexLayer() != null && l.indexLayer().intValue() == index)
-            .findFirst()
-            .orElse(null);
+                .filter(l -> l.indexLayer() != null && l.indexLayer().intValue() == index)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -270,7 +276,12 @@ public class LayerTileView extends ScrollPane {
             infoLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #999999;");
             infoLabel.setMaxWidth(TILE_SIZE - 16);
 
-            getChildren().addAll(header, previewImage, frameLabel, infoLabel);
+            // Save button
+            Button saveButton = new Button("Save");
+            saveButton.setStyle("-fx-font-size: 10px; -fx-padding: 4px 12px;");
+            saveButton.setOnAction(e -> exportLayerAsJson());
+
+            getChildren().addAll(header, previewImage, frameLabel, infoLabel, saveButton);
 
             // Generate initial preview
             updatePreview(currentFrame, backgroundColor);
@@ -303,6 +314,31 @@ public class LayerTileView extends ScrollPane {
 
             } catch (Exception e) {
                 logger.warning("Failed to update preview for layer " + layerIndex + ": " + e.getMessage());
+            }
+        }
+
+        /**
+         * Export this layer as a standalone JSON file
+         */
+        private void exportLayerAsJson() {
+            try {
+                // Create file chooser
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("Save Layer as JSON");
+                fileChooser.setInitialFileName(layer.name() + ".json");
+                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
+
+                // Get the stage from the scene
+                Stage stage = (Stage) getScene().getWindow();
+                File file = fileChooser.showSaveDialog(stage);
+
+                if (file != null) {
+                    // Export layer as JSON
+                    LottieFileSaver.saveLayer(animation, layer, layerIndex, file);
+                    logger.info("Layer exported to: " + file.getAbsolutePath());
+                }
+            } catch (Exception e) {
+                logger.severe("Failed to export layer: " + e.getMessage());
             }
         }
     }

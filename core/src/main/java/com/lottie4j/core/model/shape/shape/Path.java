@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.shape;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -36,13 +37,8 @@ public record Path(
         @JsonDeserialize(using = BezierDeserializer.class)
         Bezier bezier
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.PATH;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Path");
         list.add("Match name", matchName);
@@ -57,5 +53,10 @@ public record Path(
         list.add("ind", ind);
         list.add("Bezier", bezier);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.PATH;
     }
 }

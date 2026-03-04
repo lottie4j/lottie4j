@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.modifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,13 +38,8 @@ public record Repeater(
 
         @JsonProperty("tr") RepeaterTransform repeaterTransform
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.REPEATER;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Repeater");
         list.add("Match name", matchName);
@@ -60,5 +56,10 @@ public record Repeater(
         list.add("Stacking order", stackingOrder);
         list.add("Repeater transform", repeaterTransform);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.REPEATER;
     }
 }

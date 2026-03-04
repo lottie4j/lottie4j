@@ -59,6 +59,7 @@ public class PathRenderer implements ShapeRenderer {
         }
 
         boolean first = true;
+
         for (int i = 0; i < vertices.size(); i++) {
             List<Double> vertex = vertices.get(i);
             if (vertex.size() < 2) continue;
@@ -98,6 +99,7 @@ public class PathRenderer implements ShapeRenderer {
         // Handle closing bezier curve from last vertex back to first vertex
         if (bezierDef.closed() != null && bezierDef.closed() && vertices.size() > 1) {
             int lastIdx = vertices.size() - 1;
+
             if (tangentsIn != null && tangentsOut != null &&
                     lastIdx < tangentsOut.size() && 0 < tangentsIn.size()) {
 
@@ -116,6 +118,8 @@ public class PathRenderer implements ShapeRenderer {
                     gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
                 }
             }
+
+            // Always close the path - JavaFX needs this to properly render the path
             gc.closePath();
         }
 

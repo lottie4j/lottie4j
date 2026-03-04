@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.shape.modifier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,13 +32,8 @@ public record Merge(
         // Merge
         @JsonProperty("mm") MergeMode mergeMode
 ) implements BaseShape {
-
     @Override
-    public ShapeType type() {
-        return ShapeType.MERGE;
-    }
-
-    @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Merge");
         list.add("Match name", matchName);
@@ -51,5 +47,10 @@ public record Merge(
         list.add("cix", cix);
         list.add("Merge mode", mergeMode);
         return list;
+    }
+
+    @Override
+    public ShapeType type() {
+        return ShapeType.MERGE;
     }
 }

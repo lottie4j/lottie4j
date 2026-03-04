@@ -1,5 +1,6 @@
 package com.lottie4j.core.model.bezier;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
@@ -14,6 +15,7 @@ public record BezierKeyframe(
         @JsonProperty("s") List<BezierDefinition> beziers
 ) implements PropertyListing {
     @Override
+    @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Bezier Keyframe");
         list.add("Time", time);
