@@ -24,9 +24,11 @@ import javafx.scene.paint.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * JavaFX Canvas component for playing Lottie animations
@@ -175,6 +177,48 @@ public class LottiePlayer extends Canvas {
                     // Loop animation
                     startTime = now;
                     elapsedSeconds = 0;
+                }
+
+                double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
+                currentFrameProperty.set(newFrame);
+                render(newFrame, visibleLayerIndices);
+            }
+        };
+
+        animationTimer.start();
+    }
+
+    public void playOnceFromStart() {
+        playOnceFromStart(null);
+    }
+
+    public void playOnceFromStart(Consumer<File> onFinished) {
+        if (isPlaying) {
+            stop();
+        }
+
+        logger.info("Starting animation (play once from start)");
+        isPlaying = true;
+
+        // Start from the beginning
+        seekToFrame(getInPoint());
+        startTime = System.nanoTime();
+
+        animationTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
+                double totalFrames = getOutPoint() - getInPoint();
+                double animationDuration = totalFrames / getFramesPerSecond();
+
+                if (elapsedSeconds >= animationDuration) {
+                    // Stop when animation completes
+                    stop();
+                    seekToFrame(getOutPoint());
+                    if (onFinished != null) {
+                        onFinished.accept(null);
+                    }
+                    return;
                 }
 
                 double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());

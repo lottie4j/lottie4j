@@ -58,7 +58,8 @@ public class LottieFileViewer extends Application {
     private BorderPane root;
 
     // UI Controls
-    private Button startButton;
+    private Button playLoopButton;
+    private Button playOnceButton;
     private Button pauseButton;
     private Slider frameSlider;
     private Label frameLabel;
@@ -139,7 +140,8 @@ public class LottieFileViewer extends Application {
     public void stop() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
-            startButton.setDisable(false);
+            playLoopButton.setDisable(false);
+            playOnceButton.setDisable(false);
             pauseButton.setDisable(true);
             currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
@@ -166,17 +168,20 @@ public class LottieFileViewer extends Application {
 
         // Playback controls
         var playbackControls = new HBox(5);
-        startButton = new Button("▶ Play");
+        playLoopButton = new Button("▶ Play Loop");
+        playOnceButton = new Button("▶ Play Once");
         pauseButton = new Button("⏸ Pause");
 
-        startButton.setOnAction(e -> startAnimation());
+        playLoopButton.setOnAction(e -> startAnimationLoop());
+        playOnceButton.setOnAction(e -> startAnimationOnce());
         pauseButton.setOnAction(e -> pauseAnimation());
 
         // Initially disable controls
-        startButton.setDisable(true);
+        playLoopButton.setDisable(true);
+        playOnceButton.setDisable(true);
         pauseButton.setDisable(true);
 
-        playbackControls.getChildren().addAll(startButton, pauseButton);
+        playbackControls.getChildren().addAll(playLoopButton, playOnceButton, pauseButton);
 
         // Frame controls
         var frameControls = new HBox(10);
@@ -232,8 +237,9 @@ public class LottieFileViewer extends Application {
     private void setupAnimationControls() {
         if (animation == null) return;
 
-        // Enable controls - Play enabled, Pause disabled initially
-        startButton.setDisable(false);
+        // Enable controls - Play buttons enabled, Pause disabled initially
+        playLoopButton.setDisable(false);
+        playOnceButton.setDisable(false);
         pauseButton.setDisable(true);
         frameSlider.setDisable(false);
         screenshotButton.setDisable(false);
@@ -364,11 +370,12 @@ public class LottieFileViewer extends Application {
     }
 
     // Update play/pause methods:
-    private void startAnimation() {
+    private void startAnimationLoop() {
         if (lottiePlayer != null) {
             // Synchronize both players - start FX player first
             lottiePlayer.play();
-            startButton.setDisable(true);
+            playLoopButton.setDisable(true);
+            playOnceButton.setDisable(true);
             pauseButton.setDisable(false);
 
             // Then immediately start JS player
@@ -380,10 +387,33 @@ public class LottieFileViewer extends Application {
         }
     }
 
+    private void startAnimationOnce() {
+        if (lottiePlayer != null) {
+            // Start FX player once
+            lottiePlayer.playOnceFromStart(file -> {
+                // Re-enable buttons when animation completes
+                playLoopButton.setDisable(false);
+                playOnceButton.setDisable(false);
+                pauseButton.setDisable(true);
+            });
+            playLoopButton.setDisable(true);
+            playOnceButton.setDisable(true);
+            pauseButton.setDisable(false);
+
+            // Start JS player once (note: lottie-web doesn't have built-in play once, so we pause at end)
+            try {
+                webEngine.executeScript("window.playAnimationOnce()");
+            } catch (Exception e) {
+                logger.warn("Failed to start JS animation once: " + e.getMessage());
+            }
+        }
+    }
+
     private void pauseAnimation() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
-            startButton.setDisable(false);
+            playLoopButton.setDisable(false);
+            playOnceButton.setDisable(false);
             pauseButton.setDisable(true);
 
             // Pause JS player as well
@@ -463,21 +493,27 @@ public class LottieFileViewer extends Application {
                     
                             // Expose control functions to JavaFX
                             window.playAnimation = function() {
+                                animation.loop = true;
                                 animation.play();
                             };
-                    
+
+                            window.playAnimationOnce = function() {
+                                animation.loop = false;
+                                animation.goToAndPlay(0, true);
+                            };
+
                             window.pauseAnimation = function() {
                                 animation.pause();
                             };
-                    
+
                             window.stopAnimation = function() {
                                 animation.stop();
                             };
-                    
+
                             window.seekToFrame = function(frame) {
                                 animation.goToAndStop(frame, true);
                             };
-                    
+
                             window.setBackgroundColor = function(color) {
                                 document.body.style.backgroundColor = color;
                             };
