@@ -288,12 +288,10 @@ public class LottiePlayer extends Canvas {
                 // Check if this layer uses a track matte (has tt set)
                 if (layer.matteMode() != null) {
                     // This layer uses a matte - the next layer (i+1) should be the matte source
-                    logger.warning("[MATTE] Layer " + i + " '" + layer.name() + "' uses matte mode: " + layer.matteMode());
                     if (i + 1 < animation.layers().size()) {
                         Layer matteSource = animation.layers().get(i + 1);
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
-                            logger.warning("[MATTE] Matte source: " + matteSource.name());
                             logger.fine("Rendering matted layer " + i + ": " + layer.name() + " with matte from " + matteSource.name());
                             renderLayerWithMatteSimple(gc, layer, matteSource, frame);
                             continue;
@@ -1514,11 +1512,16 @@ public class LottiePlayer extends Canvas {
                     if (effectValue != null && "Blurriness".equals(effectValue.name())) {
                         if (effectValue.value() != null) {
                             double rawBlur = effectValue.value().getValue(0, frame);
-                            // Scale blur radius for JavaFX
-                            // Use much gentler scaling - divide by 2 for most cases
-                            // This preserves the blur strength better
-                            blurRadius = rawBlur / 2.0;
-                            logger.finer("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name());
+                            // Scale blur radius for JavaFX - After Effects blurriness is much stronger
+                            // Use much higher divisors to match the visual strength
+                            if (rawBlur > 100) {
+                                blurRadius = rawBlur / 10.0;  // Heavy blur - strong scale down
+                            } else if (rawBlur > 50) {
+                                blurRadius = rawBlur / 6.0;  // Medium blur
+                            } else {
+                                blurRadius = rawBlur / 3.5;  // Light blur
+                            }
+                            logger.finer("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name() + " at frame " + frame);
                         }
                         break;
                     }

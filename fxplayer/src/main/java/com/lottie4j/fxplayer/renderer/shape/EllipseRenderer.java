@@ -53,7 +53,6 @@ public class EllipseRenderer implements ShapeRenderer {
         double renderX = centerX - (width / 2.0);
         double renderY = centerY - (height / 2.0);
 
-
         // Check for trim path
         var trimPath = getTrimPath(parentGroup);
 
