@@ -13,9 +13,10 @@
 
     <licenses>
         <license>
-            <name>GPL-2.0 License</name>
-            <url>https://opensource.org/license/gpl-2-0</url>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
         </license>
     </licenses>
 
