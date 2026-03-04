@@ -5,9 +5,11 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Rectangle;
 import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.core.model.shape.style.GradientFill;
+import com.lottie4j.core.model.shape.style.GradientStroke;
 import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.GradientFillStyle;
+import com.lottie4j.fxplayer.element.GradientStrokeStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;
@@ -50,25 +52,63 @@ public class RectangleRenderer implements ShapeRenderer {
         double renderX = centerX - (width / 2.0);
         double renderY = centerY - (height / 2.0);
 
+        // Lottie rectangle radius is in local shape units and should not exceed half-dimension.
+        double radius = 0;
+        if (rectangle.roundedCornerRadius() != null) {
+            radius = Math.max(0, rectangle.roundedCornerRadius().getValue(0, frame));
+            radius = Math.min(radius, Math.min(width, height) / 2.0);
+        }
+        double arc = radius * 2.0;
+
         // Check for gradient fill first, then regular fill
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
             Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            gc.save();
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
             if (opacity < 1.0) {
-                double currentAlpha = gc.getGlobalAlpha();
-                gc.setGlobalAlpha(currentAlpha * opacity);
+                gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
             }
-            gc.fillRect(renderX, renderY, width, height);
-            gc.setGlobalAlpha(1.0); // Reset
+            if (radius > 0) {
+                gc.fillRoundRect(renderX, renderY, width, height, arc, arc);
+            } else {
+                gc.fillRect(renderX, renderY, width, height);
+            }
+            gc.restore();
         } else {
             var fillStyle = getFillStyle(parentGroup);
             if (fillStyle.isPresent()) {
                 var fillColor = fillStyle.get().getColor(frame);
                 gc.setFill(fillColor);
-                gc.fillRect(renderX, renderY, width, height);
+                if (radius > 0) {
+                    gc.fillRoundRect(renderX, renderY, width, height, arc, arc);
+                } else {
+                    gc.fillRect(renderX, renderY, width, height);
+                }
             }
+        }
+
+        var gradientStrokeStyle = getGradientStrokeStyle(parentGroup);
+        if (gradientStrokeStyle.isPresent()) {
+            double strokeWidth = gradientStrokeStyle.get().getStrokeWidth(frame);
+            if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
+                double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+                gc.save();
+                gc.setStroke(gradientStrokeStyle.get().getPaint(frame));
+                gc.setLineWidth(compensatedWidth);
+                double opacity = gradientStrokeStyle.get().getOpacity(frame);
+                if (opacity < 1.0) {
+                    gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
+                }
+                if (radius > 0) {
+                    gc.strokeRoundRect(renderX, renderY, width, height, arc, arc);
+                } else {
+                    gc.strokeRect(renderX, renderY, width, height);
+                }
+                gc.restore();
+            }
+            return;
         }
 
         var strokeStyle = getStrokeStyle(parentGroup);
@@ -83,7 +123,11 @@ public class RectangleRenderer implements ShapeRenderer {
                         + strokeWidth + " (compensated: " + compensatedWidth + ")");
                 gc.setStroke(strokeStyle.get().getColor(frame));
                 gc.setLineWidth(compensatedWidth);
-                gc.strokeRect(renderX, renderY, width, height);
+                if (radius > 0) {
+                    gc.strokeRoundRect(renderX, renderY, width, height, arc, arc);
+                } else {
+                    gc.strokeRect(renderX, renderY, width, height);
+                }
             }
         }
     }
@@ -112,6 +156,18 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
+    private Optional<GradientStrokeStyle> getGradientStrokeStyle(Group group) {
+        if (group == null) {
+            return Optional.empty();
+        }
+        for (BaseShape baseShape : group.shapes()) {
+            if (baseShape instanceof GradientStroke gradientStroke) {
+                return Optional.of(new GradientStrokeStyle(gradientStroke));
+            }
+        }
+        return Optional.empty();
+    }
+
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -124,3 +180,4 @@ public class RectangleRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 }
+

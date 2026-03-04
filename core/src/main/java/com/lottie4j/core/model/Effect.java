@@ -7,6 +7,8 @@ import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 
+import java.util.List;
+
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/effects/">Lottie Docs: Effect</a>
  */
@@ -17,8 +19,8 @@ public record Effect(
         @JsonProperty("mn") String matchName,
         @JsonProperty("inv") Integer index,
         @JsonProperty("ty") EffectType type,
-        @JsonProperty("en") Integer enabled
-        // TODO EXTEND FURTHER
+        @JsonProperty("en") Integer enabled,
+        @JsonProperty("ef") List<EffectValue> values
 ) implements PropertyListing {
     @Override
     public PropertyListingList getList() {
@@ -27,6 +29,7 @@ public record Effect(
         list.add("Index", index);
         list.add("Effect type", type);
         list.add("Enabled", enabled);
+        list.addList("Values", values);
         return list;
     }
 }

@@ -1,5 +1,6 @@
 package com.lottie4j.fxplayer;
 
+import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
@@ -18,6 +19,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
@@ -351,6 +353,17 @@ public class LottiePlayer extends Canvas {
     }
 
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
+        // Check for Gaussian Blur effect and render with blur if needed
+        double blurRadius = getGaussianBlurRadius(layer, frame);
+        if (blurRadius > 0.0) {
+            renderLayerWithGaussianBlur(gc, layer, frame, blurRadius);
+            return;
+        }
+
+        renderLayerInternal(gc, layer, frame);
+    }
+
+    private void renderLayerInternal(GraphicsContext gc, Layer layer, double frame) {
         gc.save();
 
         // Check layer opacity - skip rendering if transparent
@@ -1472,5 +1485,67 @@ public class LottiePlayer extends Canvas {
         }
         return null;
     }
+
+    private double getGaussianBlurRadius(Layer layer, double frame) {
+        // Default to no blur
+        double blurRadius = 0.0;
+
+        // Check if the layer has effects
+        if (layer.effects() == null) {
+            return blurRadius;
+        }
+
+        for (var effect : layer.effects()) {
+            // Look for Gaussian Blur effect (type 14)
+            if (effect.type() != EffectType.GAUSSIAN_BLUR) {
+                continue;
+            }
+
+            // Skip if effect is disabled
+            if (effect.enabled() != null && effect.enabled() == 0) {
+                continue;
+            }
+
+            // Look for "Blurriness" property in the effect values
+            if (effect.values() != null) {
+                for (var effectValue : effect.values()) {
+                    if (effectValue != null && "Blurriness".equals(effectValue.name())) {
+                        if (effectValue.value() != null) {
+                            double rawBlur = effectValue.value().getValue(0, frame);
+                            // Scale blur radius for JavaFX - After Effects blurriness is much stronger
+                            // Use much higher divisors to match the visual strength
+                            if (rawBlur > 100) {
+                                blurRadius = rawBlur / 10.0;  // Heavy blur - strong scale down
+                            } else if (rawBlur > 50) {
+                                blurRadius = rawBlur / 6.0;  // Medium blur
+                            } else {
+                                blurRadius = rawBlur / 3.5;  // Light blur
+                            }
+                            logger.finer("Gaussian Blur: raw=" + rawBlur + " scaled=" + blurRadius + " for layer " + layer.name() + " at frame " + frame);
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+
+        return blurRadius;
+    }
+
+    private void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius) {
+        gc.save();
+
+        // Apply the Gaussian blur effect
+        GaussianBlur blur = new GaussianBlur(blurRadius);
+        gc.setEffect(blur);
+
+        // Render the layer normally
+        renderLayerInternal(gc, layer, frame);
+
+        gc.setEffect(null);
+        gc.restore();
+    }
 }
+
 
