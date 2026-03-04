@@ -32,7 +32,9 @@ public class TextRenderer {
         }
 
         TextData textData = layer.textData();
-        TextKeyframe keyframe = getKeyframeAtFrame(textData.document().keyframes(), frame);
+        List<TextKeyframe> keyframes = textData.document().keyframes();
+        KeyframeWindow window = getKeyframeWindow(keyframes, frame);
+        TextKeyframe keyframe = window.prev();
         if (keyframe == null) {
             return;
         }
@@ -44,11 +46,14 @@ public class TextRenderer {
 
         gc.save();
 
-        Double baseSize = keyframe.getFontSize();
+        Double baseSize = interpolateFontSize(window, frame);
+        if (baseSize == null) {
+            baseSize = keyframe.getFontSize();
+        }
         if (baseSize == null) {
             baseSize = DEFAULT_FONT_SIZE;
         }
-        // Keep size source from text keyframe; animator fs/fh/fb are fill HSB channels in this file.
+        // Keep animator fs for this file as color-domain (HSB saturation) to avoid incorrect sizing.
         double fontSize = baseSize;
 
         String fontFamily = keyframe.getFontFamily();
@@ -63,6 +68,9 @@ public class TextRenderer {
         applyTextAnimatorTransform(gc, textData, frame);
 
         Color fill = getAnimatorFillColor(textData, frame);
+        if (fill == null) {
+            fill = interpolateKeyframeFill(window, frame);
+        }
         if (fill == null) {
             double[] rgb = keyframe.getFontColor();
             fill = (rgb != null && rgb.length >= 3) ? Color.color(rgb[0], rgb[1], rgb[2]) : Color.BLACK;
@@ -429,5 +437,77 @@ public class TextRenderer {
         Map<String, Object> propMap = (Map<String, Object>) raw;
         Object k = propMap.get("k");
         return evalAnimatedNumber(k, frame);
+    }
+
+    private KeyframeWindow getKeyframeWindow(List<TextKeyframe> keyframes, double frame) {
+        TextKeyframe prev = null;
+        TextKeyframe next = null;
+        for (TextKeyframe kf : keyframes) {
+            if (kf.t() == null || kf.t() <= frame) {
+                prev = kf;
+            } else {
+                next = kf;
+                break;
+            }
+        }
+        if (prev == null && !keyframes.isEmpty()) {
+            prev = keyframes.get(0);
+        }
+        return new KeyframeWindow(prev, next);
+    }
+
+    private Double interpolateFontSize(KeyframeWindow w, double frame) {
+        if (w.prev() == null) {
+            return null;
+        }
+        Double s0 = w.prev().getFontSize();
+        if (s0 == null) {
+            return null;
+        }
+        if (w.next() == null || w.next().t() == null || w.prev().t() == null) {
+            return s0;
+        }
+        Double s1 = w.next().getFontSize();
+        if (s1 == null) {
+            return s0;
+        }
+        double t0 = w.prev().t();
+        double t1 = w.next().t();
+        if (t1 <= t0) {
+            return s0;
+        }
+        double u = clamp01((frame - t0) / (t1 - t0));
+        return s0 + (s1 - s0) * u;
+    }
+
+    private Color interpolateKeyframeFill(KeyframeWindow w, double frame) {
+        if (w.prev() == null) {
+            return null;
+        }
+        double[] c0 = w.prev().getFontColor();
+        if (c0 == null || c0.length < 3) {
+            return null;
+        }
+        if (w.next() == null || w.next().t() == null || w.prev().t() == null) {
+            return Color.color(clamp01(c0[0]), clamp01(c0[1]), clamp01(c0[2]));
+        }
+        double[] c1 = w.next().getFontColor();
+        if (c1 == null || c1.length < 3) {
+            return Color.color(clamp01(c0[0]), clamp01(c0[1]), clamp01(c0[2]));
+        }
+        double t0 = w.prev().t();
+        double t1 = w.next().t();
+        if (t1 <= t0) {
+            return Color.color(clamp01(c0[0]), clamp01(c0[1]), clamp01(c0[2]));
+        }
+        double u = clamp01((frame - t0) / (t1 - t0));
+        return Color.color(
+                clamp01(c0[0] + (c1[0] - c0[0]) * u),
+                clamp01(c0[1] + (c1[1] - c0[1]) * u),
+                clamp01(c0[2] + (c1[2] - c0[2]) * u)
+        );
+    }
+
+    private record KeyframeWindow(TextKeyframe prev, TextKeyframe next) {
     }
 }

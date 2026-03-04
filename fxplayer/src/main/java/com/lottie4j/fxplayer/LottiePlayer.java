@@ -640,9 +640,11 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
-        logger.finer("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers");
+        // Precomp layers animate on their own local timeline.
+        double localFrame = toLocalFrame(layer, frame);
 
-        // Build a temporary layer index map for this precomposition's parenting
+        logger.finer("Rendering precomposition: " + layer.referenceId() + " with " + asset.layers().size() + " layers at localFrame=" + localFrame + " (global=" + frame + ")");
+
         Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
         for (Layer precompLayer : asset.layers()) {
             if (precompLayer.indexLayer() != null) {
@@ -650,15 +652,19 @@ public class LottiePlayer extends Canvas {
             }
         }
 
-        // Render all layers in the precomposition in reverse order
-        // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
             Layer precompLayer = asset.layers().get(i);
-            if (isLayerActiveAtFrame(precompLayer, frame)) {
+            if (isLayerActiveAtFrame(precompLayer, localFrame)) {
                 logger.fine("Rendering precomp layer [" + i + "] ind=" + precompLayer.indexLayer() + " name='" + precompLayer.name() + "'");
-                renderPrecompLayer(gc, precompLayer, frame, precompLayersByIndex);
+                renderPrecompLayer(gc, precompLayer, localFrame, precompLayersByIndex);
             }
         }
+    }
+
+    private double toLocalFrame(Layer layer, double parentFrame) {
+        double start = layer.startTime() != null ? layer.startTime() : 0.0;
+        double stretch = (layer.timeStretch() != null && layer.timeStretch() != 0) ? layer.timeStretch() : 1.0;
+        return (parentFrame - start) / stretch;
     }
 
     private void renderPrecompLayer(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
