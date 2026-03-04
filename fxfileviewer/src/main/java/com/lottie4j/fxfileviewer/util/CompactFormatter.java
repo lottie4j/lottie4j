@@ -1,5 +1,6 @@
 package com.lottie4j.fxfileviewer.util;
 
+import java.util.Date;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
@@ -17,7 +18,7 @@ public class CompactFormatter extends Formatter {
         }
 
         return String.format("[%1$tF %1$tT] [%2$-7s] %3$-20s %4$-30s %5$s%n",
-                new java.util.Date(record.getMillis()),
+                new Date(record.getMillis()),
                 record.getLevel().getName(),
                 className,
                 methodName,

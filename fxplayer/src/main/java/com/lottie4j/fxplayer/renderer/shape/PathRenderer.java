@@ -614,7 +614,7 @@ public class PathRenderer implements ShapeRenderer {
             return start;
         }
 
-        List<List<Double>> result = new java.util.ArrayList<>();
+        List<List<Double>> result = new ArrayList<>();
         int size = Math.min(start.size(), end.size());
 
         for (int i = 0; i < size; i++) {

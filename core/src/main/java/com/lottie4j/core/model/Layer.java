@@ -54,7 +54,10 @@ public record Layer(
         @JsonProperty("tm") Animated timeRemapping,
 
         // Solid Color Layer
-        @JsonProperty("sc") String solidColor
+        @JsonProperty("sc") String solidColor,
+
+        // Text Layer
+        @JsonProperty("t") TextData textData
 ) implements PropertyListing {
     @Override
     public PropertyListingList getList() {
@@ -82,6 +85,7 @@ public record Layer(
         list.add("Height", height);
         list.add("Time remapping", timeRemapping);
         list.add("Solid color", solidColor);
+        list.add("Text data", textData);
         list.addList("Masks", masks);
         list.addList("Effects", effects);
         list.addShapeList("Shapes", shapes);

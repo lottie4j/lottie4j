@@ -39,6 +39,8 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
 
 /**
  * JavaFX Lottie Animation Viewer
@@ -792,7 +794,7 @@ public class LottieFileViewer extends Application {
     }
 
     private byte[] deflate(byte[] data) throws IOException {
-        java.util.zip.Deflater deflater = new java.util.zip.Deflater();
+        Deflater deflater = new Deflater();
         deflater.setInput(data);
         deflater.finish();
 
@@ -828,7 +830,7 @@ public class LottieFileViewer extends Application {
     }
 
     private int calculateCRC(byte[] type, byte[] data) {
-        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        CRC32 crc = new CRC32();
         crc.update(type);
         crc.update(data);
         return (int) crc.getValue();

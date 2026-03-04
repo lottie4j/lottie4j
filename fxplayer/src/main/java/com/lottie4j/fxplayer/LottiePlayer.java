@@ -10,6 +10,7 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
+import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
 import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
@@ -23,6 +24,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -40,6 +42,7 @@ public class LottiePlayer extends Canvas {
     private final Map<Integer, Layer> layersByIndex;
     private final Map<String, Asset> assetsById;
     private final ImageRenderer imageRenderer = new ImageRenderer();
+    private final TextRenderer textRenderer = new TextRenderer();
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -398,6 +401,10 @@ public class LottiePlayer extends Canvas {
         else if (layer.layerType() == LayerType.SOLD_COLOR) {
             renderSolidColorLayer(gc, layer);
         }
+        // Handle text layers
+        else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
+        }
         // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
         else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
@@ -668,6 +675,8 @@ public class LottiePlayer extends Canvas {
             renderPrecompositionLayer(gc, layer, frame);
         } else if (layer.layerType() == LayerType.SOLD_COLOR) {
             renderSolidColorLayer(gc, layer);
+        } else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
         } else if (layer.layerType() != LayerType.NULL) {
             // Render layer shapes
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
@@ -684,7 +693,7 @@ public class LottiePlayer extends Canvas {
 
                 // Second pass: render shapes in REVERSE order, passing down layer-level modifiers
                 // Lottie renders shapes from last to first (last appears behind, first appears on top)
-                java.util.List<BaseShape> shapes = layer.shapes();
+                List<BaseShape> shapes = layer.shapes();
                 for (int i = shapes.size() - 1; i >= 0; i--) {
                     BaseShape shape = shapes.get(i);
                     // Skip modifiers and styles - they're applied within groups/shapes
@@ -733,9 +742,9 @@ public class LottiePlayer extends Canvas {
     }
 
     private void renderChildrenAfterParent(GraphicsContext gc, Layer parent, double frame,
-                                           java.util.List<Layer> allLayers,
+                                           List<Layer> allLayers,
                                            Map<Integer, Layer> precompLayersByIndex,
-                                           java.util.Set<Integer> renderedIndices) {
+                                           Set<Integer> renderedIndices) {
         Integer parentInd = parent.indexLayer() != null ? parent.indexLayer().intValue() : null;
         if (parentInd == null) return;
 
@@ -955,9 +964,9 @@ public class LottiePlayer extends Canvas {
 
         if (bezierDef == null || bezierDef.vertices() == null || bezierDef.vertices().isEmpty()) return;
 
-        java.util.List<java.util.List<Double>> vertices = bezierDef.vertices();
-        java.util.List<java.util.List<Double>> tangentsIn = bezierDef.tangentsIn();
-        java.util.List<java.util.List<Double>> tangentsOut = bezierDef.tangentsOut();
+        List<java.util.List<Double>> vertices = bezierDef.vertices();
+        List<java.util.List<Double>> tangentsIn = bezierDef.tangentsIn();
+        List<java.util.List<Double>> tangentsOut = bezierDef.tangentsOut();
 
         boolean first = true;
         for (int i = 0; i < vertices.size(); i++) {

@@ -51,6 +51,7 @@ public record Animated(
 
     /**
      * Get value for single-value animated properties (like opacity) at a specific frame
+     *
      * @param index the index of the value (typically 0 for single-value properties)
      * @param frame the current animation frame
      * @return the interpolated value at the given frame
@@ -117,14 +118,6 @@ public record Animated(
 
         double startValue = getValueFromKeyframe(prevKeyframe, index);
         double endValue = getValueFromKeyframe(nextKeyframe, index);
-
-        // Debug logging for rotation
-        if (index == 0 && (Math.abs(endValue - startValue) > 90 || (startValue >= 170 && startValue <= 190))) {
-            java.util.logging.Logger.getLogger("Animated").fine(
-                String.format("Rotation: frame=%.1f, kf[%.1f→%.1f], val[%.1f→%.1f], prog=%.3f→%.3f = %.1f",
-                    frame, startFrame, endFrame, startValue, endValue, progress, easedProgress,
-                    startValue + (endValue - startValue) * easedProgress));
-        }
 
         return startValue + (endValue - startValue) * easedProgress;
     }
@@ -225,9 +218,10 @@ public record Animated(
     /**
      * Apply cubic Bezier easing curve to progress value
      * Based on the Lottie easing specification
-     * @param t progress value (0-1)
+     *
+     * @param t         progress value (0-1)
      * @param easingOut outgoing easing handle from current keyframe
-     * @param easingIn incoming easing handle for next keyframe (not used in simplified calculation)
+     * @param easingIn  incoming easing handle for next keyframe (not used in simplified calculation)
      * @return eased progress value
      */
     private double applyBezierEasing(double t, EasingHandle easingOut, EasingHandle easingIn) {

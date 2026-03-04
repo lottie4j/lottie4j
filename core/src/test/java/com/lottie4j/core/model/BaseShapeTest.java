@@ -48,7 +48,6 @@ public class BaseShapeTest {
     @ParameterizedTest
     @MethodSource("provideShapeFiles")
     void shapeFile(String file, Class clazz, ShapeType type) throws IOException {
-        System.out.println("Testing file: " + file);
         File f = new File(this.getClass().getResource(file).getFile());
         String jsonFromFile = LottieFileLoader.loadAsString(f);
         BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
