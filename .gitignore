@@ -10,3 +10,4 @@ todo.txt
 /target/
 /screenshot/
 /*.log
+/fxfileviewer/*.log
