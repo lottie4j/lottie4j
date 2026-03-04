@@ -21,7 +21,7 @@ public record Asset(
 
         // Generic for Image, Sound, Datasource
         @JsonProperty("u") ShapeType shapeType,
-        @JsonProperty("p") Boolean fileName,
+        @JsonProperty("p") Object fileName,  // Can be Boolean (true/false) or String (base64 data URI)
         @JsonProperty("e") Integer embedded,
 
         // Image
@@ -43,7 +43,7 @@ public record Asset(
         var list = new PropertyListingList("Asset");
         list.add("ID", id());
         list.add("Path", shapeType);
-        list.add("File name", fileName());
+        list.add("File name", fileName != null ? fileName.toString() : null);
         list.add("Embedded", embedded());
         list.add("Width", width());
         list.add("Height", height());

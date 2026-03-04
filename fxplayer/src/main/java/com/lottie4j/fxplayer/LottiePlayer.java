@@ -9,6 +9,7 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
+import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
 import com.lottie4j.fxplayer.renderer.shape.*;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
@@ -38,6 +39,7 @@ public class LottiePlayer extends Canvas {
     private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
     private final Map<Integer, Layer> layersByIndex;
     private final Map<String, Asset> assetsById;
+    private final ImageRenderer imageRenderer = new ImageRenderer();
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -199,7 +201,8 @@ public class LottiePlayer extends Canvas {
 
     /**
      * Render a specific frame with optional layer filtering
-     * @param frame Frame number to render
+     *
+     * @param frame               Frame number to render
      * @param visibleLayerIndices Set of layer indices to render, null to render all layers
      */
     public void render(double frame, Set<Integer> visibleLayerIndices) {
@@ -209,8 +212,9 @@ public class LottiePlayer extends Canvas {
     /**
      * Render a frame to a specific graphics context with optional layer filtering.
      * Useful for generating thumbnails or rendering to custom canvases.
-     * @param gc Graphics context to render to
-     * @param frame Frame number to render
+     *
+     * @param gc                  Graphics context to render to
+     * @param frame               Frame number to render
      * @param visibleLayerIndices Set of layer indices to render, null to render all layers
      */
     public void renderFrame(GraphicsContext gc, double frame, Set<Integer> visibleLayerIndices) {
@@ -385,6 +389,10 @@ public class LottiePlayer extends Canvas {
         // Handle precomposition layers
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             renderPrecompositionLayer(gc, layer, frame);
+        }
+        // Handle image layers
+        else if (layer.layerType() == LayerType.IMAGE) {
+            imageRenderer.render(gc, layer, animation);
         }
         // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
         else if (layer.layerType() != LayerType.NULL) {
@@ -1158,7 +1166,7 @@ public class LottiePlayer extends Canvas {
             // Check for NaN values (animation interpolation bug at exact keyframe boundaries)
             if (Double.isNaN(x) || Double.isNaN(y)) {
                 logger.warning("Position contains NaN at frame " + frame + " for layer " + layer.name() +
-                              " - trying fallback frame " + (frame + 0.001));
+                        " - trying fallback frame " + (frame + 0.001));
                 // Try a slightly offset frame to get a valid value
                 double fallbackX = layer.transform().position().getValue(AnimatedValueType.X, frame + 0.001);
                 double fallbackY = layer.transform().position().getValue(AnimatedValueType.Y, frame + 0.001);
@@ -1179,7 +1187,7 @@ public class LottiePlayer extends Canvas {
             // Check for extreme values that might push content off-screen
             if (Math.abs(x) > 10000 || Math.abs(y) > 10000) {
                 logger.warning("WARNING: Extreme translation values detected for layer " + layer.name() +
-                              " at frame " + frame + "! x=" + x + ", y=" + y + " - layer may be off-screen");
+                        " at frame " + frame + "! x=" + x + ", y=" + y + " - layer may be off-screen");
             }
 
             gc.translate(x, y);
@@ -1372,7 +1380,17 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Get the current visible layer indices.
+     *
+     * @return Set of visible layer indices, null if all layers are visible
+     */
+    public Set<Integer> getVisibleLayerIndices() {
+        return visibleLayerIndices;
+    }
+
+    /**
      * Set which layers should be visible when rendering.
+     *
      * @param visibleLayerIndices Set of layer indices to render, null to render all layers
      */
     public void setVisibleLayerIndices(Set<Integer> visibleLayerIndices) {
@@ -1381,13 +1399,5 @@ public class LottiePlayer extends Canvas {
         if (!isPlaying) {
             render(currentFrameProperty.get(), visibleLayerIndices);
         }
-    }
-
-    /**
-     * Get the current visible layer indices.
-     * @return Set of visible layer indices, null if all layers are visible
-     */
-    public Set<Integer> getVisibleLayerIndices() {
-        return visibleLayerIndices;
     }
 }
