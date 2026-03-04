@@ -12,7 +12,11 @@ import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
 import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
+import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.renderer.shape.*;
+import com.lottie4j.fxplayer.util.ColorParser;
+import com.lottie4j.fxplayer.util.FrameTiming;
+import com.lottie4j.fxplayer.util.LayerActivity;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -45,6 +49,11 @@ public class LottiePlayer extends Canvas {
     private final Map<String, Asset> assetsById;
     private final ImageRenderer imageRenderer = new ImageRenderer();
     private final TextRenderer textRenderer = new TextRenderer();
+    private final TransformApplier transformApplier = new TransformApplier();
+    private final ShapeRenderer pathRenderer = new PathRenderer();
+    private final ShapeRenderer ellipseRenderer = new EllipseRenderer();
+    private final ShapeRenderer rectangleRenderer = new RectangleRenderer();
+    private final ShapeRenderer polystarRenderer = new PolystarRenderer();
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -129,23 +138,23 @@ public class LottiePlayer extends Canvas {
     }
 
     private int getInPoint() {
-        return animation.inPoint() != null ? animation.inPoint() : 0;
+        return FrameTiming.getInPoint(animation);
     }
 
     private int getOutPoint() {
-        return animation.outPoint() != null ? animation.outPoint() : 60;
+        return FrameTiming.getOutPoint(animation);
     }
 
     private int getFramesPerSecond() {
-        return animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
+        return FrameTiming.getFramesPerSecond(animation);
     }
 
     private int getAnimationWidth() {
-        return animation.width() != null ? animation.width() : 500;
+        return FrameTiming.getAnimationWidth(animation);
     }
 
     private int getAnimationHeight() {
-        return animation.height() != null ? animation.height() : 500;
+        return FrameTiming.getAnimationHeight(animation);
     }
 
     public void play() {
@@ -327,10 +336,7 @@ public class LottiePlayer extends Canvas {
     }
 
     private boolean isLayerActiveAtFrame(Layer layer, double frame) {
-        boolean active = frame >= layer.inPoint() && frame <= layer.outPoint();
-        logger.finer("Layer " + layer.name() + " active at frame " + frame + ": " + active +
-                " (in: " + layer.inPoint() + ", out: " + layer.outPoint() + ")");
-        return active;
+        return LayerActivity.isActiveAtFrame(layer, frame);
     }
 
     private boolean shouldSkipDueToParent(Layer layer) {
@@ -675,9 +681,7 @@ public class LottiePlayer extends Canvas {
     }
 
     private double toLocalFrame(Layer layer, double parentFrame) {
-        double start = layer.startTime() != null ? layer.startTime() : 0.0;
-        double stretch = (layer.timeStretch() != null && layer.timeStretch() != 0) ? layer.timeStretch() : 1.0;
-        return (parentFrame - start) / stretch;
+        return FrameTiming.toLocalFrame(layer, parentFrame);
     }
 
     private void renderPrecompLayer(GraphicsContext gc, Layer layer, double frame, Map<Integer, Layer> precompLayersByIndex) {
@@ -809,6 +813,31 @@ public class LottiePlayer extends Canvas {
 
         // Then apply this parent's transform
         applyLayerTransform(gc, parent, frame);
+    }
+
+    private ShapeRenderer getShapeRenderer(BaseShape shape) {
+        if (shape instanceof com.lottie4j.core.model.shape.shape.Path) {
+            return pathRenderer;
+        }
+        if (shape instanceof com.lottie4j.core.model.shape.shape.Ellipse) {
+            return ellipseRenderer;
+        }
+        if (shape instanceof com.lottie4j.core.model.shape.shape.Rectangle) {
+            return rectangleRenderer;
+        }
+        if (shape instanceof com.lottie4j.core.model.shape.shape.Polystar) {
+            return polystarRenderer;
+        }
+        return null;
+    }
+
+    private void renderShapeTypeShape(BaseShape shape, Group parentGroup, double frame) {
+        ShapeRenderer renderer = getShapeRenderer(shape);
+        if (renderer == null) {
+            logger.warning("No renderer found for shape: " + shape.getClass().getSimpleName());
+            return;
+        }
+        renderer.render(gc, shape, parentGroup, frame);
     }
 
     public void renderShapeTypeGroup(BaseShape shape, double frame, TrimPath layerTrimPath) {
@@ -1054,337 +1083,18 @@ public class LottiePlayer extends Canvas {
     }
 
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
-        logger.finer("Applying group transform");
-
-        // Apply opacity first (doesn't affect transform order)
-        if (transform.opacity() != null) {
-            // Opacity is a single value, get with frame for animation interpolation
-            double opacityValue = transform.opacity().getValue(0, frame);
-            double opacity = opacityValue / 100.0;
-            logger.finer("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
-            if (opacity > 0) {
-                gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
-            }
-        }
-
-        // Correct transform order for Lottie/After Effects:
-        // 1. Translate by position
-        // 2. Apply rotation
-        // 3. Apply scale
-        // 4. Translate by -anchor (to offset the coordinate system)
-
-        // Step 1: Apply position
-        if (transform.position() != null) {
-            double x = transform.position().getValue(AnimatedValueType.X, frame);
-            double y = transform.position().getValue(AnimatedValueType.Y, frame);
-            logger.finer("Group translation: " + x + ", " + y);
-            gc.translate(x, y);
-        }
-
-        // Step 2: Apply rotation
-        if (transform.rotation() != null) {
-            double rotationDegrees = transform.rotation().getValue(0, frame);
-            logger.finer("Group rotation: " + rotationDegrees + " degrees");
-            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
-        }
-
-        // Step 3: Apply scale
-        if (transform.scale() != null) {
-            double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
-            double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-            logger.finer("Group scale: " + scaleX + ", " + scaleY);
-            gc.scale(scaleX, scaleY);
-        }
-
-        // Step 4: Apply anchor point offset (anchor point is the origin for transforms)
-        // This must be done AFTER rotation and scale
-        if (transform.anchor() != null) {
-            double anchorX = transform.anchor().getValue(AnimatedValueType.X, frame);
-            double anchorY = transform.anchor().getValue(AnimatedValueType.Y, frame);
-            logger.finer("Group anchor: " + anchorX + ", " + anchorY);
-            // Translate by negative anchor to offset the coordinate system
-            gc.translate(-anchorX, -anchorY);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public void renderShapeTypeShape(BaseShape shape, Group parentGroup, double frame) {
-        if (gc == null || shape == null) {
-            logger.warning("Skipping render: gc or shape is null");
-            return;
-        }
-
-        logger.fine("Rendering shape: " + shape.getClass().getSimpleName() +
-                " (name: " + (shape.name() != null ? shape.name() : "unnamed") + ")");
-
-        var renderer = getShapeRenderer(shape.getClass());
-        if (renderer != null) {
-            logger.fine("Using renderer: " + renderer.getClass().getSimpleName());
-
-            try {
-                // The unchecked cast is still here but now with proper error handling
-                renderer.render(gc, shape, parentGroup, frame);
-            } catch (ClassCastException e) {
-                logger.severe("Type mismatch when rendering shape: " + e.getMessage());
-                // Fall back to placeholder rendering
-                renderPlaceholder(gc);
-            }
-        } else {
-            logger.severe("No renderer found for shape type: " + shape.getClass().getSimpleName());
-
-            // Draw a placeholder for unhandled shapes
-            gc.save();
-            gc.setFill(Color.ORANGE);
-            gc.fillRect(0, 0, 50, 20);
-            gc.setFill(Color.BLACK);
-            gc.fillText("?", 20, 15);
-            gc.restore();
-        }
-    }
-
-    private void renderPlaceholder(GraphicsContext gc) {
-        gc.save();
-        gc.setFill(Color.ORANGE);
-        gc.fillRect(0, 0, 50, 20);
-        gc.setFill(Color.BLACK);
-        gc.fillText("?", 20, 15);
-        gc.restore();
-    }
-
-    private ShapeRenderer getShapeRenderer(Class<? extends BaseShape> shapeType) {
-        switch (shapeType.getSimpleName()) {
-            case "Rectangle":
-                return new RectangleRenderer();
-            case "Ellipse":
-                return new EllipseRenderer();
-            case "Path":
-                return new PathRenderer();
-            case "Polystar":
-                return new PolystarRenderer();
-            default:
-                return null;
-        }
+        transformApplier.applyGroupTransform(gc, transform, frame);
     }
 
     private void applyLayerTransform(GraphicsContext gc, Layer layer, double frame) {
-        if (layer.transform() == null) {
-            logger.finer("No transform for layer: " + layer.name());
-            return;
-        }
-
-        // Apply opacity
-        if (layer.transform().opacity() != null) {
-            // Opacity is a single value, so use index 0 with current frame for animation
-            double opacity = layer.transform().opacity().getValue(0, frame);
-            logger.finer("Setting layer opacity: " + opacity + " (normalized: " + (opacity / 100.0) + ")");
-
-            if (opacity > 0) {
-                // Multiply with existing alpha to properly composite nested opacities
-                gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));
-            }
-        } else {
-            logger.finer("No opacity transform");
-        }
-
-        // Correct transform order for Lottie/After Effects (matching group transform):
-        // 1. Translate by position
-        // 2. Apply rotation
-        // 3. Apply scale
-        // 4. Translate by -anchor (to offset the coordinate system)
-
-        // Step 1: Apply position
-        if (layer.transform().position() != null) {
-            double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
-            double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-
-            // Check for NaN values (animation interpolation bug at exact keyframe boundaries)
-            if (Double.isNaN(x) || Double.isNaN(y)) {
-                logger.warning("Position contains NaN at frame " + frame + " for layer " + layer.name() +
-                        " - trying fallback frame " + (frame + 0.001));
-                // Try a slightly offset frame to get a valid value
-                double fallbackX = layer.transform().position().getValue(AnimatedValueType.X, frame + 0.001);
-                double fallbackY = layer.transform().position().getValue(AnimatedValueType.Y, frame + 0.001);
-
-                if (!Double.isNaN(fallbackX) && !Double.isNaN(fallbackY)) {
-                    x = fallbackX;
-                    y = fallbackY;
-                    logger.warning("Using fallback position: (" + x + ", " + y + ")");
-                } else {
-                    logger.warning("Fallback also returned NaN - skipping layer rendering");
-                    gc.restore();
-                    return;
-                }
-            }
-
-            logger.finer("Translating by position: " + x + ", " + y);
-
-            // Check for extreme values that might push content off-screen
-            if (Math.abs(x) > 10000 || Math.abs(y) > 10000) {
-                logger.warning("WARNING: Extreme translation values detected for layer " + layer.name() +
-                        " at frame " + frame + "! x=" + x + ", y=" + y + " - layer may be off-screen");
-            }
-
-            gc.translate(x, y);
-        } else {
-            logger.finer("No position transform");
-        }
-
-        // Step 2: Apply rotation
-        if (layer.transform().rotation() != null) {
-            double rotationDegrees = layer.transform().rotation().getValue(0, frame);
-            logger.finer("Rotating by: " + rotationDegrees + " degrees");
-            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
-        } else {
-            logger.finer("No rotation transform");
-        }
-
-        // Step 3: Apply 3D rotation approximation (rx, ry)
-        // Approximate 3D rotation by scaling perpendicular axis
-        double rx3DScale = 1.0;
-        double ry3DScale = 1.0;
-
-        if (layer.transform().rx() != null) {
-            // X-axis rotation: scale Y dimension by cos(rx) for flip effect
-            double rxDegrees = layer.transform().rx().getValue(0, frame);
-            rx3DScale = Math.cos(Math.toRadians(rxDegrees));
-            logger.finer("Applying 3D X-axis rotation: " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
-        }
-
-        if (layer.transform().ry() != null) {
-            // Y-axis rotation: scale X dimension by cos(ry) for flip effect
-            double ryDegrees = layer.transform().ry().getValue(0, frame);
-            ry3DScale = Math.cos(Math.toRadians(ryDegrees));
-            logger.finer("Applying 3D Y-axis rotation: " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
-        }
-
-        // Step 4: Apply scale (combine regular scale with 3D rotation scale approximation)
-        if (layer.transform().scale() != null) {
-            double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, frame) / 100.0;
-            double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-
-            // Apply 3D rotation approximation scaling
-            scaleX *= ry3DScale;
-            scaleY *= rx3DScale;
-
-            logger.finer("Scaling by: " + scaleX + ", " + scaleY);
-
-            // Check for zero or negative scale that would make content invisible
-            if (scaleX <= 0 || scaleY <= 0) {
-                logger.warning("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
-            }
-
-            gc.scale(scaleX, scaleY);
-        } else {
-            logger.finer("No scale transform");
-        }
-
-        // Step 5: Apply anchor point offset (anchor point is the origin for transforms)
-        // This must be done AFTER rotation and scale
-        if (layer.transform().anchor() != null) {
-            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
-            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
-            logger.finer("Layer anchor: " + anchorX + ", " + anchorY);
-            // Translate by negative anchor to offset the coordinate system
-            gc.translate(-anchorX, -anchorY);
-        }
-
-        logger.finer("=== LAYER TRANSFORM APPLIED ===");
+        transformApplier.applyLayerTransform(gc, layer, frame);
     }
 
     /**
      * Apply layer transform WITHOUT opacity - used for parent transforms where opacity should not inherit
      */
     private void applyLayerTransformWithoutOpacity(GraphicsContext gc, Layer layer, double frame) {
-        if (layer.transform() == null) {
-            logger.finer("No transform for layer: " + layer.name());
-            return;
-        }
-
-        // NOTE: Opacity is NOT applied here - this method is used for parent transforms
-        // where opacity should not be inherited by child layers
-
-        // Correct transform order for Lottie/After Effects (matching group transform):
-        // 1. Translate by position
-        // 2. Apply rotation
-        // 3. Apply scale
-        // 4. Translate by -anchor (to offset the coordinate system)
-
-        // Step 1: Apply position
-        if (layer.transform().position() != null) {
-            double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
-            double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-            logger.finer("Translating by position (without opacity): " + x + ", " + y);
-
-            // Check for extreme values that might push content off-screen
-            if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
-                logger.warning("WARNING: Large translation values detected! x=" + x + ", y=" + y);
-            }
-
-            gc.translate(x, y);
-        } else {
-            logger.finer("No position transform");
-        }
-
-        // Step 2: Apply rotation
-        if (layer.transform().rotation() != null) {
-            double rotationDegrees = layer.transform().rotation().getValue(0, frame);
-            logger.finer("Rotating by (without opacity): " + rotationDegrees + " degrees");
-            gc.rotate(rotationDegrees);  // JavaFX rotate() expects degrees, not radians
-        } else {
-            logger.finer("No rotation transform");
-        }
-
-        // Step 3: Apply 3D rotation approximation (rx, ry)
-        // Approximate 3D rotation by scaling perpendicular axis
-        double rx3DScale = 1.0;
-        double ry3DScale = 1.0;
-
-        if (layer.transform().rx() != null) {
-            // X-axis rotation: scale Y dimension by cos(rx) for flip effect
-            double rxDegrees = layer.transform().rx().getValue(0, frame);
-            rx3DScale = Math.cos(Math.toRadians(rxDegrees));
-            logger.finer("Applying 3D X-axis rotation (without opacity): " + rxDegrees + " degrees (scaleY factor: " + rx3DScale + ")");
-        }
-
-        if (layer.transform().ry() != null) {
-            // Y-axis rotation: scale X dimension by cos(ry) for flip effect
-            double ryDegrees = layer.transform().ry().getValue(0, frame);
-            ry3DScale = Math.cos(Math.toRadians(ryDegrees));
-            logger.finer("Applying 3D Y-axis rotation (without opacity): " + ryDegrees + " degrees (scaleX factor: " + ry3DScale + ")");
-        }
-
-        // Step 4: Apply scale (combine regular scale with 3D rotation scale approximation)
-        if (layer.transform().scale() != null) {
-            double scaleX = layer.transform().scale().getValue(AnimatedValueType.X, frame) / 100.0;
-            double scaleY = layer.transform().scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-
-            // Apply 3D rotation approximation scaling
-            scaleX *= ry3DScale;
-            scaleY *= rx3DScale;
-
-            logger.finer("Scaling by (without opacity): " + scaleX + ", " + scaleY);
-
-            // Check for zero or negative scale that would make content invisible
-            if (scaleX <= 0 || scaleY <= 0) {
-                logger.warning("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
-            }
-
-            gc.scale(scaleX, scaleY);
-        } else {
-            logger.finer("No scale transform");
-        }
-
-        // Step 5: Apply anchor point offset (anchor point is the origin for transforms)
-        // This must be done AFTER rotation and scale
-        if (layer.transform().anchor() != null) {
-            double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
-            double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
-            logger.finer("Layer anchor (without opacity): " + anchorX + ", " + anchorY);
-            // Translate by negative anchor to offset the coordinate system
-            gc.translate(-anchorX, -anchorY);
-        }
-
-        logger.finer("=== LAYER TRANSFORM APPLIED (WITHOUT OPACITY) ===");
+        transformApplier.applyLayerTransformWithoutOpacity(gc, layer, frame);
     }
 
     private void renderFrame(double frame) {
@@ -1461,29 +1171,7 @@ public class LottiePlayer extends Canvas {
     }
 
     private Color parseColorString(String colorStr) {
-        try {
-            // Remove '#' if present
-            String hex = colorStr.startsWith("#") ? colorStr.substring(1) : colorStr;
-
-            // Handle different formats
-            if (hex.length() == 6) {
-                // RGB format: RRGGBB
-                int r = Integer.parseInt(hex.substring(0, 2), 16);
-                int g = Integer.parseInt(hex.substring(2, 4), 16);
-                int b = Integer.parseInt(hex.substring(4, 6), 16);
-                return Color.color(r / 255.0, g / 255.0, b / 255.0);
-            } else if (hex.length() == 8) {
-                // RGBA format: RRGGBBAA
-                int r = Integer.parseInt(hex.substring(0, 2), 16);
-                int g = Integer.parseInt(hex.substring(2, 4), 16);
-                int b = Integer.parseInt(hex.substring(4, 6), 16);
-                int a = Integer.parseInt(hex.substring(6, 8), 16);
-                return Color.color(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
-            }
-        } catch (Exception e) {
-            logger.warning("Error parsing color string '" + colorStr + "': " + e.getMessage());
-        }
-        return null;
+        return ColorParser.parse(colorStr, logger);
     }
 
     private double getGaussianBlurRadius(Layer layer, double frame) {
@@ -1547,5 +1235,4 @@ public class LottiePlayer extends Canvas {
         gc.restore();
     }
 }
-
 
