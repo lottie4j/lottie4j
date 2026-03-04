@@ -317,7 +317,7 @@ public class PathRenderer implements ShapeRenderer {
                 double t1 = Math.min(1, (endLength - segmentStart) / segmentLength);
 
                 logger.fine("    Segment " + i + ": segmentStart=" + segmentStart + ", segmentEnd=" + segmentEnd +
-                           ", t0=" + t0 + ", t1=" + t1);
+                        ", t0=" + t0 + ", t1=" + t1);
 
                 // Get points at t0 and t1
                 double[] point0 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t0);
@@ -368,7 +368,7 @@ public class PathRenderer implements ShapeRenderer {
             double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
             logger.fine("  Applying stroke: segmentsRendered=" + segmentsRendered +
-                       ", color=" + strokeColor + ", width=" + compensatedWidth);
+                    ", color=" + strokeColor + ", width=" + compensatedWidth);
 
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
                 gc.setStroke(strokeColor);

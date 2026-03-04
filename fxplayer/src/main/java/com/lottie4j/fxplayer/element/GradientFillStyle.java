@@ -7,7 +7,9 @@ import com.lottie4j.fxplayer.util.LottieValueHelper;
 import javafx.scene.paint.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GradientFillStyle {
 
@@ -21,6 +23,7 @@ public class GradientFillStyle {
         if (gradientFill == null || gradientFill.colors() == null) {
             return Color.BLACK;
         }
+
 
         // Get start and end points
         double startX = 0, startY = 0, endX = 100, endY = 100;
@@ -37,17 +40,43 @@ public class GradientFillStyle {
         List<Stop> stops = new ArrayList<>();
         if (gradientFill.colors().colors() != null) {
             int numColors = gradientFill.colors().numberOfColors();
+            var colorAnimated = gradientFill.colors().colors();
 
-            // The gradient color data is stored as a flat array:
-            // [offset1, r1, g1, b1, offset2, r2, g2, b2, ...]
-            // Where each color stop has 4 values: offset (0-1), R, G, B
+            // The gradient color data is stored as a flat array with two possible layouts:
+            // Without alpha: [offset1, r1, g1, b1, offset2, r2, g2, b2, ...]
+            // With alpha: [offset1, r1, g1, b1, ..., offsetN, rN, gN, bN, alpha_offset1, alpha1, alpha_offset2, alpha2, ...]
+
+            // Access the keyframes list directly to get all elements
+            int totalElements = colorAnimated.keyframes() != null ? colorAnimated.keyframes().size() : 0;
+
+            // Build a map of alpha values by offset
+            Map<Double, Double> alphaByOffset = new HashMap<>();
+
+            // If there are more elements than numColors * 4, there's an alpha section
+            int colorSectionSize = numColors * 4;
+            if (totalElements > colorSectionSize) {
+                // Parse alpha values (interleaved: offset, alpha, offset, alpha, ...)
+                for (int i = colorSectionSize; i < totalElements; i += 2) {
+                    Double alphaOffset = colorAnimated.getValue(i);
+                    Double alphaValue = colorAnimated.getValue(i + 1);
+                    if (alphaOffset != null && alphaValue != null) {
+                        alphaByOffset.put(alphaOffset, LottieValueHelper.clamp(alphaValue));
+                    }
+                }
+            }
+
+            // Parse color stops
             for (int i = 0; i < numColors; i++) {
-                double offset = gradientFill.colors().colors().getValue(i * 4, frame);
-                double r = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 1, frame));
-                double g = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 2, frame));
-                double b = LottieValueHelper.clamp(gradientFill.colors().colors().getValue(i * 4 + 3, frame));
+                int baseIdx = i * 4;
+                double offset = colorAnimated.getValue(baseIdx);
+                double r = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 1));
+                double g = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 2));
+                double b = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 3));
 
-                stops.add(new Stop(offset, Color.color(r, g, b)));
+                // Get alpha for this offset, default to 1.0 if not specified
+                double alpha = alphaByOffset.getOrDefault(offset, 1.0);
+
+                stops.add(new Stop(offset, Color.color(r, g, b, alpha)));
             }
         }
 
