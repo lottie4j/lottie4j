@@ -47,6 +47,12 @@ public class LayerTileView extends ScrollPane {
     private VBox contentWrapper;
     private Button enableButton;
 
+    /**
+     * Creates a tile view for the animation layers.
+     *
+     * @param animation     animation containing layers to display
+     * @param frameProperty observable frame property to monitor for updates
+     */
     public LayerTileView(Animation animation, DoubleProperty frameProperty) {
         this.animation = animation;
         this.layerTiles = new HashMap<>();
@@ -65,6 +71,9 @@ public class LayerTileView extends ScrollPane {
         setupScrollPane();
     }
 
+    /**
+     * Configures the scroll pane appearance and behavior.
+     */
     private void setupScrollPane() {
         setFitToWidth(true);
         setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -72,6 +81,9 @@ public class LayerTileView extends ScrollPane {
         setStyle("-fx-background-color: #f5f5f5;");
     }
 
+    /**
+     * Builds the tile grid layout with an Enable button and layer tiles.
+     */
     private void buildTileView() {
         contentWrapper = new VBox(10);
         contentWrapper.setPadding(new Insets(TILE_SPACING));
@@ -119,7 +131,7 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Toggle live updates on/off
+     * Toggle live updates on/off.
      */
     private void toggleLiveUpdates() {
         liveUpdatesEnabled = !liveUpdatesEnabled;
@@ -136,7 +148,7 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Disable live updates (called when loading new file)
+     * Disable live updates (called when loading new file).
      */
     public void disableLiveUpdates() {
         if (liveUpdatesEnabled) {
@@ -147,7 +159,7 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Update all tiles with current frame
+     * Update all tiles with current frame.
      */
     private void updateAllTiles() {
         // Only update if enabled
@@ -167,7 +179,9 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Set background color and update all tiles
+     * Set background color and update all tiles.
+     *
+     * @param color new background color
      */
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
@@ -175,7 +189,9 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Get set of visible layer indices
+     * Get set of visible layer indices.
+     *
+     * @return set containing indices of visible layers, including matte sources
      */
     public Set<Integer> getVisibleLayerIndices() {
         Set<Integer> visibleIndices = new HashSet<>();
@@ -196,12 +212,20 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Get the visibility map to add listeners
+     * Get the visibility map to add listeners.
+     *
+     * @return map of layer indices to visibility properties
      */
     public Map<Integer, BooleanProperty> getLayerVisibilityMap() {
         return layerVisibilityMap;
     }
 
+    /**
+     * Retrieves a layer by its index.
+     *
+     * @param index layer index to find
+     * @return layer with matching index, or null if not found
+     */
     private Layer getLayerByIndex(int index) {
         if (animation.layers() == null) return null;
         return animation.layers().stream()
@@ -211,7 +235,7 @@ public class LayerTileView extends ScrollPane {
     }
 
     /**
-     * Individual layer tile with checkbox, name, and live preview
+     * Individual layer tile with checkbox, name, and live preview.
      */
     private class LayerTile extends VBox {
         private final Layer layer;
@@ -221,6 +245,13 @@ public class LayerTileView extends ScrollPane {
         private final Label frameLabel;
         private final CheckBox visibilityCheckBox;
 
+        /**
+         * Creates a tile for a single layer.
+         *
+         * @param layer      layer to display
+         * @param layerIndex index of the layer
+         * @param visible    visibility property for binding
+         */
         public LayerTile(Layer layer, Integer layerIndex, BooleanProperty visible) {
             this.layer = layer;
             this.layerIndex = layerIndex;
@@ -288,7 +319,10 @@ public class LayerTileView extends ScrollPane {
         }
 
         /**
-         * Update the preview for this tile
+         * Update the preview for this tile.
+         *
+         * @param frame   current animation frame
+         * @param bgColor background color for rendering
          */
         public void updatePreview(double frame, Color bgColor) {
             try {
@@ -318,7 +352,7 @@ public class LayerTileView extends ScrollPane {
         }
 
         /**
-         * Export this layer as a standalone JSON file
+         * Export this layer as a standalone JSON file.
          */
         private void exportLayerAsJson() {
             try {

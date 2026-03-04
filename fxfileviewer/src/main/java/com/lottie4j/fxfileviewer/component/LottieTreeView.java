@@ -11,6 +11,10 @@ import javafx.scene.control.TreeTableView;
 
 import java.util.logging.Logger;
 
+/**
+ * Tree table view component for displaying Lottie animation properties in a hierarchical structure.
+ * Shows animation metadata including name, dimensions, layers, and nested property values.
+ */
 public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty> {
 
     private static final Logger logger = Logger.getLogger(LottieTreeView.class.getName());
@@ -18,6 +22,12 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
     private final String fileName;
     private final Animation animation;
 
+    /**
+     * Creates a tree table view for the given Lottie animation.
+     *
+     * @param fileName  name of the loaded animation file
+     * @param animation parsed animation model
+     */
     public LottieTreeView(String fileName, Animation animation) {
         this.fileName = fileName;
         this.animation = animation;
@@ -35,6 +45,9 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
         buildTree();
     }
 
+    /**
+     * Builds the hierarchical tree structure from animation properties.
+     */
     private void buildTree() {
         var rootItem = getLottiePropertyTreeItem("File", fileName);
         rootItem.setExpanded(true);
@@ -48,6 +61,12 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
         this.setRoot(rootItem);
     }
 
+    /**
+     * Recursively adds nested label-value properties to the tree.
+     *
+     * @param parent parent tree item to add children to
+     * @param list   property listing containing label-value pairs
+     */
     private void addLabelValues(TreeItem<LottieProperty> parent, PropertyListingList list) {
         for (PropertyLabelValue labelValue : list.getList()) {
             var treeItem = getLottiePropertyTreeItem(labelValue.label(), labelValue.value());
@@ -58,24 +77,50 @@ public class LottieTreeView extends TreeTableView<LottieTreeView.LottieProperty>
         }
     }
 
+    /**
+     * Creates a tree item wrapper for a label-value pair.
+     *
+     * @param label property label
+     * @param value property value
+     * @return tree item containing the property
+     */
     private TreeItem<LottieProperty> getLottiePropertyTreeItem(String label, String value) {
         return new TreeItem<>(new LottieProperty(label, value));
     }
 
+    /**
+     * Data model for a Lottie property entry with label and value.
+     */
     public static class LottieProperty {
 
         private final StringProperty label;
         private final StringProperty value;
 
+        /**
+         * Creates a property entry with label and value.
+         *
+         * @param label property label
+         * @param value property value
+         */
         public LottieProperty(String label, String value) {
             this.label = new SimpleStringProperty(label);
             this.value = new SimpleStringProperty(value);
         }
 
+        /**
+         * Gets the label property for JavaFX binding.
+         *
+         * @return observable string property for the label
+         */
         public StringProperty getLabelProperty() {
             return label;
         }
 
+        /**
+         * Gets the value property for JavaFX binding.
+         *
+         * @return observable string property for the value
+         */
         public StringProperty getValueProperty() {
             return value;
         }
