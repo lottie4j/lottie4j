@@ -121,6 +121,16 @@ public class PrecompRenderer {
                                     ShapeRendererDelegate shapeRendererDelegate) {
         gc.save();
 
+        // Check layer opacity - skip rendering if transparent
+        if (layer.transform() != null && layer.transform().opacity() != null) {
+            double opacity = layer.transform().opacity().getValue(0, frame);
+            if (opacity <= 0) {
+                logger.debug("Skipping precomp layer {} - opacity is {}", layer.name(), opacity);
+                gc.restore();
+                return;
+            }
+        }
+
         applyPrecompParentTransforms(gc, layer, frame, precompLayersByIndex);
         transformApplier.applyLayerTransform(gc, layer, frame);
 
