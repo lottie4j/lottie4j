@@ -92,11 +92,18 @@ public record Animated(
         }
 
         if (prevKeyframe == null) {
+            // No keyframes at or before this frame - use the first keyframe's value
+            if (!keyframes.isEmpty() && keyframes.get(0) instanceof TimedKeyframe firstKeyframe) {
+                return getValueFromKeyframe(firstKeyframe, index);
+            }
             return 0D;
         }
 
-        // If frame was before the first keyframe, return 0 rather than interpolating from the first keyframe
+        // If frame was before the first keyframe, return the first keyframe's value
         if (frameBeforeFirstKeyframe) {
+            if (!keyframes.isEmpty() && keyframes.get(0) instanceof TimedKeyframe firstKeyframe) {
+                return getValueFromKeyframe(firstKeyframe, index);
+            }
             return 0D;
         }
 
@@ -174,11 +181,18 @@ public record Animated(
 
         // If we only have one keyframe or we're at/after the last keyframe
         if (prevKeyframe == null) {
+            // No keyframes at or before this frame - use the first keyframe's value
+            if (!keyframes.isEmpty() && keyframes.get(0) instanceof TimedKeyframe firstKeyframe) {
+                return getValueFromKeyframe(firstKeyframe, valueType.getIndex());
+            }
             return 0D;
         }
 
-        // If frame was before the first keyframe, return 0 rather than using first keyframe value
+        // If frame was before the first keyframe, return the first keyframe's value
         if (frameBeforeFirstKeyframe2) {
+            if (!keyframes.isEmpty() && keyframes.get(0) instanceof TimedKeyframe firstKeyframe) {
+                return getValueFromKeyframe(firstKeyframe, valueType.getIndex());
+            }
             return 0D;
         }
 
