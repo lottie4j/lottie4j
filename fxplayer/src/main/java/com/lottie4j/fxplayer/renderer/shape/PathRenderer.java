@@ -155,28 +155,38 @@ public class PathRenderer implements ShapeRenderer {
                 // Check for TrimPath - if present, we need special handling
                 var trimPath = getTrimPath(parentGroup);
                 if (trimPath.isPresent()) {
+                    logger.debug("  Found TrimPath in parent group");
                     double trimStart = trimPath.get().segmentStart() != null ?
                             trimPath.get().segmentStart().getValue(0, frame) : 0;
                     double trimEnd = trimPath.get().segmentEnd() != null ?
                             trimPath.get().segmentEnd().getValue(0, frame) : 100;
 
+                    // Log detailed trim path values around frame 88
+                    if (frame > 85 && frame < 91) {
+                        logger.warn("FRAME {}: Path '{}' TrimPath raw values - start={}, end={}, parent={}", frame, path.name(), trimStart, trimEnd, parentGroup != null ? "yes" : "no");
+                    }
+
                     // Handle NaN values (animation interpolation bug at exact keyframe boundaries)
                     if (Double.isNaN(trimStart)) {
-                        logger.warn("  TrimPath start is NaN at frame " + frame + ", defaulting to 0");
+                        logger.warn("  TrimPath start is NaN at frame {} defaulting to 0", frame);
                         trimStart = 0;
                     }
                     if (Double.isNaN(trimEnd)) {
-                        logger.warn("  TrimPath end is NaN at frame " + frame + ", using start value as fallback");
+                        logger.warn("  TrimPath end is NaN at frame {} using start value as fallback", frame);
                         // When end is NaN in a reversed path (start > end), use 0 to show full path
                         // When end is NaN in a normal path, use start value to show nothing
                         trimEnd = (trimStart > 50) ? 0 : trimStart;
                     }
 
                     // Handle different trim cases
-                    logger.debug("  Path TrimPath: start=" + trimStart + ", end=" + trimEnd + " at frame " + frame);
+                    logger.debug("  Path TrimPath: start={}, end={} at frame {}", trimStart, trimEnd, frame);
+
+                    // Skip if start and end are the same (empty trim range)
+                    // This includes the case where both are 0 (before animation starts)
                     if (Math.abs(trimStart - trimEnd) < 0.01) {
                         // Empty path - start and end are essentially the same
-                        logger.debug("  Path TrimPath is empty (start=" + trimStart + ", end=" + trimEnd + ") - skipping");
+                        logger.debug("  Path TrimPath is empty (start={}, end={}) - skipping rendering", trimStart, trimEnd);
+                        // Don't render anything - the path is completely trimmed out
                     } else if (trimStart >= 100 && trimEnd >= 100) {
                         // Full path
                         var strokeColor = strokeStyle.get().getColor(frame);
@@ -198,6 +208,9 @@ public class PathRenderer implements ShapeRenderer {
                                 trimStart, trimEnd, strokeStyle.get(), strokeWidth, frame);
                     }
                 } else {
+                    if (frame > 85 && frame < 91 && path.name().contains("Path")) {
+                        logger.warn("FRAME {}: Path '{}' NO TrimPath found - rendering full stroke", frame, path.name());
+                    }
                     var strokeColor = strokeStyle.get().getColor(frame);
                     double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
