@@ -98,11 +98,11 @@ public class EllipseRenderer implements ShapeRenderer {
                 var fillStyle = getFillStyle(parentGroup);
                 if (fillStyle.isPresent()) {
                     var fillColor = fillStyle.get().getColor(frame);
-                    logger.info("Ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, renderX, renderY, width, height);
+                    logger.debug("Ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, renderX, renderY, width, height);
                     gc.setFill(fillColor);
                     gc.fillOval(renderX, renderY, width, height);
                 } else {
-                    logger.info("Ellipse NO fill found for parentGroup");
+                    logger.debug("Ellipse NO fill found for parentGroup");
                 }
             }
 
@@ -272,11 +272,11 @@ public class EllipseRenderer implements ShapeRenderer {
             var fillStyle = getFillStyle(parentGroup);
             if (fillStyle.isPresent()) {
                 var fillColor = fillStyle.get().getColor(frame);
-                logger.info("TrimPath ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, x, y, width, height);
+                logger.debug("TrimPath ellipse fill found - color: {}, position: ({},{}), size: {}x{}", fillColor, x, y, width, height);
                 gc.setFill(fillColor);
                 gc.fillOval(x, y, width, height);
             } else {
-                logger.info("TrimPath ellipse NO fill found for parentGroup");
+                logger.debug("TrimPath ellipse NO fill found for parentGroup");
             }
         }
 

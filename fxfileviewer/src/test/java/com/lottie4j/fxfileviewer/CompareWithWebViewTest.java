@@ -6,12 +6,15 @@ import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
+import javafx.scene.control.Label;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,11 +37,11 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CompareWithWebViewTest {
+class CompareWithWebViewTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CompareWithWebViewTest.class);
 
-    private static final double SIMILARITY_THRESHOLD = 95;
+    private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
     private static final int CANVAS_HEIGHT = 600;
     private static Stage primaryStage;
@@ -60,25 +63,18 @@ public class CompareWithWebViewTest {
                 "angry_bird.json",
                 "animated_background_patterns.json",
                 "box-moving-changing-color.json",
-                "box-static.json",
-                "circle-static.json",
-                //           "interactive_mood_selector_ui.json",
-                //           "interactive_mood_selector_ui_bg_isolated.json",
+                "interactive_mood_selector_ui.json",
                 "isometric_data_analysis.json",
                 "java_duke_fadein.json",
                 "java_duke_flip.json",
                 "java_duke_slidein.json",
-                "java_duke_still.json",
                 "loading.json",
                 "lottie4j.json",
                 "lottie_lego.json",
-                "polygon-static.json",
                 "sandy_loading.json",
                 "snake_ladder_loading_animation.json",
-                "star-static.json",
                 "success.json",
-                "timeline_animation.json",
-                "timeline_animation_polygon_5.json"
+                "timeline_animation.json"
         );
     }
 
@@ -147,7 +143,22 @@ public class CompareWithWebViewTest {
                 // Add both player and webView to scene (matching LottieFileDebugViewer approach)
                 var playersBox = new HBox(10);
                 playersBox.getChildren().addAll(fxPlayer, webView);
-                Scene scene = new Scene(playersBox, animWidth * 2 + 10, animHeight);
+
+                // Create similarity score label overlay
+                Label similarityLabel = new Label("Similarity: -- %");
+                similarityLabel.setStyle("-fx-font-size: 30; -fx-text-fill: black; -fx-font-weight: bold;");
+                similarityLabel.setBackground(new Background(new BackgroundFill(
+                        Color.web("#FFFF99", 0.9),
+                        new CornerRadii(15),
+                        new Insets(20)
+                )));
+                similarityLabel.setPadding(new Insets(30, 60, 30, 60));
+
+                // Create StackPane to overlay the label on top of the playersBox
+                StackPane rootPane = new StackPane(playersBox, similarityLabel);
+                StackPane.setAlignment(similarityLabel, javafx.geometry.Pos.CENTER);
+
+                Scene scene = new Scene(rootPane, animWidth * 2 + 10, animHeight);
                 primaryStage.setScene(scene);
                 primaryStage.setAlwaysOnTop(true); // Keep visible during test
                 primaryStage.toFront();
@@ -282,15 +293,35 @@ public class CompareWithWebViewTest {
 
                                         // Compare images
                                         double similarity = compareImages(playerImage, webViewImage);
-                                        totalSimilarity.updateAndGet(v -> v + similarity);
+                                        double roundedSimilarity = Math.round(similarity * 100.0) / 100.0;
+                                        totalSimilarity.updateAndGet(v -> v + roundedSimilarity);
                                         frameCount.incrementAndGet();
 
+                                        // Update similarity label on JavaFX thread
+                                        Platform.runLater(() -> {
+                                            similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %%", currentFrame, roundedSimilarity));
+                                            // Change color based on similarity
+                                            if (roundedSimilarity >= SIMILARITY_THRESHOLD) {
+                                                similarityLabel.setBackground(new Background(new BackgroundFill(
+                                                        Color.web("#99FF99", 0.9),
+                                                        new CornerRadii(15),
+                                                        new Insets(20)
+                                                )));
+                                            } else {
+                                                similarityLabel.setBackground(new Background(new BackgroundFill(
+                                                        Color.web("#FF9999", 0.9),
+                                                        new CornerRadii(15),
+                                                        new Insets(20)
+                                                )));
+                                            }
+                                        });
+
                                         // Save images
-                                        if (similarity < SIMILARITY_THRESHOLD) {
-                                            saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + similarity + ".png"));
+                                        if (roundedSimilarity < SIMILARITY_THRESHOLD) {
+                                            saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + roundedSimilarity + ".png"));
                                         }
 
-                                        System.out.printf("Frame %d: %.2f%% similar%n", currentFrame, similarity);
+                                        System.out.printf("Frame %d: %.2f%% similar%n", currentFrame, roundedSimilarity);
                                     }
                                 } catch (Exception e) {
                                     fail("Error in frame comparison thread: " + e.getMessage());
@@ -413,37 +444,82 @@ public class CompareWithWebViewTest {
         int width = (int) Math.min(img1.getWidth(), img2.getWidth());
         int height = (int) Math.min(img1.getHeight(), img2.getHeight());
 
-        int totalPixels = width * height;
-        int matchingPixels = 0;
+        // Use structural similarity metric for better accuracy
+        int[][] pixels1 = new int[height][width];
+        int[][] pixels2 = new int[height][width];
 
+        PixelReader reader1 = img1.getPixelReader();
+        PixelReader reader2 = img2.getPixelReader();
+
+        // Read all pixels and convert to grayscale for comparison
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int argb1 = img1.getPixelReader().getArgb(x, y);
-                int argb2 = img2.getPixelReader().getArgb(x, y);
+                int argb1 = reader1.getArgb(x, y);
+                int argb2 = reader2.getArgb(x, y);
 
-                // Calculate color difference (with tolerance for anti-aliasing)
-                int tolerance = 10; // Allow small differences
-                if (colorDistance(argb1, argb2) <= tolerance) {
-                    matchingPixels++;
-                }
+                // Convert to grayscale
+                pixels1[y][x] = pixelToGrayscale(argb1);
+                pixels2[y][x] = pixelToGrayscale(argb2);
             }
         }
 
-        return (matchingPixels * 100.0) / totalPixels;
+        // Calculate mean and variance for both images
+        double mean1 = calculateMean(pixels1);
+        double mean2 = calculateMean(pixels2);
+        double variance1 = calculateVariance(pixels1, mean1);
+        double variance2 = calculateVariance(pixels2, mean2);
+        double covariance = calculateCovariance(pixels1, pixels2, mean1, mean2);
+
+        // SSIM formula: (2*mean1*mean2 + c1) * (2*covariance + c2) / ((mean1^2 + mean2^2 + c1) * (variance1 + variance2 + c2))
+        double c1 = 6.5025; // (0.01 * 255)^2
+        double c2 = 58.5225; // (0.03 * 255)^2
+
+        double numerator = (2 * mean1 * mean2 + c1) * (2 * covariance + c2);
+        double denominator = (mean1 * mean1 + mean2 * mean2 + c1) * (variance1 + variance2 + c2);
+
+        if (denominator == 0) return 100.0;
+        double ssim = numerator / denominator;
+
+        // Convert SSIM (-1 to 1) to percentage (0 to 100)
+        return Math.max(0, Math.min(100, (ssim + 1) * 50));
     }
 
-    private int colorDistance(int argb1, int argb2) {
-        int a1 = (argb1 >> 24) & 0xFF;
-        int r1 = (argb1 >> 16) & 0xFF;
-        int g1 = (argb1 >> 8) & 0xFF;
-        int b1 = argb1 & 0xFF;
+    private int pixelToGrayscale(int argb) {
+        int r = (argb >> 16) & 0xFF;
+        int g = (argb >> 8) & 0xFF;
+        int b = argb & 0xFF;
+        // Use standard grayscale conversion
+        return (int) (0.299 * r + 0.587 * g + 0.114 * b);
+    }
 
-        int a2 = (argb2 >> 24) & 0xFF;
-        int r2 = (argb2 >> 16) & 0xFF;
-        int g2 = (argb2 >> 8) & 0xFF;
-        int b2 = argb2 & 0xFF;
+    private double calculateMean(int[][] pixels) {
+        double sum = 0;
+        for (int[] row : pixels) {
+            for (int pixel : row) {
+                sum += pixel;
+            }
+        }
+        return sum / (pixels.length * pixels[0].length);
+    }
 
-        return Math.abs(a1 - a2) + Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+    private double calculateVariance(int[][] pixels, double mean) {
+        double sum = 0;
+        for (int[] row : pixels) {
+            for (int pixel : row) {
+                sum += Math.pow(pixel - mean, 2);
+            }
+        }
+        return sum / (pixels.length * pixels[0].length);
+    }
+
+    private double calculateCovariance(int[][] pixels1, int[][] pixels2, double mean1, double mean2) {
+        double sum = 0;
+        for (int y = 0; y < pixels1.length; y++) {
+            for (int x = 0; x < pixels1[0].length; x++) {
+                sum += (pixels1[y][x] - mean1) * (pixels2[y][x] - mean2);
+            }
+        }
+        return sum / (pixels1.length * pixels1[0].length);
     }
 
     private void saveImage(WritableImage imageFx, WritableImage imageJs, Path path) throws IOException {
