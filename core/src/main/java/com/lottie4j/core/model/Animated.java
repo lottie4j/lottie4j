@@ -70,6 +70,7 @@ public record Animated(
         // Find the appropriate keyframe(s) for the current frame
         TimedKeyframe prevKeyframe = null;
         TimedKeyframe nextKeyframe = null;
+        boolean frameBeforeFirstKeyframe = false;
 
         for (int i = 0; i < keyframes.size(); i++) {
             if (keyframes.get(i) instanceof TimedKeyframe timedKeyframe) {
@@ -82,8 +83,8 @@ public record Animated(
                 } else {
                     // We've gone past the current frame
                     if (prevKeyframe == null) {
-                        // Frame is before the first keyframe
-                        prevKeyframe = timedKeyframe;
+                        // Frame is before the first keyframe - return 0 instead of using first keyframe
+                        frameBeforeFirstKeyframe = true;
                     }
                     break;
                 }
@@ -91,6 +92,11 @@ public record Animated(
         }
 
         if (prevKeyframe == null) {
+            return 0D;
+        }
+
+        // If frame was before the first keyframe, return 0 rather than interpolating from the first keyframe
+        if (frameBeforeFirstKeyframe) {
             return 0D;
         }
 
@@ -145,6 +151,7 @@ public record Animated(
         // Find the appropriate keyframe(s) for the current frame
         TimedKeyframe prevKeyframe = null;
         TimedKeyframe nextKeyframe = null;
+        boolean frameBeforeFirstKeyframe2 = false;
 
         for (int i = 0; i < keyframes.size(); i++) {
             if (keyframes.get(i) instanceof TimedKeyframe timedKeyframe) {
@@ -157,8 +164,8 @@ public record Animated(
                 } else {
                     // We've gone past the current frame
                     if (prevKeyframe == null) {
-                        // Frame is before the first keyframe
-                        prevKeyframe = timedKeyframe;
+                        // Frame is before the first keyframe - return 0 instead of using first keyframe
+                        frameBeforeFirstKeyframe2 = true;
                     }
                     break;
                 }
@@ -167,6 +174,11 @@ public record Animated(
 
         // If we only have one keyframe or we're at/after the last keyframe
         if (prevKeyframe == null) {
+            return 0D;
+        }
+
+        // If frame was before the first keyframe, return 0 rather than using first keyframe value
+        if (frameBeforeFirstKeyframe2) {
             return 0D;
         }
 

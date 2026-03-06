@@ -2,6 +2,7 @@ package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.definition.LineCap;
 import com.lottie4j.core.definition.LineJoin;
+import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
@@ -152,70 +153,79 @@ public class PathRenderer implements ShapeRenderer {
             var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
 
             if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
-                // Check for TrimPath - if present, we need special handling
-                var trimPath = getTrimPath(parentGroup);
-                if (trimPath.isPresent()) {
-                    logger.debug("  Found TrimPath in parent group");
-                    double trimStart = trimPath.get().segmentStart() != null ?
-                            trimPath.get().segmentStart().getValue(0, frame) : 0;
-                    double trimEnd = trimPath.get().segmentEnd() != null ?
-                            trimPath.get().segmentEnd().getValue(0, frame) : 100;
+                // Check for TrimPaths - multiple trim paths should be combined
+                var allTrimPaths = getAllTrimPaths(parentGroup);
+                if (!allTrimPaths.isEmpty()) {
+                    logger.debug("  Found {} TrimPath(s) in parent group", allTrimPaths.size());
 
-                    // Log detailed trim path values around frame 88
-                    if (frame > 85 && frame < 91) {
-                        logger.warn("FRAME {}: Path '{}' TrimPath raw values - start={}, end={}, parent={}", frame, path.name(), trimStart, trimEnd, parentGroup != null ? "yes" : "no");
+                    // Combine all trim paths: use the most restrictive range
+                    // start = max of all starts, end = min of all ends
+                    double combinedStart = 0;
+                    double combinedEnd = 100;
+                    java.util.List<Animated> animatedSegEnds = new java.util.ArrayList<>();
+
+                    for (TrimPath trimPath : allTrimPaths) {
+                        Animated segStart = trimPath.segmentStart();
+                        Animated segEnd = trimPath.segmentEnd();
+
+                        double trimStart = segStart != null ? segStart.getValue(0, frame) : 0;
+                        double trimEnd = segEnd != null ? segEnd.getValue(0, frame) : 100;
+
+                        // Track which trim paths are animated
+                        if (segEnd != null && segEnd.animated() != null && segEnd.animated() > 0) {
+                            animatedSegEnds.add(segEnd);
+                        }
+
+                        // Combine: most restrictive range
+                        combinedStart = Math.max(combinedStart, trimStart);
+                        combinedEnd = Math.min(combinedEnd, trimEnd);
                     }
 
-                    // Handle NaN values (animation interpolation bug at exact keyframe boundaries)
-                    if (Double.isNaN(trimStart)) {
-                        logger.warn("  TrimPath start is NaN at frame {} defaulting to 0", frame);
-                        trimStart = 0;
-                    }
-                    if (Double.isNaN(trimEnd)) {
-                        logger.warn("  TrimPath end is NaN at frame {} using start value as fallback", frame);
-                        // When end is NaN in a reversed path (start > end), use 0 to show full path
-                        // When end is NaN in a normal path, use start value to show nothing
-                        trimEnd = (trimStart > 50) ? 0 : trimStart;
-                    }
+                    logger.debug("COMBINED_TRIM FRAME {}: Path '{}' - combined start={}, combined end={}, trimPaths={}",
+                            frame, path.name(), combinedStart, combinedEnd, allTrimPaths.size());
 
-                    // Handle different trim cases
-                    logger.debug("  Path TrimPath: start={}, end={} at frame {}", trimStart, trimEnd, frame);
-
-                    // Skip if start and end are the same (empty trim range)
-                    // This includes the case where both are 0 (before animation starts)
-                    if (Math.abs(trimStart - trimEnd) < 0.01) {
-                        // Empty path - start and end are essentially the same
-                        logger.debug("  Path TrimPath is empty (start={}, end={}) - skipping rendering", trimStart, trimEnd);
-                        // Don't render anything - the path is completely trimmed out
-                    } else if (trimStart >= 100 && trimEnd >= 100) {
-                        // Full path
-                        var strokeColor = strokeStyle.get().getColor(frame);
-                        double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
-                        logger.debug("  TrimPath full path, rendering stroke: " + strokeColor + ", width: " + strokeWidth);
-                        gc.setStroke(strokeColor);
-                        gc.setLineWidth(compensatedWidth);
-                        applyStrokeStyle(gc, strokeStyle.get().stroke());
-                        gc.stroke();
-                    } else if (trimStart > trimEnd) {
-                        // Reversed trim: render from 0 to trimEnd, then from trimStart to 100
-                        // For simplicity, render the visible portion from trimEnd to trimStart
-                        logger.debug("  Reversed TrimPath (start=" + trimStart + ", end=" + trimEnd + ") - rendering from end to start");
-                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                trimEnd, trimStart, strokeStyle.get(), strokeWidth, frame);
+                    // Handle NaN values
+                    if (Double.isNaN(combinedStart) || Double.isNaN(combinedEnd)) {
+                        logger.warn("  Combined TrimPath has NaN value at frame {} - skipping rendering", frame);
+                        // Don't render
+                    } else if (combinedEnd == 100 && combinedStart == 0 && !animatedSegEnds.isEmpty() && isBeforeAnyKeyframe(animatedSegEnds, frame)) {
+                        // Skip rendering if we're before ANY animated trim path's first keyframe
+                        logger.warn("SKIP_BEFORE_ANIM: FRAME {}: Path '{}' - before first animated keyframe",
+                                frame, path.name());
+                        // Don't render
                     } else {
-                        // Normal trim: render from trimStart to trimEnd
-                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                trimStart, trimEnd, strokeStyle.get(), strokeWidth, frame);
+                        // Handle different trim cases with combined values
+                        logger.debug("  Path Combined TrimPath: start={}, end={} at frame {}", combinedStart, combinedEnd, frame);
+
+                        if (Math.abs(combinedStart - combinedEnd) < 0.01) {
+                            // Empty path - start and end are essentially the same
+                            logger.warn("EMPTY_PATH FRAME {}: combined start={}, combined end={} - NOT RENDERING", frame, combinedStart, combinedEnd);
+                            logger.debug("  Combined TrimPath is empty - skipping rendering");
+                        } else if (combinedStart > combinedEnd) {
+                            // Invalid trim range - start is after end, don't render
+                            logger.warn("INVALID_TRIM FRAME {}: combined start={} > combined end={} - NOT RENDERING", frame, combinedStart, combinedEnd);
+                            logger.debug("  Combined TrimPath is invalid (start > end) - skipping rendering");
+                        } else if (combinedStart >= 100 && combinedEnd >= 100) {
+                            // Full path
+                            var strokeColor = strokeStyle.get().getColor(frame);
+                            double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+                            gc.setStroke(strokeColor);
+                            gc.setLineWidth(compensatedWidth);
+                            applyStrokeStyle(gc, strokeStyle.get().stroke());
+                            gc.stroke();
+                        } else {
+                            // Normal trim
+                            renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                    combinedStart, combinedEnd, strokeStyle.get(), strokeWidth, frame);
+                        }
                     }
                 } else {
-                    if (frame > 85 && frame < 91 && path.name().contains("Path")) {
-                        logger.warn("FRAME {}: Path '{}' NO TrimPath found - rendering full stroke", frame, path.name());
-                    }
+                    logger.debug("  No TrimPath found in parent group, rendering full stroke");
                     var strokeColor = strokeStyle.get().getColor(frame);
                     double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-                    logger.debug("  Applying stroke: " + strokeColor + ", width: " + strokeWidth +
-                            " (compensated: " + compensatedWidth + ")");
+                    logger.debug("  Applying stroke: color={}, width={} (compensated: {})",
+                            strokeColor, strokeWidth, compensatedWidth);
                     gc.setStroke(strokeColor);
                     gc.setLineWidth(compensatedWidth);
 
@@ -270,16 +280,62 @@ public class PathRenderer implements ShapeRenderer {
         return Optional.empty();
     }
 
-    private Optional<TrimPath> getTrimPath(Group group) {
+
+    /**
+     * Get all trim paths in a group. Multiple trim paths should be combined.
+     */
+    private java.util.List<TrimPath> getAllTrimPaths(Group group) {
+        java.util.List<TrimPath> trimPaths = new java.util.ArrayList<>();
         if (group == null) {
-            return Optional.empty();
+            return trimPaths;
         }
         for (BaseShape baseShape : group.shapes()) {
             if (baseShape instanceof TrimPath trimPath) {
-                return Optional.of(trimPath);
+                trimPaths.add(trimPath);
             }
         }
-        return Optional.empty();
+        return trimPaths;
+    }
+
+    /**
+     * Check if the current frame is before the first keyframe of an animated property
+     *
+     * @param animated The animated property to check
+     * @param frame    The current frame
+     * @return true if frame is before the first keyframe, false otherwise
+     */
+    private boolean isBeforeFirstKeyframe(Animated animated, double frame) {
+        if (animated == null) {
+            return false;
+        }
+
+        // Get the keyframes from the animated property
+        if (animated.keyframes() == null || animated.keyframes().isEmpty()) {
+            return false;
+        }
+
+        // Find the first timed keyframe and check if frame is before it
+        for (Object keyframeObj : animated.keyframes()) {
+            if (keyframeObj instanceof com.lottie4j.core.model.keyframe.TimedKeyframe timedKeyframe) {
+                if (timedKeyframe.time() != null && timedKeyframe.time() > frame) {
+                    return true;  // Frame is before this keyframe
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the current frame is before the first keyframe of ANY animated property in a list
+     */
+    private boolean isBeforeAnyKeyframe(java.util.List<Animated> animatedList, double frame) {
+        for (Animated animated : animatedList) {
+            if (isBeforeFirstKeyframe(animated, frame)) {
+                return true;  // Before at least one keyframe
+            }
+        }
+        return false;  // After all keyframes
     }
 
     private void renderTrimmedPath(GraphicsContext gc, List<List<Double>> vertices,
@@ -711,3 +767,5 @@ public class PathRenderer implements ShapeRenderer {
         }
     }
 }
+
+
