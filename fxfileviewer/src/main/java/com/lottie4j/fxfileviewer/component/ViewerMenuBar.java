@@ -10,6 +10,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.io.File;
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
 import static com.lottie4j.fxfileviewer.util.AlertHelper.showError;
 
 public class ViewerMenuBar extends MenuBar {
+    private static final Logger logger = LoggerFactory.getLogger(ViewerMenuBar.class);
 
     private final Consumer<File> onFileSelected;
 
@@ -47,6 +50,7 @@ public class ViewerMenuBar extends MenuBar {
 
         var file = fileChooser.showOpenDialog(stage);
         if (file != null && onFileSelected != null) {
+            logger.info("Opening file: {}", file);
             onFileSelected.accept(file);
         }
     }

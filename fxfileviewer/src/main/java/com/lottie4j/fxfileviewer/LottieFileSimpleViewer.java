@@ -43,13 +43,13 @@ public class LottieFileSimpleViewer extends Application {
         // Handle command-line arguments
         var args = getParameters();
         if (!args.getUnnamed().isEmpty()) {
-            var fileName = args.getUnnamed().get(0);
-            var r = this.getClass().getResource(fileName);
-            if (r == null) {
+            var fileName = args.getUnnamed().getFirst();
+            var file = new File(fileName);
+            if (!file.exists()) {
                 logger.warn("The Lottie file can not be found: {}", fileName);
                 return;
             }
-            loadAnimation(new File(r.getFile()));
+            loadAnimation(file);
         }
     }
 
