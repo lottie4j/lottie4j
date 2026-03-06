@@ -70,6 +70,7 @@ public class CompareWithWebViewTest {
                 "java_duke_slidein.json",
                 "java_duke_still.json",
                 "loading.json",
+                "lottie4j.json",
                 "lottie_lego.json",
                 "polygon-static.json",
                 "sandy_loading.json",
