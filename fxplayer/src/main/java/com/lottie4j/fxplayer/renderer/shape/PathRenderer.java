@@ -158,66 +158,61 @@ public class PathRenderer implements ShapeRenderer {
                 if (!allTrimPaths.isEmpty()) {
                     logger.debug("  Found {} TrimPath(s) in parent group", allTrimPaths.size());
 
-                    // Combine all trim paths: use the most restrictive range
-                    // start = max of all starts, end = min of all ends
+                    // Combine all trim paths: use the most restrictive visible window.
                     double combinedStart = 0;
                     double combinedEnd = 100;
+                    double combinedOffsetDegrees = 0;
                     java.util.List<Animated> animatedSegEnds = new java.util.ArrayList<>();
 
                     for (TrimPath trimPath : allTrimPaths) {
                         Animated segStart = trimPath.segmentStart();
                         Animated segEnd = trimPath.segmentEnd();
+                        Animated offset = trimPath.offset();
 
                         double trimStart = segStart != null ? segStart.getValue(0, frame) : 0;
                         double trimEnd = segEnd != null ? segEnd.getValue(0, frame) : 100;
+                        double trimOffsetDegrees = offset != null ? offset.getValue(0, frame) : 0;
 
-                        // Track which trim paths are animated
                         if (segEnd != null && segEnd.animated() != null && segEnd.animated() > 0) {
                             animatedSegEnds.add(segEnd);
                         }
 
-                        // Combine: most restrictive range
                         combinedStart = Math.max(combinedStart, trimStart);
                         combinedEnd = Math.min(combinedEnd, trimEnd);
+                        combinedOffsetDegrees = trimOffsetDegrees;
                     }
 
-                    logger.debug("COMBINED_TRIM FRAME {}: Path '{}' - combined start={}, combined end={}, trimPaths={}",
-                            frame, path.name(), combinedStart, combinedEnd, allTrimPaths.size());
+                    double visibleWindow = combinedEnd - combinedStart;
+                    double offsetPercent = degreesToTrimPercent(combinedOffsetDegrees);
+                    double offsetAdjustedStart = normalizeTrimPercent(combinedStart + offsetPercent);
+                    double offsetAdjustedEnd = offsetAdjustedStart + visibleWindow;
 
-                    // Handle NaN values
-                    if (Double.isNaN(combinedStart) || Double.isNaN(combinedEnd)) {
+                    logger.debug("COMBINED_TRIM FRAME {}: Path '{}' - start={}, end={}, window={}, offsetDeg={}, offsetPct={}, adjustedStart={}, adjustedEnd={}",
+                            frame, path.name(), combinedStart, combinedEnd, visibleWindow,
+                            combinedOffsetDegrees, offsetPercent, offsetAdjustedStart, offsetAdjustedEnd);
+
+                    if (Double.isNaN(offsetAdjustedStart) || Double.isNaN(offsetAdjustedEnd)) {
                         logger.warn("  Combined TrimPath has NaN value at frame {} - skipping rendering", frame);
-                        // Don't render
                     } else if (combinedEnd == 100 && combinedStart == 0 && !animatedSegEnds.isEmpty() && isBeforeAnyKeyframe(animatedSegEnds, frame)) {
-                        // Skip rendering if we're before ANY animated trim path's first keyframe
-                        logger.warn("SKIP_BEFORE_ANIM: FRAME {}: Path '{}' - before first animated keyframe",
-                                frame, path.name());
-                        // Don't render
+                        logger.warn("SKIP_BEFORE_ANIM: FRAME {}: Path '{}' - before first animated keyframe", frame, path.name());
+                    } else if (Math.abs(visibleWindow) < 0.01) {
+                        logger.warn("EMPTY_PATH FRAME {}: visibleWindow={} - NOT RENDERING", frame, visibleWindow);
+                    } else if (visibleWindow >= 100) {
+                        var strokeColor = strokeStyle.get().getColor(frame);
+                        double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
+                        gc.setStroke(strokeColor);
+                        gc.setLineWidth(compensatedWidth);
+                        applyStrokeStyle(gc, strokeStyle.get().stroke(), frame, parentGroup);
+                        gc.stroke();
+                    } else if (offsetAdjustedEnd <= 100) {
+                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                offsetAdjustedStart, offsetAdjustedEnd, strokeStyle.get(), strokeWidth, frame, parentGroup);
                     } else {
-                        // Handle different trim cases with combined values
-                        logger.debug("  Path Combined TrimPath: start={}, end={} at frame {}", combinedStart, combinedEnd, frame);
-
-                        if (Math.abs(combinedStart - combinedEnd) < 0.01) {
-                            // Empty path - start and end are essentially the same
-                            logger.warn("EMPTY_PATH FRAME {}: combined start={}, combined end={} - NOT RENDERING", frame, combinedStart, combinedEnd);
-                            logger.debug("  Combined TrimPath is empty - skipping rendering");
-                        } else if (combinedStart > combinedEnd) {
-                            // Invalid trim range - start is after end, don't render
-                            logger.warn("INVALID_TRIM FRAME {}: combined start={} > combined end={} - NOT RENDERING", frame, combinedStart, combinedEnd);
-                            logger.debug("  Combined TrimPath is invalid (start > end) - skipping rendering");
-                        } else if (combinedStart >= 100 && combinedEnd >= 100) {
-                            // Full path
-                            var strokeColor = strokeStyle.get().getColor(frame);
-                            double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
-                            gc.setStroke(strokeColor);
-                            gc.setLineWidth(compensatedWidth);
-                            applyStrokeStyle(gc, strokeStyle.get().stroke(), frame);
-                            gc.stroke();
-                        } else {
-                            // Normal trim
-                            renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                    combinedStart, combinedEnd, strokeStyle.get(), strokeWidth, frame);
-                        }
+                        // Wrapped range (e.g. 92% -> 107%): render [92,100] and [0,7].
+                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                offsetAdjustedStart, 100, strokeStyle.get(), strokeWidth, frame, parentGroup);
+                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
+                                0, normalizeTrimPercent(offsetAdjustedEnd), strokeStyle.get(), strokeWidth, frame, parentGroup);
                     }
                 } else {
                     logger.debug("  No TrimPath found in parent group, rendering full stroke");
@@ -230,7 +225,7 @@ public class PathRenderer implements ShapeRenderer {
                     gc.setLineWidth(compensatedWidth);
 
                     // Apply line cap and join and stroke dashes
-                    applyStrokeStyle(gc, strokeStyle.get().stroke(), frame);
+                    applyStrokeStyle(gc, strokeStyle.get().stroke(), frame, parentGroup);
 
                     gc.stroke();
                 }
@@ -341,7 +336,7 @@ public class PathRenderer implements ShapeRenderer {
     private void renderTrimmedPath(GraphicsContext gc, List<List<Double>> vertices,
                                    List<List<Double>> tangentsIn, List<List<Double>> tangentsOut,
                                    Boolean closed, double trimStart, double trimEnd,
-                                   StrokeStyle strokeStyle, double strokeWidth, double frame) {
+                                   StrokeStyle strokeStyle, double strokeWidth, double frame, Group parentGroup) {
         if (vertices.isEmpty()) return;
 
         // Calculate segment lengths
@@ -444,7 +439,7 @@ public class PathRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
                 gc.setStroke(strokeColor);
                 gc.setLineWidth(compensatedWidth);
-                applyStrokeStyle(gc, strokeStyle.stroke(), frame);
+                applyStrokeStyle(gc, strokeStyle.stroke(), frame, parentGroup);
                 gc.stroke();
                 logger.debug("  Stroke applied successfully");
             } else {
@@ -742,7 +737,7 @@ public class PathRenderer implements ShapeRenderer {
         return 3 * mt2 * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t2 * (p3 - p2);
     }
 
-    private void applyStrokeStyle(GraphicsContext gc, Stroke stroke, double frame) {
+    private void applyStrokeStyle(GraphicsContext gc, Stroke stroke, double frame, Group parentGroup) {
         // Set line cap: 1=butt, 2=round, 3=square
         if (stroke.lineCap() != null) {
             switch (stroke.lineCap()) {
@@ -768,18 +763,21 @@ public class PathRenderer implements ShapeRenderer {
 
         // Apply stroke dashes if specified
         if (stroke.strokeDashes() != null && !stroke.strokeDashes().isEmpty()) {
-            applyStrokeDashes(gc, stroke.strokeDashes(), frame);
+            // Apply stroke dashes with only the static offset from the dashes definition
+            // The animated trim path offset is now used for trim path animation, not stroke dashes
+            applyStrokeDashes(gc, stroke.strokeDashes(), frame, 0);
         }
     }
 
     /**
      * Apply stroke dashes and offset to the graphics context.
      *
-     * @param gc           the graphics context
-     * @param strokeDashes the list of stroke dash definitions
-     * @param frame        the current animation frame
+     * @param gc             the graphics context
+     * @param strokeDashes   the list of stroke dash definitions
+     * @param frame          the current animation frame
+     * @param trimPathOffset unused - kept for compatibility (trim path offset now controls trim animation)
      */
-    private void applyStrokeDashes(GraphicsContext gc, java.util.List<com.lottie4j.core.model.StrokeDash> strokeDashes, double frame) {
+    private void applyStrokeDashes(GraphicsContext gc, java.util.List<com.lottie4j.core.model.StrokeDash> strokeDashes, double frame, double trimPathOffset) {
         java.util.List<Double> dashArray = new java.util.ArrayList<>();
         double offset = 0;
 
@@ -794,8 +792,9 @@ public class PathRenderer implements ShapeRenderer {
                 double gapLength = dash.length() != null ? dash.length().getValue(0, frame) : 0;
                 dashArray.add(gapLength);
             } else if (dash.type() == com.lottie4j.core.definition.StrokeDashType.OFFSET) {
-                // Store offset value
-                offset = dash.length() != null ? dash.length().getValue(0, frame) : 0;
+                // Add offset value from stroke dashes definition
+                double dashOffset = dash.length() != null ? dash.length().getValue(0, frame) : 0;
+                offset = dashOffset;
             }
         }
 
@@ -810,6 +809,16 @@ public class PathRenderer implements ShapeRenderer {
             logger.debug("Applied stroke dashes: {} with offset {}", java.util.Arrays.toString(dashes), offset);
         }
     }
+
+    private double normalizeTrimPercent(double value) {
+        double normalized = value % 100.0;
+        return normalized < 0 ? normalized + 100.0 : normalized;
+    }
+
+    private double degreesToTrimPercent(double degrees) {
+        return (degrees / 360.0) * 100.0;
+    }
 }
+
 
 
