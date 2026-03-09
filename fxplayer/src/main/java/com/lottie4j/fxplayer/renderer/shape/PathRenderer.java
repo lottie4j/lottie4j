@@ -211,7 +211,7 @@ public class PathRenderer implements ShapeRenderer {
                             double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
                             gc.setStroke(strokeColor);
                             gc.setLineWidth(compensatedWidth);
-                            applyStrokeStyle(gc, strokeStyle.get().stroke());
+                            applyStrokeStyle(gc, strokeStyle.get().stroke(), frame);
                             gc.stroke();
                         } else {
                             // Normal trim
@@ -229,8 +229,8 @@ public class PathRenderer implements ShapeRenderer {
                     gc.setStroke(strokeColor);
                     gc.setLineWidth(compensatedWidth);
 
-                    // Apply line cap and join
-                    applyStrokeStyle(gc, strokeStyle.get().stroke());
+                    // Apply line cap and join and stroke dashes
+                    applyStrokeStyle(gc, strokeStyle.get().stroke(), frame);
 
                     gc.stroke();
                 }
@@ -444,7 +444,7 @@ public class PathRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
                 gc.setStroke(strokeColor);
                 gc.setLineWidth(compensatedWidth);
-                applyStrokeStyle(gc, strokeStyle.stroke());
+                applyStrokeStyle(gc, strokeStyle.stroke(), frame);
                 gc.stroke();
                 logger.debug("  Stroke applied successfully");
             } else {
@@ -742,7 +742,7 @@ public class PathRenderer implements ShapeRenderer {
         return 3 * mt2 * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t2 * (p3 - p2);
     }
 
-    private void applyStrokeStyle(GraphicsContext gc, Stroke stroke) {
+    private void applyStrokeStyle(GraphicsContext gc, Stroke stroke, double frame) {
         // Set line cap: 1=butt, 2=round, 3=square
         if (stroke.lineCap() != null) {
             switch (stroke.lineCap()) {
@@ -764,6 +764,50 @@ public class PathRenderer implements ShapeRenderer {
         // Set miter limit if specified
         if (stroke.miterLimit() != null) {
             gc.setMiterLimit(stroke.miterLimit());
+        }
+
+        // Apply stroke dashes if specified
+        if (stroke.strokeDashes() != null && !stroke.strokeDashes().isEmpty()) {
+            applyStrokeDashes(gc, stroke.strokeDashes(), frame);
+        }
+    }
+
+    /**
+     * Apply stroke dashes and offset to the graphics context.
+     *
+     * @param gc           the graphics context
+     * @param strokeDashes the list of stroke dash definitions
+     * @param frame        the current animation frame
+     */
+    private void applyStrokeDashes(GraphicsContext gc, java.util.List<com.lottie4j.core.model.StrokeDash> strokeDashes, double frame) {
+        java.util.List<Double> dashArray = new java.util.ArrayList<>();
+        double offset = 0;
+
+        // Process stroke dashes to build dash array and get offset
+        for (com.lottie4j.core.model.StrokeDash dash : strokeDashes) {
+            if (dash.type() == com.lottie4j.core.definition.StrokeDashType.DASH) {
+                // Add dash length
+                double dashLength = dash.length() != null ? dash.length().getValue(0, frame) : 0;
+                dashArray.add(dashLength);
+            } else if (dash.type() == com.lottie4j.core.definition.StrokeDashType.GAP) {
+                // Add gap length
+                double gapLength = dash.length() != null ? dash.length().getValue(0, frame) : 0;
+                dashArray.add(gapLength);
+            } else if (dash.type() == com.lottie4j.core.definition.StrokeDashType.OFFSET) {
+                // Store offset value
+                offset = dash.length() != null ? dash.length().getValue(0, frame) : 0;
+            }
+        }
+
+        // Apply dash pattern if we have dashes
+        if (!dashArray.isEmpty()) {
+            double[] dashes = new double[dashArray.size()];
+            for (int i = 0; i < dashArray.size(); i++) {
+                dashes[i] = dashArray.get(i);
+            }
+            gc.setLineDashes(dashes);
+            gc.setLineDashOffset(offset);
+            logger.debug("Applied stroke dashes: {} with offset {}", java.util.Arrays.toString(dashes), offset);
         }
     }
 }
