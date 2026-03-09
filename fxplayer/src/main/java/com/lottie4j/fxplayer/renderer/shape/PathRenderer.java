@@ -204,15 +204,10 @@ public class PathRenderer implements ShapeRenderer {
                         gc.setLineWidth(compensatedWidth);
                         applyStrokeStyle(gc, strokeStyle.get().stroke(), frame, parentGroup);
                         gc.stroke();
-                    } else if (offsetAdjustedEnd <= 100) {
+                    } else {
+                        // Render trimmed path with static dash offset to keep dashes stable
                         renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
                                 offsetAdjustedStart, offsetAdjustedEnd, strokeStyle.get(), strokeWidth, frame, parentGroup);
-                    } else {
-                        // Wrapped range (e.g. 92% -> 107%): render [92,100] and [0,7].
-                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                offsetAdjustedStart, 100, strokeStyle.get(), strokeWidth, frame, parentGroup);
-                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                0, normalizeTrimPercent(offsetAdjustedEnd), strokeStyle.get(), strokeWidth, frame, parentGroup);
                     }
                 } else {
                     logger.debug("  No TrimPath found in parent group, rendering full stroke");
@@ -333,6 +328,7 @@ public class PathRenderer implements ShapeRenderer {
         return false;  // After all keyframes
     }
 
+
     private void renderTrimmedPath(GraphicsContext gc, List<List<Double>> vertices,
                                    List<List<Double>> tangentsIn, List<List<Double>> tangentsOut,
                                    Boolean closed, double trimStart, double trimEnd,
@@ -345,9 +341,9 @@ public class PathRenderer implements ShapeRenderer {
 
         for (int i = 0; i < vertices.size(); i++) {
             int nextIdx = (i + 1) % vertices.size();
-            if (!closed && nextIdx == 0) break; // Don't include closing segment for open paths
+            if (!closed && nextIdx == 0) break;
 
-            double segmentLength = calculateSegmentLength(vertices, tangentsIn, tangentsOut, i, nextIdx);
+            double segmentLength = calculateSegmentLengthForTrim(vertices, tangentsIn, tangentsOut, i, nextIdx);
             segmentLengths.add(segmentLength);
             totalLength += segmentLength;
         }
@@ -355,8 +351,20 @@ public class PathRenderer implements ShapeRenderer {
         if (totalLength == 0) return;
 
         // Convert trim percentages to lengths
-        double startLength = (trimStart / 100.0) * totalLength;
-        double endLength = (trimEnd / 100.0) * totalLength;
+        double windowPercent = trimEnd - trimStart;
+        if (windowPercent < 0) {
+            windowPercent += 100.0;
+        }
+
+        double startPercent = trimStart;
+        boolean isClosedPath = closed != null && closed;
+        if (isClosedPath) {
+            startPercent = normalizeTrimPercent(trimStart);
+        }
+
+        double startLength = (startPercent / 100.0) * totalLength;
+        double endLength = startLength + (windowPercent / 100.0) * totalLength;
+        boolean wrapped = isClosedPath && endLength > totalLength;
 
         logger.debug("  Rendering trimmed path: totalLength=" + totalLength + ", start=" + startLength + ", end=" + endLength);
 
@@ -368,10 +376,21 @@ public class PathRenderer implements ShapeRenderer {
         boolean pathStarted = false;
         int segmentsRendered = 0;
 
-        for (int i = 0; i < segmentLengths.size(); i++) {
+        int segmentCount = segmentLengths.size();
+        int iterationCount = wrapped ? segmentCount * 2 : segmentCount;
+
+        for (int idx = 0; idx < iterationCount; idx++) {
+            int i = idx % segmentCount;
             double segmentLength = segmentLengths.get(i);
             double segmentStart = currentLength;
             double segmentEnd = currentLength + segmentLength;
+
+            if (!wrapped && segmentStart >= endLength) {
+                break;
+            }
+            if (wrapped && segmentStart >= endLength) {
+                break;
+            }
 
             int nextIdx = (i + 1) % vertices.size();
             List<Double> vertex = vertices.get(i);
@@ -386,8 +405,8 @@ public class PathRenderer implements ShapeRenderer {
                         ", t0=" + t0 + ", t1=" + t1);
 
                 // Get points at t0 and t1
-                double[] point0 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t0);
-                double[] point1 = evaluateBezierSegment(vertices, tangentsIn, tangentsOut, i, nextIdx, t1);
+                double[] point0 = evaluateBezierSegmentForTrim(vertices, tangentsIn, tangentsOut, i, nextIdx, t0);
+                double[] point1 = evaluateBezierSegmentForTrim(vertices, tangentsIn, tangentsOut, i, nextIdx, t1);
 
                 logger.debug("    Point0: (" + point0[0] + ", " + point0[1] + "), Point1: (" + point1[0] + ", " + point1[1] + ")");
 
@@ -407,7 +426,7 @@ public class PathRenderer implements ShapeRenderer {
 
                     if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
                         // Subdivide the bezier curve for the trimmed portion
-                        double[] subdividedCP = subdivideBezierCurve(
+                        double[] subdividedCP = subdivideBezierCurveForTrim(
                                 vertex.get(0), vertex.get(1),
                                 vertex.get(0) + prevTangentOut.get(0), vertex.get(1) + prevTangentOut.get(1),
                                 nextVertex.get(0) + currentTangentIn.get(0), nextVertex.get(1) + currentTangentIn.get(1),
@@ -450,10 +469,10 @@ public class PathRenderer implements ShapeRenderer {
         gc.restore();
     }
 
-    private double calculateSegmentLength(List<List<Double>> vertices,
-                                          List<List<Double>> tangentsIn,
-                                          List<List<Double>> tangentsOut,
-                                          int i, int nextIdx) {
+    private double calculateSegmentLengthForTrim(List<List<Double>> vertices,
+                                                 List<List<Double>> tangentsIn,
+                                                 List<List<Double>> tangentsOut,
+                                                 int i, int nextIdx) {
         List<Double> p0 = vertices.get(i);
         List<Double> p3 = vertices.get(nextIdx);
 
@@ -470,7 +489,7 @@ public class PathRenderer implements ShapeRenderer {
                 double x2 = p3.get(0) + tangIn.get(0), y2 = p3.get(1) + tangIn.get(1);
                 double x3 = p3.get(0), y3 = p3.get(1);
 
-                return approximateBezierLength(x0, y0, x1, y1, x2, y2, x3, y3);
+                return approximateBezierLengthForTrim(x0, y0, x1, y1, x2, y2, x3, y3);
             }
         }
 
@@ -480,9 +499,8 @@ public class PathRenderer implements ShapeRenderer {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    private double approximateBezierLength(double x0, double y0, double x1, double y1,
-                                           double x2, double y2, double x3, double y3) {
-        // Sample the curve at multiple points
+    private double approximateBezierLengthForTrim(double x0, double y0, double x1, double y1,
+                                                  double x2, double y2, double x3, double y3) {
         int samples = 10;
         double length = 0;
         double prevX = x0, prevY = y0;
@@ -509,10 +527,10 @@ public class PathRenderer implements ShapeRenderer {
         return length;
     }
 
-    private double[] evaluateBezierSegment(List<List<Double>> vertices,
-                                           List<List<Double>> tangentsIn,
-                                           List<List<Double>> tangentsOut,
-                                           int i, int nextIdx, double t) {
+    private double[] evaluateBezierSegmentForTrim(List<List<Double>> vertices,
+                                                  List<List<Double>> tangentsIn,
+                                                  List<List<Double>> tangentsOut,
+                                                  int i, int nextIdx, double t) {
         List<Double> p0 = vertices.get(i);
         List<Double> p3 = vertices.get(nextIdx);
 
@@ -548,17 +566,9 @@ public class PathRenderer implements ShapeRenderer {
         return new double[]{x, y};
     }
 
-    /**
-     * Subdivide a cubic bezier curve from parameter t0 to t1
-     * Returns the two new control points [cp1x, cp1y, cp2x, cp2y]
-     * Using proper bezier subdivision formula based on derivatives
-     */
-    private double[] subdivideBezierCurve(double x0, double y0, double x1, double y1,
-                                          double x2, double y2, double x3, double y3,
-                                          double t0, double t1) {
-        // For a cubic bezier B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
-        // Extract the portion from t0 to t1 and reparameterize to [0,1]
-
+    private double[] subdivideBezierCurveForTrim(double x0, double y0, double x1, double y1,
+                                                 double x2, double y2, double x3, double y3,
+                                                 double t0, double t1) {
         double dt = t1 - t0;
 
         // Evaluate bezier and its derivative at t0
@@ -763,42 +773,36 @@ public class PathRenderer implements ShapeRenderer {
 
         // Apply stroke dashes if specified
         if (stroke.strokeDashes() != null && !stroke.strokeDashes().isEmpty()) {
-            // Apply stroke dashes with only the static offset from the dashes definition
-            // The animated trim path offset is now used for trim path animation, not stroke dashes
-            applyStrokeDashes(gc, stroke.strokeDashes(), frame, 0);
+            applyStrokeDashes(gc, stroke.strokeDashes(), frame);
         }
     }
 
     /**
      * Apply stroke dashes and offset to the graphics context.
+     * Uses only the static stroke offset from the animation data.
      *
-     * @param gc             the graphics context
-     * @param strokeDashes   the list of stroke dash definitions
-     * @param frame          the current animation frame
-     * @param trimPathOffset unused - kept for compatibility (trim path offset now controls trim animation)
+     * @param gc           the graphics context
+     * @param strokeDashes the list of stroke dash definitions
+     * @param frame        the current animation frame
      */
-    private void applyStrokeDashes(GraphicsContext gc, java.util.List<com.lottie4j.core.model.StrokeDash> strokeDashes, double frame, double trimPathOffset) {
+    private void applyStrokeDashes(GraphicsContext gc, java.util.List<com.lottie4j.core.model.StrokeDash> strokeDashes, double frame) {
         java.util.List<Double> dashArray = new java.util.ArrayList<>();
         double offset = 0;
 
         // Process stroke dashes to build dash array and get offset
         for (com.lottie4j.core.model.StrokeDash dash : strokeDashes) {
             if (dash.type() == com.lottie4j.core.definition.StrokeDashType.DASH) {
-                // Add dash length
                 double dashLength = dash.length() != null ? dash.length().getValue(0, frame) : 0;
                 dashArray.add(dashLength);
             } else if (dash.type() == com.lottie4j.core.definition.StrokeDashType.GAP) {
-                // Add gap length
                 double gapLength = dash.length() != null ? dash.length().getValue(0, frame) : 0;
                 dashArray.add(gapLength);
             } else if (dash.type() == com.lottie4j.core.definition.StrokeDashType.OFFSET) {
-                // Add offset value from stroke dashes definition
                 double dashOffset = dash.length() != null ? dash.length().getValue(0, frame) : 0;
                 offset = dashOffset;
             }
         }
 
-        // Apply dash pattern if we have dashes
         if (!dashArray.isEmpty()) {
             double[] dashes = new double[dashArray.size()];
             for (int i = 0; i < dashArray.size(); i++) {
@@ -819,6 +823,3 @@ public class PathRenderer implements ShapeRenderer {
         return (degrees / 360.0) * 100.0;
     }
 }
-
-
-
