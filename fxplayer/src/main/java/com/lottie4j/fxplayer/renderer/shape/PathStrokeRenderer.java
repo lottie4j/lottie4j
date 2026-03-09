@@ -89,8 +89,8 @@ public class PathStrokeRenderer {
             Animated segEnd = trimPath.segmentEnd();
             Animated offset = trimPath.offset();
 
-            double trimStart = segStart != null ? segStart.getValue(0, frame) : 0;
-            double trimEnd = segEnd != null ? segEnd.getValue(0, frame) : 100;
+            double trimStart = segStart != null ? getTrimSampledValue(segStart, frame) : 0;
+            double trimEnd = segEnd != null ? getTrimSampledValue(segEnd, frame) : 100;
             double trimOffsetDegrees = offset != null ? offset.getValue(0, frame) : 0;
 
             if (segEnd != null && segEnd.animated() != null && segEnd.animated() > 0) {
@@ -201,6 +201,46 @@ public class PathStrokeRenderer {
         for (Animated animated : animatedList) {
             if (isBeforeFirstKeyframe(animated, frame)) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets trim value with NaN handling at keyframe boundaries.
+     * When getValue returns NaN at exact keyframe time, sample just before the keyframe.
+     */
+    private double getTrimSampledValue(Animated animated, double frame) {
+        if (animated == null) {
+            return 0.0;
+        }
+
+        double exact = animated.getValue(0, frame);
+
+        // Handle NaN at exact keyframe boundaries by sampling just before
+        if (Double.isNaN(exact) && isAtAnimatedKeyframeTime(animated, frame)) {
+            double sampledFrame = Math.max(0.0, frame - 1.0e-3);
+            double sampled = animated.getValue(0, sampledFrame);
+            if (!Double.isNaN(sampled)) {
+                return sampled;
+            }
+        }
+
+        return exact;
+    }
+
+    /**
+     * Checks if the current frame is at an animated keyframe time.
+     */
+    private boolean isAtAnimatedKeyframeTime(Animated animated, double frame) {
+        if (animated == null || animated.keyframes() == null || animated.keyframes().isEmpty()) {
+            return false;
+        }
+        for (Object keyframeObj : animated.keyframes()) {
+            if (keyframeObj instanceof TimedKeyframe timedKeyframe && timedKeyframe.time() != null) {
+                if (Math.abs(frame - timedKeyframe.time()) < 1.0e-2) {
+                    return true;
+                }
             }
         }
         return false;
