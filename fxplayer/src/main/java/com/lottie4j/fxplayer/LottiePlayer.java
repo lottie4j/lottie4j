@@ -1,7 +1,6 @@
 package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.definition.LayerType;
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Asset;
 import com.lottie4j.core.model.Layer;
@@ -419,26 +418,6 @@ public class LottiePlayer extends Canvas {
                 logger.debug("Skipping layer {} - opacity is {}", layer.name(), opacity);
                 gc.restore();
                 return;
-            }
-        }
-
-        // Log transform values for Tick layer at frame 88
-        if ("Tick".equals(layer.name()) && Math.abs(frame - 88.0) < 0.5) {
-            if (layer.transform() != null) {
-                if (layer.transform().position() != null) {
-                    double x = layer.transform().position().getValue(AnimatedValueType.X, frame);
-                    double y = layer.transform().position().getValue(AnimatedValueType.Y, frame);
-                    logger.warn("Tick layer at frame {} - position: ({}, {})", frame, x, y);
-                }
-                if (layer.transform().rotation() != null) {
-                    double rot = layer.transform().rotation().getValue(0, frame);
-                    logger.warn("Tick layer at frame {} - rotation: {}", frame, rot);
-                }
-                if (layer.transform().scale() != null) {
-                    double sx = layer.transform().scale().getValue(AnimatedValueType.X, frame);
-                    double sy = layer.transform().scale().getValue(AnimatedValueType.Y, frame);
-                    logger.warn("Tick layer at frame {} - scale: ({}, {})", frame, sx, sy);
-                }
             }
         }
 
