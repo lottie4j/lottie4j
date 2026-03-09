@@ -14,6 +14,7 @@ import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.LayerActivity;
+import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -412,19 +413,32 @@ public class LottiePlayer extends Canvas {
         gc.save();
 
         // Check layer opacity - skip rendering if transparent
+        double layerOpacity = 1.0;
+        boolean hasAnimatedOpacity = false;
         if (layer.transform() != null && layer.transform().opacity() != null) {
-            double opacity = layer.transform().opacity().getValue(0, frame);
-            if (opacity <= 0) {
-                logger.debug("Skipping layer {} - opacity is {}", layer.name(), opacity);
+            layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
+            if (layerOpacity <= 0) {
+                logger.debug("Skipping layer {} - opacity is {}", layer.name(), layerOpacity);
                 gc.restore();
                 return;
             }
+            hasAnimatedOpacity = layer.transform().opacity().animated() != null && layer.transform().opacity().animated() > 0;
         }
 
         // Apply parent transforms recursively
         applyParentTransforms(gc, layer, frame);
 
-        // Apply this layer's transform
+        // For layers with animated opacity containing shapes, use off-screen rendering
+        // to ensure shapes composite before opacity is applied (matching JS behavior)
+        if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
+                layer.shapes() != null && !layer.shapes().isEmpty()) {
+            logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
+            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity);
+            gc.restore();
+            return;
+        }
+
+        // Apply this layer's transform (with opacity)
         applyLayerTransform(gc, layer, frame);
 
         // Handle precomposition layers
@@ -590,6 +604,112 @@ public class LottiePlayer extends Canvas {
         // Re-render current frame with new visibility
         if (!isPlaying) {
             render(currentFrameProperty.get(), visibleLayerIndices);
+        }
+    }
+
+    /**
+     * Renders a layer to an off-screen buffer, applies opacity, and draws to the main context.
+     * This ensures that all shapes composite before opacity is applied, matching JavaScript behavior.
+     *
+     * @param gc           graphics context to render to
+     * @param layer        layer to render
+     * @param frame        current frame
+     * @param layerOpacity opacity to apply to the final composite
+     */
+    private void renderLayerWithOffscreenBuffer(GraphicsContext gc, Layer layer, double frame, double layerOpacity) {
+        // Estimate bounds for the off-screen canvas based on animation size
+        int offscreenWidth = getAnimationWidth();
+        int offscreenHeight = getAnimationHeight();
+
+        logger.debug("Rendering layer {} to off-screen buffer ({}x{})", layer.name(), offscreenWidth, offscreenHeight);
+
+        // Render layer to off-screen image
+        javafx.scene.image.WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+            // Save graphics state
+            offscreenGc.save();
+
+            // Apply layer transforms WITHOUT opacity to the off-screen context
+            applyLayerTransformWithoutOpacity(offscreenGc, layer, frame);
+
+            // Render layer content (shapes, images, etc.)
+            renderLayerContent(offscreenGc, layer, frame);
+
+            // Restore graphics state
+            offscreenGc.restore();
+        });
+
+        // Draw the off-screen buffer to the main context with opacity applied
+        double currentAlpha = gc.getGlobalAlpha();
+        gc.setGlobalAlpha(currentAlpha * layerOpacity);
+        gc.drawImage(offscreenImage, 0, 0);
+        gc.setGlobalAlpha(currentAlpha);
+
+        logger.debug("Finished off-screen rendering for layer: {}", layer.name());
+    }
+
+    /**
+     * Renders the content of a layer (shapes, images, etc.) without transforms or opacity.
+     * Used by off-screen rendering to composite content first, then apply opacity.
+     *
+     * @param gc    graphics context to render to
+     * @param layer layer to render
+     * @param frame current frame
+     */
+    private void renderLayerContent(GraphicsContext gc, Layer layer, double frame) {
+        // Handle precomposition layers
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            renderPrecompositionLayer(gc, layer, frame);
+        }
+        // Handle image layers
+        else if (layer.layerType() == LayerType.IMAGE) {
+            imageRenderer.render(gc, layer, animation);
+        }
+        // Handle solid color layers
+        else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            solidColorRenderer.render(gc, layer, getAnimationWidth(), getAnimationHeight());
+        }
+        // Handle text layers
+        else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
+        }
+        // Skip rendering shapes for NULL layers (type 3)
+        else if (layer.layerType() != LayerType.NULL) {
+            // Render layer shapes
+            if (layer.shapes() != null && !layer.shapes().isEmpty()) {
+                logger.debug("Layer has {} shapes", layer.shapes().size());
+
+                // First pass: collect any layer-level modifiers (like TrimPath)
+                TrimPath layerTrimPath = null;
+                for (BaseShape shape : layer.shapes()) {
+                    if (shape instanceof TrimPath trim) {
+                        layerTrimPath = trim;
+                        logger.debug("Found layer-level TrimPath");
+                    }
+                }
+
+                // Second pass: render shapes in REVERSE order (bottom-to-top: last shape renders first)
+                for (int i = layer.shapes().size() - 1; i >= 0; i--) {
+                    BaseShape shape = layer.shapes().get(i);
+
+                    // Skip modifiers and styles - they're applied within groups/shapes
+                    if (shape instanceof TrimPath) {
+                        continue;
+                    }
+
+                    logger.debug("Shape class: {}, type: {}, shapeGroup: {}", shape.getClass().getSimpleName(), shape.shapeType(), shape.shapeType().shapeGroup());
+
+                    switch (shape.shapeType().shapeGroup()) {
+                        case GROUP -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, frame, layerTrimPath);
+                        case SHAPE -> renderShapeTypeShape(shape, null, frame);
+                        case STYLE -> {
+                            // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                        }
+                        default -> logger.warn("Unsupported shape type: {}", shape.shapeType().shapeGroup());
+                    }
+                }
+            } else {
+                logger.debug("Layer has no shapes");
+            }
         }
     }
 

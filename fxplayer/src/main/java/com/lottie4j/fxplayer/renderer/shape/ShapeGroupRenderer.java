@@ -13,7 +13,9 @@ import com.lottie4j.core.model.shape.shape.Path;
 import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
+import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,17 +72,17 @@ public class ShapeGroupRenderer {
                 }
             }
 
-            // Check group opacity - skip rendering if transparent
-            if (groupTransform != null) {
-                if (groupTransform.opacity() != null) {
-                    double opacity = groupTransform.opacity().getValue(0, frame);
-                    if (opacity <= 0) {
-                        logger.debug("Skipping group {} - opacity is {}", group.name(), opacity);
-                        gc.restore();
-                        return;
-                    }
+            // Check if group has opacity that needs special handling
+            double groupOpacity = 1.0;
+            boolean hasAnimatedOpacity = false;
+            if (groupTransform != null && groupTransform.opacity() != null) {
+                groupOpacity = groupTransform.opacity().getValue(0, frame) / 100.0;
+                if (groupOpacity <= 0) {
+                    logger.debug("Skipping group {} - opacity is {}", group.name(), groupOpacity);
+                    gc.restore();
+                    return;
                 }
-                transformApplier.applyGroupTransform(gc, groupTransform, frame);
+                hasAnimatedOpacity = groupTransform.opacity().animated() != null && groupTransform.opacity().animated() > 0;
             }
 
             // Use group-level TrimPath if present, otherwise use layer-level TrimPath
@@ -93,22 +95,34 @@ public class ShapeGroupRenderer {
             boolean hasMultiplePaths = renderGroupWithCombinedPaths(gc, group, effectiveGroup, frame, effectiveTrimPath);
 
             if (!hasMultiplePaths) {
-                // Render all non-transform/non-modifier shapes in reverse order
-                // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
-                for (int i = group.shapes().size() - 1; i >= 0; i--) {
-                    BaseShape item = group.shapes().get(i);
-                    if (item instanceof Transform || item instanceof TrimPath) {
-                        continue; // Skip modifiers, they're applied to the shapes
+                // If the group has opacity that varies per frame and contains overlapping shapes,
+                // we need to render to an off-screen buffer to combine shapes properly
+                if (hasAnimatedOpacity && groupOpacity < 1.0 && groupContainsOverlappingShapes(group)) {
+                    logger.debug("Group {} has animated opacity with overlapping shapes - using off-screen rendering", group.name());
+                    renderGroupWithOffscreenBuffer(gc, group, effectiveGroup, frame, effectiveTrimPath, groupTransform);
+                } else {
+                    // Standard rendering path: apply transforms directly and render shapes
+                    if (groupTransform != null) {
+                        transformApplier.applyGroupTransform(gc, groupTransform, frame);
                     }
 
-                    switch (item.shapeType().shapeGroup()) {
-                        case GROUP -> renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
-                        case SHAPE -> renderShape(gc, item, effectiveGroup, frame);
-                        case STYLE -> {
-                            // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                    // Render all non-transform/non-modifier shapes in reverse order
+                    // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
+                    for (int i = group.shapes().size() - 1; i >= 0; i--) {
+                        BaseShape item = group.shapes().get(i);
+                        if (item instanceof Transform || item instanceof TrimPath) {
+                            continue; // Skip modifiers, they're applied to the shapes
                         }
-                        default ->
-                                logger.warn("Not defined how to render shape type: {}", item.shapeType().shapeGroup());
+
+                        switch (item.shapeType().shapeGroup()) {
+                            case GROUP -> renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
+                            case SHAPE -> renderShape(gc, item, effectiveGroup, frame);
+                            case STYLE -> {
+                                // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                            }
+                            default ->
+                                    logger.warn("Not defined how to render shape type: {}", item.shapeType().shapeGroup());
+                        }
                     }
                 }
             }
@@ -329,6 +343,98 @@ public class ShapeGroupRenderer {
             return;
         }
         renderer.render(gc, shape, parentGroup, frame);
+    }
+
+    /**
+     * Checks if a group contains multiple overlapping shape elements.
+     * This is a heuristic check to determine if off-screen rendering is needed.
+     *
+     * @param group group to check
+     * @return true if the group likely contains overlapping shapes
+     */
+    private boolean groupContainsOverlappingShapes(Group group) {
+        // Count the number of shape elements (excluding modifiers)
+        int shapeCount = 0;
+        boolean hasFill = false;
+
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof Group) {
+                // Nested groups could have overlapping content
+                shapeCount++;
+            } else if (item instanceof Path) {
+                shapeCount++;
+            } else if (item instanceof Fill) {
+                hasFill = true;
+            }
+        }
+
+        // If we have multiple shapes (2+) with a fill, they likely overlap
+        return shapeCount > 1 && hasFill;
+    }
+
+    /**
+     * Renders a group to an off-screen buffer, applies opacity, and draws to the main context.
+     * This ensures that overlapping shapes combine before opacity is applied.
+     *
+     * @param gc                graphics context
+     * @param group             group to render
+     * @param effectiveGroup    group with effective trim path
+     * @param frame             animation frame
+     * @param effectiveTrimPath effective trim path
+     * @param groupTransform    group transform (may contain opacity)
+     */
+    private void renderGroupWithOffscreenBuffer(GraphicsContext gc, Group group, Group effectiveGroup,
+                                                double frame, TrimPath effectiveTrimPath,
+                                                Transform groupTransform) {
+        // Estimate bounds for the off-screen canvas
+        // For now, use a reasonable default size - in a real implementation, this should be calculated from shapes
+        double offscreenWidth = 2000;
+        double offscreenHeight = 2000;
+
+        // Render group to off-screen image
+        WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+            // Save the graphics state
+            offscreenGc.save();
+
+            // Apply transforms WITHOUT opacity to the off-screen context
+            if (groupTransform != null) {
+                transformApplier.applyGroupTransform(offscreenGc, groupTransform, frame);
+            }
+
+            // Render all shapes to the off-screen context
+            for (int i = group.shapes().size() - 1; i >= 0; i--) {
+                BaseShape item = group.shapes().get(i);
+                if (item instanceof Transform || item instanceof TrimPath) {
+                    continue;
+                }
+
+                switch (item.shapeType().shapeGroup()) {
+                    case GROUP -> renderShapeTypeGroup(offscreenGc, item, frame, effectiveTrimPath);
+                    case SHAPE -> renderShape(offscreenGc, item, effectiveGroup, frame);
+                    case STYLE -> {
+                        // Skip
+                    }
+                    default ->
+                            logger.warn("Unsupported shape type in off-screen rendering: {}", item.shapeType().shapeGroup());
+                }
+            }
+
+            // Restore the graphics state
+            offscreenGc.restore();
+        });
+
+        // Apply opacity from the group transform when drawing to the main context
+        double groupOpacity = 1.0;
+        if (groupTransform != null && groupTransform.opacity() != null) {
+            groupOpacity = groupTransform.opacity().getValue(0, frame) / 100.0;
+        }
+
+        double currentAlpha = gc.getGlobalAlpha();
+        gc.setGlobalAlpha(currentAlpha * groupOpacity);
+        gc.drawImage(offscreenImage, 0, 0);
+        gc.setGlobalAlpha(currentAlpha);
+
+        logger.debug("Finished off-screen rendering for group: {}", group.name());
     }
 }
 
