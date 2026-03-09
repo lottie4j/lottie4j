@@ -178,12 +178,15 @@ public class ShapeGroupRenderer {
         // Count Path shapes and check for Fill
         List<Path> paths = new ArrayList<>();
         Fill fill = null;
+        Transform groupTransform = null;
 
         for (BaseShape item : group.shapes()) {
             if (item instanceof Path path) {
                 paths.add(path);
             } else if (item instanceof Fill f) {
                 fill = f;
+            } else if (item instanceof Transform transform) {
+                groupTransform = transform;
             }
         }
 
@@ -199,6 +202,12 @@ public class ShapeGroupRenderer {
                 javafx.scene.shape.FillRule.EVEN_ODD : javafx.scene.shape.FillRule.NON_ZERO;
 
         gc.save();
+
+        // Apply group transform BEFORE rendering combined paths
+        if (groupTransform != null) {
+            transformApplier.applyGroupTransform(gc, groupTransform, frame);
+        }
+
         gc.setFillRule(fxFillRule);
         gc.beginPath();
 

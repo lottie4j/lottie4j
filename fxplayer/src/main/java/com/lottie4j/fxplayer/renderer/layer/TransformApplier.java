@@ -165,6 +165,7 @@ public class TransformApplier {
             gc.translate(-anchorX, -anchorY);
         }
 
+
         if (includeOpacity) {
             logger.debug("=== LAYER TRANSFORM APPLIED ===");
         } else {

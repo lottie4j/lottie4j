@@ -425,18 +425,19 @@ public class LottiePlayer extends Canvas {
             hasAnimatedOpacity = layer.transform().opacity().animated() != null && layer.transform().opacity().animated() > 0;
         }
 
-        // Apply parent transforms recursively
-        applyParentTransforms(gc, layer, frame);
-
         // For layers with animated opacity containing shapes, use off-screen rendering
         // to ensure shapes composite before opacity is applied (matching JS behavior)
         if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
                 layer.shapes() != null && !layer.shapes().isEmpty()) {
             logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
+            // Off-screen rendering handles parent transforms internally
             renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity);
             gc.restore();
             return;
         }
+
+        // Apply parent transforms recursively
+        applyParentTransforms(gc, layer, frame);
 
         // Apply this layer's transform (with opacity)
         applyLayerTransform(gc, layer, frame);
@@ -623,10 +624,13 @@ public class LottiePlayer extends Canvas {
 
         logger.debug("Rendering layer {} to off-screen buffer ({}x{})", layer.name(), offscreenWidth, offscreenHeight);
 
-        // Render layer to off-screen image
+        // Render layer to off-screen image WITH all transforms but WITHOUT opacity
         javafx.scene.image.WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
             // Save graphics state
             offscreenGc.save();
+
+            // Apply parent transforms inside the off-screen buffer
+            applyParentTransforms(offscreenGc, layer, frame);
 
             // Apply layer transforms WITHOUT opacity to the off-screen context
             applyLayerTransformWithoutOpacity(offscreenGc, layer, frame);
@@ -638,7 +642,8 @@ public class LottiePlayer extends Canvas {
             offscreenGc.restore();
         });
 
-        // Draw the off-screen buffer to the main context with opacity applied
+        // Draw the off-screen buffer to main canvas at (0,0) with opacity applied
+        // All transforms were already applied inside the buffer
         double currentAlpha = gc.getGlobalAlpha();
         gc.setGlobalAlpha(currentAlpha * layerOpacity);
         gc.drawImage(offscreenImage, 0, 0);
