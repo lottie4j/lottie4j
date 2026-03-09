@@ -104,8 +104,18 @@ public class PathStrokeRenderer {
 
         double visibleWindow = combinedEnd - combinedStart;
         double offsetPercent = degreesToTrimPercent(combinedOffsetDegrees);
-        double offsetAdjustedStart = normalizeTrimPercent(combinedStart + offsetPercent);
-        double offsetAdjustedEnd = offsetAdjustedStart + visibleWindow;
+        boolean isClosedPath = Boolean.TRUE.equals(closed);
+        double offsetAdjustedStart;
+        double offsetAdjustedEnd;
+
+        if (isClosedPath) {
+            offsetAdjustedStart = normalizeTrimPercent(combinedStart + offsetPercent);
+            offsetAdjustedEnd = offsetAdjustedStart + visibleWindow;
+        } else {
+            // For open paths, preserve endpoints like 100 exactly; modulo normalization breaks TrimPath.
+            offsetAdjustedStart = clampTrimPercent(combinedStart + offsetPercent);
+            offsetAdjustedEnd = clampTrimPercent(combinedEnd + offsetPercent);
+        }
 
         if (Double.isNaN(offsetAdjustedStart) || Double.isNaN(offsetAdjustedEnd)) {
             logger.warn("  Combined TrimPath has NaN value at frame {} - skipping rendering", frame);
@@ -227,6 +237,14 @@ public class PathStrokeRenderer {
 
         double startLength = (trimStart / 100.0) * totalLength;
         double endLength = (trimEnd / 100.0) * totalLength;
+
+        // Lottie open paths expect a direct segment between start/end values.
+        // Normalize reversed ranges (e.g. start=100, end=0) to avoid rendering nothing.
+        if (!Boolean.TRUE.equals(closed) && startLength > endLength) {
+            double tmp = startLength;
+            startLength = endLength;
+            endLength = tmp;
+        }
 
         boolean wrapped = Boolean.TRUE.equals(closed) && endLength > totalLength;
 
@@ -531,6 +549,16 @@ public class PathStrokeRenderer {
     private double normalizeTrimPercent(double value) {
         double normalized = value % 100.0;
         return normalized < 0 ? normalized + 100.0 : normalized;
+    }
+
+    private double clampTrimPercent(double value) {
+        if (value < 0.0) {
+            return 0.0;
+        }
+        if (value > 100.0) {
+            return 100.0;
+        }
+        return value;
     }
 
     /**
