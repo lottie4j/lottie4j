@@ -518,7 +518,7 @@ public class LottiePlayer extends Canvas {
                 animation,
                 this::isLayerActiveAtFrame,
                 (solid_gc, solid_layer) -> solidColorRenderer.render(solid_gc, solid_layer, getAnimationWidth(), getAnimationHeight()),
-                (shape, f, trimPath) -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, f, trimPath),
+                (shapeGc, shape, f, trimPath) -> shapeGroupRenderer.renderShapeTypeGroup(shapeGc, shape, f, trimPath),
                 this::renderShapeTypeShape
         );
     }

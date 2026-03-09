@@ -136,43 +136,54 @@ public class EffectsRenderer {
                 layer.name(), blurRadius, boundsWidth, boundsHeight);
 
         if (boundsWidth > 0 && boundsHeight > 0) {
-            // Create offscreen buffer with padding for blur spread
-            double padding = Math.ceil(blurRadius * 2);
-            double offscreenWidth = boundsWidth + padding * 2;
-            double offscreenHeight = boundsHeight + padding * 2;
-            logger.info("Creating offscreen buffer: {}x{} with padding={}", offscreenWidth, offscreenHeight, padding);
-
-            // Render blurred content into expanded offscreen buffer to allow blur to spread
-            WritableImage blurredImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
-                offscreenGc.save();
-                // Translate to account for padding
-                offscreenGc.translate(padding, padding);
-                applyBlurEffect(offscreenGc, blurRadius);
-                layerRenderer.render(offscreenGc, layer, frame);
-                offscreenGc.setEffect(null);
-                offscreenGc.restore();
-            });
-
-            // Draw back to main canvas with clipping to precomp bounds
-            gc.save();
-            gc.beginPath();
-            gc.rect(0, 0, boundsWidth, boundsHeight);
-            gc.closePath();
-            gc.clip();
-            // Draw image offset by negative padding to align content
-            gc.drawImage(blurredImage, -padding, -padding);
-            gc.restore();
-
-            logger.info("Applied bounded blur for layer {}: radius={} bounds={}x{}", layer.name(), blurRadius, boundsWidth, boundsHeight);
+            // Render with explicit bounds clipping - applies transforms in offscreen, clips when drawing back
+            renderWithBoundedBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, layerRenderer);
             return;
         }
 
+        // Fallback: no bounds, just apply blur directly
         gc.save();
         applyBlurEffect(gc, blurRadius);
         layerRenderer.render(gc, layer, frame);
         gc.setEffect(null);
         gc.restore();
-        logger.info("Applied blur for layer {}: radius={}", layer.name(), blurRadius);
+        logger.info("Applied direct blur (no bounds) for layer {}: radius={}", layer.name(), blurRadius);
+    }
+
+    private void renderWithBoundedBlur(GraphicsContext gc,
+                                       Layer layer,
+                                       double frame,
+                                       double blurRadius,
+                                       double boundsWidth,
+                                       double boundsHeight,
+                                       LayerRenderer layerRenderer) {
+        // Create offscreen buffer with padding for blur spread
+        double padding = Math.ceil(blurRadius * 2);
+        double offscreenWidth = boundsWidth + padding * 2;
+        double offscreenHeight = boundsHeight + padding * 2;
+        logger.info("Creating offscreen buffer: {}x{} with padding={}", offscreenWidth, offscreenHeight, padding);
+
+        // Render blurred content into expanded offscreen buffer to allow blur to spread
+        WritableImage blurredImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+            offscreenGc.save();
+            // Translate to account for padding
+            offscreenGc.translate(padding, padding);
+            applyBlurEffect(offscreenGc, blurRadius);
+            layerRenderer.render(offscreenGc, layer, frame);
+            offscreenGc.setEffect(null);
+            offscreenGc.restore();
+        });
+
+        // Draw only the central (unpadded) region back to destination bounds.
+        // This enforces cropping even when gc.clip interactions are inconsistent.
+        gc.save();
+        gc.drawImage(blurredImage,
+                padding, padding, boundsWidth, boundsHeight,
+                0, 0, boundsWidth, boundsHeight);
+        gc.restore();
+
+        logger.info("Applied bounded blur crop for layer {}: radius={} src=({}, {}, {}, {}) dst=(0, 0, {}, {})",
+                layer.name(), blurRadius, padding, padding, boundsWidth, boundsHeight, boundsWidth, boundsHeight);
     }
 
     private void applyBlurEffect(GraphicsContext gc, double blurRadius) {

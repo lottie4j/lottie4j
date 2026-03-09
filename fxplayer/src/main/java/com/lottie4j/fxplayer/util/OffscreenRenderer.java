@@ -1,8 +1,10 @@
 package com.lottie4j.fxplayer.util;
 
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
 
 /**
  * Utility class for rendering content to an off-screen buffer.
@@ -29,9 +31,11 @@ public class OffscreenRenderer {
         // Perform the rendering
         renderer.render(offscreenGc);
 
-        // Create an image from the canvas
+        // Create an image from the canvas with transparent fill.
         WritableImage image = new WritableImage((int) width, (int) height);
-        offscreenCanvas.snapshot(null, image);
+        SnapshotParameters snapshotParameters = new SnapshotParameters();
+        snapshotParameters.setFill(Color.TRANSPARENT);
+        offscreenCanvas.snapshot(snapshotParameters, image);
 
         return image;
     }
@@ -44,4 +48,3 @@ public class OffscreenRenderer {
         void render(GraphicsContext gc);
     }
 }
-
