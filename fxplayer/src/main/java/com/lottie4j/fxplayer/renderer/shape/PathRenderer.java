@@ -31,6 +31,7 @@ import java.util.Optional;
 public class PathRenderer implements ShapeRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(PathRenderer.class);
+    private final PathStrokeRenderer pathStrokeRenderer = new PathStrokeRenderer();
 
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
@@ -148,88 +149,8 @@ public class PathRenderer implements ShapeRenderer {
             }
         }
 
-        var strokeStyle = getStrokeStyle(parentGroup);
-        if (strokeStyle.isPresent()) {
-            var strokeWidth = strokeStyle.get().getStrokeWidth(frame);
-
-            if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
-                // Check for TrimPaths - multiple trim paths should be combined
-                var allTrimPaths = getAllTrimPaths(parentGroup);
-                if (!allTrimPaths.isEmpty()) {
-                    logger.debug("  Found {} TrimPath(s) in parent group", allTrimPaths.size());
-
-                    // Combine all trim paths: use the most restrictive visible window.
-                    double combinedStart = 0;
-                    double combinedEnd = 100;
-                    double combinedOffsetDegrees = 0;
-                    java.util.List<Animated> animatedSegEnds = new java.util.ArrayList<>();
-
-                    for (TrimPath trimPath : allTrimPaths) {
-                        Animated segStart = trimPath.segmentStart();
-                        Animated segEnd = trimPath.segmentEnd();
-                        Animated offset = trimPath.offset();
-
-                        double trimStart = segStart != null ? segStart.getValue(0, frame) : 0;
-                        double trimEnd = segEnd != null ? segEnd.getValue(0, frame) : 100;
-                        double trimOffsetDegrees = offset != null ? offset.getValue(0, frame) : 0;
-
-                        if (segEnd != null && segEnd.animated() != null && segEnd.animated() > 0) {
-                            animatedSegEnds.add(segEnd);
-                        }
-
-                        combinedStart = Math.max(combinedStart, trimStart);
-                        combinedEnd = Math.min(combinedEnd, trimEnd);
-                        combinedOffsetDegrees = trimOffsetDegrees;
-                    }
-
-                    double visibleWindow = combinedEnd - combinedStart;
-                    double offsetPercent = degreesToTrimPercent(combinedOffsetDegrees);
-                    double offsetAdjustedStart = normalizeTrimPercent(combinedStart + offsetPercent);
-                    double offsetAdjustedEnd = offsetAdjustedStart + visibleWindow;
-
-                    logger.debug("COMBINED_TRIM FRAME {}: Path '{}' - start={}, end={}, window={}, offsetDeg={}, offsetPct={}, adjustedStart={}, adjustedEnd={}",
-                            frame, path.name(), combinedStart, combinedEnd, visibleWindow,
-                            combinedOffsetDegrees, offsetPercent, offsetAdjustedStart, offsetAdjustedEnd);
-
-                    if (Double.isNaN(offsetAdjustedStart) || Double.isNaN(offsetAdjustedEnd)) {
-                        logger.warn("  Combined TrimPath has NaN value at frame {} - skipping rendering", frame);
-                    } else if (combinedEnd == 100 && combinedStart == 0 && !animatedSegEnds.isEmpty() && isBeforeAnyKeyframe(animatedSegEnds, frame)) {
-                        logger.warn("SKIP_BEFORE_ANIM: FRAME {}: Path '{}' - before first animated keyframe", frame, path.name());
-                    } else if (Math.abs(visibleWindow) < 0.01) {
-                        logger.warn("EMPTY_PATH FRAME {}: visibleWindow={} - NOT RENDERING", frame, visibleWindow);
-                    } else if (visibleWindow >= 100) {
-                        var strokeColor = strokeStyle.get().getColor(frame);
-                        double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
-                        gc.setStroke(strokeColor);
-                        gc.setLineWidth(compensatedWidth);
-                        applyStrokeStyle(gc, strokeStyle.get().stroke(), frame, parentGroup);
-                        gc.stroke();
-                    } else {
-                        // Render trimmed path with offset for dash animation (snake effect)
-                        renderTrimmedPath(gc, vertices, tangentsIn, tangentsOut, bezierDef.closed(),
-                                offsetAdjustedStart, offsetAdjustedEnd, strokeStyle.get(), strokeWidth, frame, parentGroup, combinedOffsetDegrees);
-                    }
-                } else {
-                    logger.debug("  No TrimPath found in parent group, rendering full stroke");
-                    var strokeColor = strokeStyle.get().getColor(frame);
-                    double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
-
-                    logger.debug("  Applying stroke: color={}, width={} (compensated: {})",
-                            strokeColor, strokeWidth, compensatedWidth);
-                    gc.setStroke(strokeColor);
-                    gc.setLineWidth(compensatedWidth);
-
-                    // Apply line cap and join and stroke dashes
-                    applyStrokeStyle(gc, strokeStyle.get().stroke(), frame, parentGroup);
-
-                    gc.stroke();
-                }
-            } else {
-                logger.debug("  Skipping stroke with width: " + strokeWidth);
-            }
-        } else {
-            logger.debug("  No stroke style found");
-        }
+        // Delegate all stroke and trim-path rendering to dedicated collaborator.
+        pathStrokeRenderer.renderStroke(gc, parentGroup, frame, path.name(), vertices, tangentsIn, tangentsOut, bezierDef.closed());
 
         gc.restore();
     }
