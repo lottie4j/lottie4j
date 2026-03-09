@@ -106,7 +106,7 @@ public class LottiePlayer extends Canvas {
         // Set canvas size to specified dimensions
         setWidth(width);
         setHeight(height);
-        logger.info("Canvas size set to: {}x{}", getWidth(), getHeight());
+        logger.debug("Canvas size set to: {}x{}", getWidth(), getHeight());
 
         this.gc = getGraphicsContext2D();
 
@@ -315,6 +315,12 @@ public class LottiePlayer extends Canvas {
         gc.save();
         gc.translate(offsetX, offsetY);
         gc.scale(scale, scale);
+
+        // Clip to animation bounds - ensures blur and other effects don't extend beyond composition
+        // This matches JavaScript/Lottie-web behavior where effects are clipped to canvas bounds
+        gc.beginPath();
+        gc.rect(0, 0, getAnimationWidth(), getAnimationHeight());
+        gc.clip();
 
         // Set default colors for debugging
         gc.setFill(Color.BLUE);

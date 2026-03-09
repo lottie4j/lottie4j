@@ -23,6 +23,7 @@ public class PrecompRenderer {
     private final TransformApplier transformApplier;
     private final TextRenderer textRenderer;
     private final ImageRenderer imageRenderer;
+    private final EffectsRenderer effectsRenderer;
 
     /**
      * Creates a precomposition renderer with required collaborators.
@@ -35,6 +36,7 @@ public class PrecompRenderer {
         this.transformApplier = transformApplier;
         this.textRenderer = textRenderer;
         this.imageRenderer = imageRenderer;
+        this.effectsRenderer = new EffectsRenderer();
     }
 
     /**
@@ -86,6 +88,9 @@ public class PrecompRenderer {
             }
         }
 
+        gc.save();
+        applyPrecompBoundsClip(gc, layer);
+
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
             Layer precompLayer = asset.layers().get(i);
             if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
@@ -104,6 +109,27 @@ public class PrecompRenderer {
                     shapeGroupRenderer,
                     shapeRendererDelegate);
         }
+
+        gc.restore();
+    }
+
+    private void applyPrecompBoundsClip(GraphicsContext gc, Layer precompLayer) {
+        if (precompLayer.width() == null || precompLayer.height() == null) {
+            return;
+        }
+
+        double width = precompLayer.width();
+        double height = precompLayer.height();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        gc.beginPath();
+        gc.rect(0, 0, width, height);
+        gc.closePath();
+        gc.clip();
+
+        logger.debug("Applied precomp bounds clip for {}: {}x{}", precompLayer.name(), width, height);
     }
 
     /**
@@ -119,6 +145,30 @@ public class PrecompRenderer {
                                     SolidColorLayerRenderer solidColorLayerRenderer,
                                     ShapeGroupRenderer shapeGroupRenderer,
                                     ShapeRendererDelegate shapeRendererDelegate) {
+        // Check for Gaussian Blur effect and render with blur if needed
+        double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
+        if (blurRadius > 0.0) {
+            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius,
+                    (blurGc, blurLayer, blurFrame) -> renderPrecompLayerInternal(blurGc, blurLayer, blurFrame, precompLayersByIndex, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate));
+            return;
+        }
+
+        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+    }
+
+    /**
+     * Internal rendering method for precomp layers (without blur handling).
+     */
+    private void renderPrecompLayerInternal(GraphicsContext gc,
+                                            Layer layer,
+                                            double frame,
+                                            Map<Integer, Layer> precompLayersByIndex,
+                                            Map<String, Asset> assetsById,
+                                            Animation animation,
+                                            LayerActivityEvaluator layerActivityEvaluator,
+                                            SolidColorLayerRenderer solidColorLayerRenderer,
+                                            ShapeGroupRenderer shapeGroupRenderer,
+                                            ShapeRendererDelegate shapeRendererDelegate) {
         gc.save();
 
         // Check layer opacity - skip rendering if transparent

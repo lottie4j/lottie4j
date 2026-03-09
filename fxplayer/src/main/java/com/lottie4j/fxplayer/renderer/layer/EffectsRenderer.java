@@ -3,6 +3,7 @@ package com.lottie4j.fxplayer.renderer.layer;
 import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.model.Layer;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.GaussianBlur;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +29,14 @@ public class EffectsRenderer {
 
         // Check if the layer has effects
         if (layer.effects() == null) {
+            logger.info("Layer {} has NO effects", layer.name());
             return blurRadius;
         }
 
+        logger.info("Layer {} has {} effects", layer.name(), layer.effects().size());
+
         for (var effect : layer.effects()) {
+            logger.info("  Effect type: {}, enabled: {}", effect.type(), effect.enabled());
             // Look for Gaussian Blur effect (type 14)
             if (effect.type() != EffectType.GAUSSIAN_BLUR) {
                 continue;
@@ -44,20 +49,43 @@ public class EffectsRenderer {
 
             // Look for "Blurriness" property in the effect values
             if (effect.values() != null) {
+                logger.info("  Effect has {} values", effect.values().size());
                 for (var effectValue : effect.values()) {
+                    logger.info("    Value name: {}", effectValue != null ? effectValue.name() : "null");
                     if (effectValue != null && "Blurriness".equals(effectValue.name())) {
                         if (effectValue.value() != null) {
                             double rawBlur = effectValue.value().getValue(0, frame);
-                            // Scale blur radius for JavaFX - After Effects blurriness is much stronger
-                            // Use much higher divisors to match the visual strength
-                            if (rawBlur > 100) {
-                                blurRadius = rawBlur / 10.0;  // Heavy blur - strong scale down
+
+                            // The key insight: Lottie-web's blur values of 700-800 create VERY diffuse blur
+                            // that makes shapes blend together into gradient-like appearances.
+                            // JavaFX blur is fundamentally limited to 63px radius.
+                            // Strategy: Use maximum blur (63) for all extreme values and rely on opacity
+                            // to create the gradient effect when multiple blurred shapes overlap.
+
+                            if (rawBlur > 400) {
+                                // Extreme blur (400+) - always use maximum
+                                blurRadius = 63.0;
+                            } else if (rawBlur > 200) {
+                                // Very high blur - scale to near maximum
+                                blurRadius = 50 + ((rawBlur - 200) / 200.0) * 13.0;
+                            } else if (rawBlur > 100) {
+                                // High blur
+                                blurRadius = 35 + ((rawBlur - 100) / 100.0) * 15.0;
                             } else if (rawBlur > 50) {
-                                blurRadius = rawBlur / 6.0;  // Medium blur
+                                // Medium-high blur
+                                blurRadius = 20 + ((rawBlur - 50) / 50.0) * 15.0;
+                            } else if (rawBlur > 20) {
+                                // Medium blur
+                                blurRadius = 10 + ((rawBlur - 20) / 30.0) * 10.0;
                             } else {
-                                blurRadius = rawBlur / 3.5;  // Light blur
+                                // Light blur
+                                blurRadius = rawBlur / 2.0;
                             }
-                            logger.debug("Gaussian Blur: raw={} scaled={} for layer {} at frame {}", rawBlur, blurRadius, layer.name(), frame);
+
+                            // Ensure we never exceed JavaFX's limit
+                            blurRadius = Math.min(63, blurRadius);
+
+                            logger.info("Gaussian Blur FOUND: raw={} scaled={} for layer {} at frame {}", rawBlur, blurRadius, layer.name(), frame);
                         }
                         break;
                     }
@@ -81,15 +109,26 @@ public class EffectsRenderer {
     public void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius, LayerRenderer layerRenderer) {
         gc.save();
 
-        // Apply the Gaussian blur effect
-        GaussianBlur blur = new GaussianBlur(blurRadius);
-        gc.setEffect(blur);
+        // Keep geometry unchanged; only apply a blur effect so positions/transforms stay correct.
+        if (blurRadius > 40) {
+            BoxBlur blur = new BoxBlur(blurRadius, blurRadius, 3);
+            gc.setEffect(blur);
+            layerRenderer.render(gc, layer, frame);
+            gc.setEffect(null);
+        } else if (blurRadius > 20) {
+            BoxBlur blur = new BoxBlur(blurRadius, blurRadius, 2);
+            gc.setEffect(blur);
+            layerRenderer.render(gc, layer, frame);
+            gc.setEffect(null);
+        } else {
+            GaussianBlur blur = new GaussianBlur(blurRadius);
+            gc.setEffect(blur);
+            layerRenderer.render(gc, layer, frame);
+            gc.setEffect(null);
+        }
 
-        // Render the layer normally
-        layerRenderer.render(gc, layer, frame);
-
-        gc.setEffect(null);
         gc.restore();
+        logger.info("Applied blur for layer {}: radius={}", layer.name(), blurRadius);
     }
 
     /**
@@ -107,4 +146,3 @@ public class EffectsRenderer {
         void render(GraphicsContext gc, Layer layer, double frame);
     }
 }
-
