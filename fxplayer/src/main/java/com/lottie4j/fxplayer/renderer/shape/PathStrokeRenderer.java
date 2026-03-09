@@ -148,6 +148,9 @@ public class PathStrokeRenderer {
 
     /**
      * Extracts stroke style from the parent group.
+     *
+     * @param group the parent group to search for stroke style
+     * @return optional containing the stroke style if found, empty otherwise
      */
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
@@ -163,6 +166,9 @@ public class PathStrokeRenderer {
 
     /**
      * Collects all Trim Path modifiers from the parent group.
+     *
+     * @param group the parent group to search for trim paths
+     * @return list of trim paths found in the group, empty list if none found
      */
     private List<TrimPath> getAllTrimPaths(Group group) {
         List<TrimPath> trimPaths = new ArrayList<>();
@@ -179,6 +185,10 @@ public class PathStrokeRenderer {
 
     /**
      * Returns true if the current frame is before the first timed keyframe.
+     *
+     * @param animated the animated property to check
+     * @param frame    the current frame number
+     * @return true if the frame is before the first keyframe, false otherwise
      */
     private boolean isBeforeFirstKeyframe(Animated animated, double frame) {
         if (animated == null || animated.keyframes() == null || animated.keyframes().isEmpty()) {
@@ -196,6 +206,10 @@ public class PathStrokeRenderer {
 
     /**
      * Returns true if any animated value starts after the current frame.
+     *
+     * @param animatedList list of animated properties to check
+     * @param frame        the current frame number
+     * @return true if any animation starts after the frame, false otherwise
      */
     private boolean isBeforeAnyKeyframe(List<Animated> animatedList, double frame) {
         for (Animated animated : animatedList) {
@@ -208,7 +222,15 @@ public class PathStrokeRenderer {
 
     /**
      * Gets trim value with NaN handling at keyframe boundaries.
-     * When getValue returns NaN at exact keyframe time, sample just before the keyframe.
+     * <p>
+     * When getValue returns NaN at exact keyframe time, samples just before the keyframe.
+     * If the sampled value is very close to 100 (end of animation), returns 0 instead
+     * to create an empty window (shape not visible). This prevents shapes from appearing
+     * when they shouldn't at keyframe boundaries.
+     *
+     * @param animated the animated property to sample
+     * @param frame    the current frame number
+     * @return the sampled trim value, with NaN handling applied
      */
     private double getTrimSampledValue(Animated animated, double frame) {
         if (animated == null) {
@@ -217,11 +239,19 @@ public class PathStrokeRenderer {
 
         double exact = animated.getValue(0, frame);
 
-        // Handle NaN at exact keyframe boundaries by sampling just before
+        // Handle NaN at exact keyframe boundaries
+        // NaN typically indicates a keyframe boundary where the animation transitions
         if (Double.isNaN(exact) && isAtAnimatedKeyframeTime(animated, frame)) {
             double sampledFrame = Math.max(0.0, frame - 1.0e-3);
             double sampled = animated.getValue(0, sampledFrame);
+
             if (!Double.isNaN(sampled)) {
+                // If sampled value is very close to 100 (end of animation),
+                // return 0 instead to create an empty window (shape not visible)
+                // This prevents shapes from appearing when they shouldn't at keyframe boundaries
+                if (sampled >= 99.0) {
+                    return 0.0;
+                }
                 return sampled;
             }
         }
@@ -231,6 +261,12 @@ public class PathStrokeRenderer {
 
     /**
      * Checks if the current frame is at an animated keyframe time.
+     * <p>
+     * Uses a tolerance of 0.01 frames to account for floating-point precision issues.
+     *
+     * @param animated the animated property to check
+     * @param frame    the current frame number
+     * @return true if the frame is at a keyframe time, false otherwise
      */
     private boolean isAtAnimatedKeyframeTime(Animated animated, double frame) {
         if (animated == null || animated.keyframes() == null || animated.keyframes().isEmpty()) {
@@ -248,6 +284,21 @@ public class PathStrokeRenderer {
 
     /**
      * Renders only the currently visible trim window for the path stroke.
+     * <p>
+     * This method calculates arc-length based trimming for precise segment extraction,
+     * handles both open and closed paths, and supports wrapped rendering for closed paths.
+     *
+     * @param gc                    the graphics context to render to
+     * @param vertices              path vertices
+     * @param tangentsIn            incoming Bezier tangents per vertex
+     * @param tangentsOut           outgoing Bezier tangents per vertex
+     * @param closed                whether the path is closed
+     * @param trimStart             trim start percentage (0-100)
+     * @param trimEnd               trim end percentage (0-100)
+     * @param strokeStyle           stroke style configuration
+     * @param strokeWidth           stroke width
+     * @param frame                 current animation frame
+     * @param animatedOffsetDegrees trim offset in degrees
      */
     private void renderTrimmedPath(GraphicsContext gc,
                                    List<List<Double>> vertices,
@@ -367,6 +418,16 @@ public class PathStrokeRenderer {
 
     /**
      * Calculates one segment length using line distance or Bezier length approximation.
+     * <p>
+     * For segments with Bezier tangents, uses arc-length approximation.
+     * For straight segments, uses Euclidean distance.
+     *
+     * @param vertices    path vertices
+     * @param tangentsIn  incoming Bezier tangents per vertex
+     * @param tangentsOut outgoing Bezier tangents per vertex
+     * @param i           current vertex index
+     * @param nextIdx     next vertex index
+     * @return the arc length of the segment
      */
     private double calculateSegmentLength(List<List<Double>> vertices,
                                           List<List<Double>> tangentsIn,
@@ -399,6 +460,18 @@ public class PathStrokeRenderer {
 
     /**
      * Approximates cubic Bezier length by fixed-point sampling.
+     * <p>
+     * Uses 10 sample points along the curve to calculate the arc length.
+     *
+     * @param x0 start point x coordinate
+     * @param y0 start point y coordinate
+     * @param x1 first control point x coordinate
+     * @param y1 first control point y coordinate
+     * @param x2 second control point x coordinate
+     * @param y2 second control point y coordinate
+     * @param x3 end point x coordinate
+     * @param y3 end point y coordinate
+     * @return approximated arc length of the Bezier curve
      */
     private double approximateBezierLength(double x0, double y0, double x1, double y1,
                                            double x2, double y2, double x3, double y3) {
@@ -431,6 +504,17 @@ public class PathStrokeRenderer {
 
     /**
      * Evaluates point coordinates on the segment at parameter {@code t}.
+     * <p>
+     * For Bezier segments, uses cubic Bezier evaluation.
+     * For straight segments, uses linear interpolation.
+     *
+     * @param vertices    path vertices
+     * @param tangentsIn  incoming Bezier tangents per vertex
+     * @param tangentsOut outgoing Bezier tangents per vertex
+     * @param i           current vertex index
+     * @param nextIdx     next vertex index
+     * @param t           parameter value (0-1) along the segment
+     * @return array containing [x, y] coordinates at parameter t
      */
     private double[] evaluateBezierSegment(List<List<Double>> vertices,
                                            List<List<Double>> tangentsIn,
@@ -473,6 +557,23 @@ public class PathStrokeRenderer {
 
     /**
      * Returns control points for the cubic subsection from {@code t0} to {@code t1}.
+     * <p>
+     * Subdivides a cubic Bezier curve defined by control points (x0, y0) to (x3, y3)
+     * with control points (x1, y1) and (x2, y2), extracting the subsection from
+     * parameter t0 to t1.
+     *
+     * @param x0 start point x coordinate
+     * @param y0 start point y coordinate
+     * @param x1 first control point x coordinate
+     * @param y1 first control point y coordinate
+     * @param x2 second control point x coordinate
+     * @param y2 second control point y coordinate
+     * @param x3 end point x coordinate
+     * @param y3 end point y coordinate
+     * @param t0 start parameter value (0-1)
+     * @param t1 end parameter value (0-1), must be greater than t0
+     * @return array of 4 elements [cp1x, cp1y, cp2x, cp2y] representing the two control points
+     * of the subdivided curve
      */
     private double[] subdivideBezierCurve(double x0, double y0, double x1, double y1,
                                           double x2, double y2, double x3, double y3,
@@ -480,16 +581,16 @@ public class PathStrokeRenderer {
         double dt = t1 - t0;
 
         double mt0 = 1 - t0;
-        double mt0_2 = mt0 * mt0;
-        double mt0_3 = mt0_2 * mt0;
-        double t0_2 = t0 * t0;
-        double t0_3 = t0_2 * t0;
+        double mt02 = mt0 * mt0;
+        double mt03 = mt02 * mt0;
+        double t02 = t0 * t0;
+        double t03 = t02 * t0;
 
-        double dpx = 3 * mt0_2 * (x1 - x0) + 6 * mt0 * t0 * (x2 - x1) + 3 * t0_2 * (x3 - x2);
-        double dpy = 3 * mt0_2 * (y1 - y0) + 6 * mt0 * t0 * (y2 - y1) + 3 * t0_2 * (y3 - y2);
+        double dpx = 3 * mt02 * (x1 - x0) + 6 * mt0 * t0 * (x2 - x1) + 3 * t02 * (x3 - x2);
+        double dpy = 3 * mt02 * (y1 - y0) + 6 * mt0 * t0 * (y2 - y1) + 3 * t02 * (y3 - y2);
 
-        double p0x = mt0_3 * x0 + 3 * mt0_2 * t0 * x1 + 3 * mt0 * t0_2 * x2 + t0_3 * x3;
-        double p0y = mt0_3 * y0 + 3 * mt0_2 * t0 * y1 + 3 * mt0 * t0_2 * y2 + t0_3 * y3;
+        double p0x = mt03 * x0 + 3 * mt02 * t0 * x1 + 3 * mt0 * t02 * x2 + t03 * x3;
+        double p0y = mt03 * y0 + 3 * mt02 * t0 * y1 + 3 * mt0 * t02 * y2 + t03 * y3;
         double cp1x = p0x + (dt / 3.0) * dpx;
         double cp1y = p0y + (dt / 3.0) * dpy;
 
@@ -512,7 +613,13 @@ public class PathStrokeRenderer {
     }
 
     /**
-     * Applies cap/join/miter and dash style.
+     * Applies cap/join/miter and dash style to the graphics context.
+     * <p>
+     * Delegates to applyStrokeStyleWithDashOffset with zero offset.
+     *
+     * @param gc     the graphics context to apply stroke style to
+     * @param stroke the stroke style configuration to apply
+     * @param frame  the current animation frame
      */
     private void applyStrokeStyle(GraphicsContext gc, Stroke stroke, double frame) {
         applyStrokeStyleWithDashOffset(gc, stroke, frame, 0.0);
@@ -520,6 +627,14 @@ public class PathStrokeRenderer {
 
     /**
      * Applies cap/join/miter and dash style with optional trim offset context.
+     * <p>
+     * Configures the graphics context with line cap, line join, miter limit, and stroke dash pattern.
+     * The trim offset is passed to the dash configuration for potential animated dash offset effects.
+     *
+     * @param gc                the graphics context to apply stroke style to
+     * @param stroke            the stroke style configuration to apply
+     * @param frame             the current animation frame
+     * @param trimOffsetDegrees the trim offset in degrees (used for dash offset calculation)
      */
     private void applyStrokeStyleWithDashOffset(GraphicsContext gc,
                                                 Stroke stroke,
@@ -546,17 +661,23 @@ public class PathStrokeRenderer {
         }
 
         if (stroke.strokeDashes() != null && !stroke.strokeDashes().isEmpty()) {
-            applyStrokeDashesWithAnimatedOffset(gc, stroke.strokeDashes(), frame, trimOffsetDegrees);
+            applyStrokeDashesWithAnimatedOffset(gc, stroke.strokeDashes(), frame);
         }
     }
 
     /**
      * Applies stroke dash pattern and offset from Lottie stroke dash entries.
+     * <p>
+     * Extracts dash, gap, and offset entries from the stroke dashes list and applies them
+     * to the graphics context. The resulting dash pattern is applied to the current stroke.
+     *
+     * @param gc           the graphics context to apply stroke dashes to
+     * @param strokeDashes list of stroke dash definitions (dash, gap, offset entries)
+     * @param frame        the current animation frame
      */
     private void applyStrokeDashesWithAnimatedOffset(GraphicsContext gc,
                                                      List<StrokeDash> strokeDashes,
-                                                     double frame,
-                                                     double trimOffsetDegrees) {
+                                                     double frame) {
         List<Double> dashArray = new ArrayList<>();
         double staticOffset = 0;
 
@@ -585,12 +706,28 @@ public class PathStrokeRenderer {
 
     /**
      * Normalizes trim percentage into [0, 100).
+     * <p>
+     * Uses modulo operation to wrap values larger than 100 or smaller than 0
+     * into the valid trim percentage range. For negative values, adds 100 to ensure
+     * proper wrapping behavior.
+     *
+     * @param value the trim percentage value to normalize
+     * @return the normalized value in the range [0, 100)
      */
     private double normalizeTrimPercent(double value) {
         double normalized = value % 100.0;
         return normalized < 0 ? normalized + 100.0 : normalized;
     }
 
+    /**
+     * Clamps trim percentage into [0, 100].
+     * <p>
+     * Restricts the given value to the valid trim percentage range without wrapping.
+     * Values below 0 are clamped to 0, values above 100 are clamped to 100.
+     *
+     * @param value the trim percentage value to clamp
+     * @return the clamped value in the range [0, 100]
+     */
     private double clampTrimPercent(double value) {
         if (value < 0.0) {
             return 0.0;
@@ -603,6 +740,12 @@ public class PathStrokeRenderer {
 
     /**
      * Converts Lottie trim offset in degrees to percentage units.
+     * <p>
+     * Translates a degree-based offset (0-360) to a trim percentage (0-100).
+     * This is used when applying rotational offsets to trim path animations.
+     *
+     * @param degrees the trim offset in degrees (0-360)
+     * @return the equivalent trim offset as a percentage (0-100)
      */
     private double degreesToTrimPercent(double degrees) {
         return (degrees / 360.0) * 100.0;
@@ -610,6 +753,15 @@ public class PathStrokeRenderer {
 
     /**
      * Checks whether a segment has valid Bezier tangent data.
+     * <p>
+     * Verifies that both tangent arrays exist and contain valid tangent vectors
+     * for the specified segment indices.
+     *
+     * @param tangentsIn  incoming Bezier tangents per vertex, may be null
+     * @param tangentsOut outgoing Bezier tangents per vertex, may be null
+     * @param i           current vertex index
+     * @param nextIdx     next vertex index
+     * @return true if the segment has valid Bezier tangent data, false otherwise
      */
     private boolean hasBezierSegmentForTrim(List<List<Double>> tangentsIn,
                                             List<List<Double>> tangentsOut,
@@ -628,6 +780,19 @@ public class PathStrokeRenderer {
 
     /**
      * Maps local arc length on a segment to Bezier parameter t.
+     * <p>
+     * Converts a distance along the segment arc length to the corresponding parameter
+     * value (0-1) for Bezier curve evaluation. Handles both straight line segments
+     * and cubic Bezier curves.
+     *
+     * @param vertices      path vertices
+     * @param tangentsIn    incoming Bezier tangents per vertex
+     * @param tangentsOut   outgoing Bezier tangents per vertex
+     * @param i             current vertex index
+     * @param nextIdx       next vertex index
+     * @param targetLength  desired arc length along the segment
+     * @param segmentLength total arc length of the segment
+     * @return parameter value t (0-1) corresponding to the target arc length
      */
     private double getSegmentTForArcLength(List<List<Double>> vertices,
                                            List<List<Double>> tangentsIn,
@@ -664,6 +829,21 @@ public class PathStrokeRenderer {
 
     /**
      * Approximates inverse arc-length lookup for a cubic Bezier via sampled cumulative lengths.
+     * <p>
+     * Uses 96 sample points along the Bezier curve to build a cumulative arc-length table,
+     * then performs linear interpolation to find the parameter t corresponding to the target arc length.
+     *
+     * @param x0           start point x coordinate
+     * @param y0           start point y coordinate
+     * @param x1           first control point x coordinate
+     * @param y1           first control point y coordinate
+     * @param x2           second control point x coordinate
+     * @param y2           second control point y coordinate
+     * @param x3           end point x coordinate
+     * @param y3           end point y coordinate
+     * @param targetLength desired arc length along the curve
+     * @param totalLength  total arc length of the curve
+     * @return parameter value t (0-1) corresponding to the target arc length, clamped to [0, 1]
      */
     private double mapBezierArcLengthToT(double x0, double y0, double x1, double y1,
                                          double x2, double y2, double x3, double y3,
