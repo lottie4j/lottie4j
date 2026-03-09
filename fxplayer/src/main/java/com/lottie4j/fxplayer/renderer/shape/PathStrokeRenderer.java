@@ -21,10 +21,31 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Renders stroke output for path-based shapes, including Trim Path handling.
+ * <p>
+ * This class owns stroke-specific behavior (line style, dashes, trim-window extraction,
+ * and arc-length based Bezier trim mapping) so {@code PathRenderer} can focus on path/fill.
+ */
 public class PathStrokeRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStrokeRenderer.class);
 
+    /**
+     * Renders stroke output for path-based shapes, including Trim Path handling.
+     * <p>
+     * This class owns stroke-specific behavior (line style, dashes, trim-window extraction,
+     * and arc-length based Bezier trim mapping) so {@code PathRenderer} can focus on path/fill.
+     *
+     * @param gc          JavaFX graphics context
+     * @param parentGroup parent shape group containing stroke/trim style items
+     * @param frame       current animation frame
+     * @param pathName    debug name of the path currently rendered
+     * @param vertices    path vertices
+     * @param tangentsIn  incoming Bezier tangents per vertex
+     * @param tangentsOut outgoing Bezier tangents per vertex
+     * @param closed      whether the path is closed
+     */
     public void renderStroke(GraphicsContext gc,
                              Group parentGroup,
                              double frame,
@@ -115,6 +136,9 @@ public class PathStrokeRenderer {
                 offsetAdjustedStart, offsetAdjustedEnd, strokeStyle.get(), strokeWidth, frame, combinedOffsetDegrees);
     }
 
+    /**
+     * Extracts stroke style from the parent group.
+     */
     private Optional<StrokeStyle> getStrokeStyle(Group group) {
         if (group == null) {
             return Optional.empty();
@@ -127,6 +151,9 @@ public class PathStrokeRenderer {
         return Optional.empty();
     }
 
+    /**
+     * Collects all Trim Path modifiers from the parent group.
+     */
     private List<TrimPath> getAllTrimPaths(Group group) {
         List<TrimPath> trimPaths = new ArrayList<>();
         if (group == null) {
@@ -140,6 +167,9 @@ public class PathStrokeRenderer {
         return trimPaths;
     }
 
+    /**
+     * Returns true if the current frame is before the first timed keyframe.
+     */
     private boolean isBeforeFirstKeyframe(Animated animated, double frame) {
         if (animated == null || animated.keyframes() == null || animated.keyframes().isEmpty()) {
             return false;
@@ -154,6 +184,9 @@ public class PathStrokeRenderer {
         return false;
     }
 
+    /**
+     * Returns true if any animated value starts after the current frame.
+     */
     private boolean isBeforeAnyKeyframe(List<Animated> animatedList, double frame) {
         for (Animated animated : animatedList) {
             if (isBeforeFirstKeyframe(animated, frame)) {
@@ -163,6 +196,9 @@ public class PathStrokeRenderer {
         return false;
     }
 
+    /**
+     * Renders only the currently visible trim window for the path stroke.
+     */
     private void renderTrimmedPath(GraphicsContext gc,
                                    List<List<Double>> vertices,
                                    List<List<Double>> tangentsIn,
@@ -271,6 +307,9 @@ public class PathStrokeRenderer {
         gc.restore();
     }
 
+    /**
+     * Calculates one segment length using line distance or Bezier length approximation.
+     */
     private double calculateSegmentLength(List<List<Double>> vertices,
                                           List<List<Double>> tangentsIn,
                                           List<List<Double>> tangentsOut,
@@ -296,6 +335,9 @@ public class PathStrokeRenderer {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    /**
+     * Approximates cubic Bezier length by fixed-point sampling.
+     */
     private double approximateBezierLength(double x0, double y0, double x1, double y1,
                                            double x2, double y2, double x3, double y3) {
         int samples = 10;
@@ -325,6 +367,9 @@ public class PathStrokeRenderer {
         return length;
     }
 
+    /**
+     * Evaluates point coordinates on the segment at parameter {@code t}.
+     */
     private double[] evaluateBezierSegment(List<List<Double>> vertices,
                                            List<List<Double>> tangentsIn,
                                            List<List<Double>> tangentsOut,
@@ -360,6 +405,9 @@ public class PathStrokeRenderer {
         return new double[]{x, y};
     }
 
+    /**
+     * Returns control points for the cubic subsection from {@code t0} to {@code t1}.
+     */
     private double[] subdivideBezierCurve(double x0, double y0, double x1, double y1,
                                           double x2, double y2, double x3, double y3,
                                           double t0, double t1) {
@@ -397,10 +445,16 @@ public class PathStrokeRenderer {
         return new double[]{cp1x, cp1y, cp2x, cp2y};
     }
 
+    /**
+     * Applies cap/join/miter and dash style.
+     */
     private void applyStrokeStyle(GraphicsContext gc, Stroke stroke, double frame) {
         applyStrokeStyleWithDashOffset(gc, stroke, frame, 0.0);
     }
 
+    /**
+     * Applies cap/join/miter and dash style with optional trim offset context.
+     */
     private void applyStrokeStyleWithDashOffset(GraphicsContext gc,
                                                 Stroke stroke,
                                                 double frame,
@@ -430,6 +484,9 @@ public class PathStrokeRenderer {
         }
     }
 
+    /**
+     * Applies stroke dash pattern and offset from Lottie stroke dash entries.
+     */
     private void applyStrokeDashesWithAnimatedOffset(GraphicsContext gc,
                                                      List<StrokeDash> strokeDashes,
                                                      double frame,
@@ -460,15 +517,24 @@ public class PathStrokeRenderer {
         }
     }
 
+    /**
+     * Normalizes trim percentage into [0, 100).
+     */
     private double normalizeTrimPercent(double value) {
         double normalized = value % 100.0;
         return normalized < 0 ? normalized + 100.0 : normalized;
     }
 
+    /**
+     * Converts Lottie trim offset in degrees to percentage units.
+     */
     private double degreesToTrimPercent(double degrees) {
         return (degrees / 360.0) * 100.0;
     }
 
+    /**
+     * Checks whether a segment has valid Bezier tangent data.
+     */
     private boolean hasBezierSegmentForTrim(List<List<Double>> tangentsIn,
                                             List<List<Double>> tangentsOut,
                                             int i,
@@ -484,6 +550,9 @@ public class PathStrokeRenderer {
         return tangOut.size() >= 2 && tangIn.size() >= 2;
     }
 
+    /**
+     * Maps local arc length on a segment to Bezier parameter t.
+     */
     private double getSegmentTForArcLength(List<List<Double>> vertices,
                                            List<List<Double>> tangentsIn,
                                            List<List<Double>> tangentsOut,
@@ -517,6 +586,9 @@ public class PathStrokeRenderer {
         return mapBezierArcLengthToT(x0, y0, x1, y1, x2, y2, x3, y3, clampedTarget, segmentLength);
     }
 
+    /**
+     * Approximates inverse arc-length lookup for a cubic Bezier via sampled cumulative lengths.
+     */
     private double mapBezierArcLengthToT(double x0, double y0, double x1, double y1,
                                          double x2, double y2, double x3, double y3,
                                          double targetLength, double totalLength) {
