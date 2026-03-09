@@ -118,12 +118,12 @@ public class PrecompRenderer {
 
         if (precompWidth > 0 && precompHeight > 0) {
             // Clip all child rendering to precomp bounds (including blurred layers).
-            logger.info("Setting precomp clip for {}: rect(0,0,{},{})", layer.referenceId(), precompWidth, precompHeight);
+            logger.debug("Setting precomp clip for {}: rect(0,0,{},{})", layer.referenceId(), precompWidth, precompHeight);
             gc.beginPath();
             gc.rect(0, 0, precompWidth, precompHeight);
             gc.clip();
         } else {
-            logger.info("No precomp clip for {} - bounds {}x{}", layer.referenceId(), precompWidth, precompHeight);
+            logger.debug("No precomp clip for {} - bounds {}x{}", layer.referenceId(), precompWidth, precompHeight);
         }
 
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
@@ -168,7 +168,7 @@ public class PrecompRenderer {
         // Check for Gaussian Blur effect and render with blur if needed
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
-            logger.info("Rendering blurred layer {} in precomp with bounds {}x{}", layer.name(), precompWidth, precompHeight);
+            logger.debug("Rendering blurred layer {} in precomp with bounds {}x{}", layer.name(), precompWidth, precompHeight);
 
             // Check layer opacity - skip rendering if transparent
             if (layer.transform() != null && layer.transform().opacity() != null) {
@@ -312,7 +312,7 @@ public class PrecompRenderer {
                                                SolidColorLayerRenderer solidColorLayerRenderer,
                                                ShapeGroupRenderer shapeGroupRenderer,
                                                ShapeRendererDelegate shapeRendererDelegate) {
-        logger.info("renderPrecompLayerContentOnly called for {} type={}", layer.name(), layer.layerType());
+        logger.debug("renderPrecompLayerContentOnly called for {} type={}", layer.name(), layer.layerType());
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             logger.warn("Nested precomp blur not supported for content-only rendering: {}", layer.name());
             return;
@@ -323,7 +323,7 @@ public class PrecompRenderer {
         } else if (layer.layerType() == LayerType.TEXT) {
             textRenderer.render(gc, layer, frame);
         } else if (layer.layerType() != LayerType.NULL) {
-            logger.info("Rendering shapes for layer {} - has {} shapes", layer.name(),
+            logger.debug("Rendering shapes for layer {} - has {} shapes", layer.name(),
                     layer.shapes() != null ? layer.shapes().size() : 0);
             renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate);
         } else {
