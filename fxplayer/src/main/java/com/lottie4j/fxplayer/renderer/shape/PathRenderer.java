@@ -56,7 +56,10 @@ public class PathRenderer implements ShapeRenderer {
 
         buildPathGeometry(gc, vertices, tangentsIn, tangentsOut);
         closePathIfNeeded(gc, bezierDef.closed(), vertices, tangentsIn, tangentsOut);
-        applyFill(gc, parentGroup, frame);
+
+        // Calculate bounding box for gradient coordinate transformation
+        double[] bounds = calculateBounds(vertices);
+        applyFill(gc, parentGroup, frame, bounds);
 
         // Delegate all stroke and trim-path rendering to dedicated collaborator.
         pathStrokeRenderer.renderStroke(gc, parentGroup, frame, path.name(), vertices, tangentsIn, tangentsOut, bezierDef.closed());
@@ -133,10 +136,16 @@ public class PathRenderer implements ShapeRenderer {
         gc.closePath();
     }
 
-    private void applyFill(GraphicsContext gc, Group parentGroup, double frame) {
+    private void applyFill(GraphicsContext gc, Group parentGroup, double frame, double[] bounds) {
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
-            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            Paint gradientPaint;
+            if (bounds != null && bounds.length == 4) {
+                // bounds = [minX, minY, width, height]
+                gradientPaint = gradientFillStyle.get().getPaint(frame, bounds[0], bounds[1], bounds[2], bounds[3]);
+            } else {
+                gradientPaint = gradientFillStyle.get().getPaint(frame);
+            }
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
             logger.debug("  Applying gradient fill, opacity: {}", opacity);
@@ -201,5 +210,39 @@ public class PathRenderer implements ShapeRenderer {
             return bezierInterpolator.getInterpolatedBezier(animatedBezier, frame);
         }
         return null;
+    }
+
+    /**
+     * Calculates bounding box from path vertices.
+     *
+     * @param vertices list of vertex coordinates
+     * @return array containing [minX, minY, width, height], or null if vertices are empty
+     */
+    private double[] calculateBounds(List<List<Double>> vertices) {
+        if (vertices == null || vertices.isEmpty()) {
+            return null;
+        }
+
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = Double.MIN_VALUE;
+        double maxY = Double.MIN_VALUE;
+
+        for (List<Double> vertex : vertices) {
+            if (vertex.size() >= 2) {
+                double x = vertex.get(0);
+                double y = vertex.get(1);
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+
+        if (minX == Double.MAX_VALUE) {
+            return null;
+        }
+
+        return new double[]{minX, minY, maxX - minX, maxY - minY};
     }
 }

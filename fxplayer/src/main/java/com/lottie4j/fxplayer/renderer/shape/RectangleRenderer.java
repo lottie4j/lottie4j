@@ -69,7 +69,7 @@ public class RectangleRenderer implements ShapeRenderer {
         // Check for gradient fill first, then regular fill
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
-            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            Paint gradientPaint = gradientFillStyle.get().getPaint(frame, renderX, renderY, width, height);
             gc.save();
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);

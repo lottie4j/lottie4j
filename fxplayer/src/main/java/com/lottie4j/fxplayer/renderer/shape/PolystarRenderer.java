@@ -176,11 +176,23 @@ public class PolystarRenderer implements ShapeRenderer {
 
         gc.closePath();
 
+        // Calculate bounding box for gradient coordinate transformation
+        double minX = Double.MAX_VALUE, maxX = Double.MIN_VALUE;
+        double minY = Double.MAX_VALUE, maxY = Double.MIN_VALUE;
+        for (int i = 0; i < xPoints.length; i++) {
+            minX = Math.min(minX, xPoints[i]);
+            maxX = Math.max(maxX, xPoints[i]);
+            minY = Math.min(minY, yPoints[i]);
+            maxY = Math.max(maxY, yPoints[i]);
+        }
+        double boundsWidth = maxX - minX;
+        double boundsHeight = maxY - minY;
+
         // Apply fill and stroke from parent group
         // Check for gradient fill first, then regular fill
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
-            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            Paint gradientPaint = gradientFillStyle.get().getPaint(frame, minX, minY, boundsWidth, boundsHeight);
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
             if (opacity < 1.0) {
