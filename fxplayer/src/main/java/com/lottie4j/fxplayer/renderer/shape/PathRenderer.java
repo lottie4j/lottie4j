@@ -458,8 +458,8 @@ public class PathRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(compensatedWidth)) {
                 gc.setStroke(strokeColor);
                 gc.setLineWidth(compensatedWidth);
-                // Pass animated offset for dash animation (snake crawling effect)
-                applyStrokeStyleWithDashOffset(gc, strokeStyle.stroke(), frame, parentGroup, animatedOffsetDegrees);
+                // Keep dash phase stable; trim geometry already provides the snake movement.
+                applyStrokeStyle(gc, strokeStyle.stroke(), frame, parentGroup);
                 gc.stroke();
                 logger.debug("  Stroke applied successfully");
             } else {
@@ -824,34 +824,15 @@ public class PathRenderer implements ShapeRenderer {
 
         if (!dashArray.isEmpty()) {
             double[] dashes = new double[dashArray.size()];
-            double cycleLength = 0;
             for (int i = 0; i < dashArray.size(); i++) {
                 dashes[i] = dashArray.get(i);
-                cycleLength += dashes[i];
-            }
-
-            // For odd-length dash arrays, JavaFX repeats the pattern, so cycle doubles
-            if ((dashes.length % 2) == 1) {
-                cycleLength *= 2;
             }
 
             gc.setLineDashes(dashes);
-
-            // Apply animated trim offset as dash offset, normalized by cycle length
-            // This keeps dashes at constant size while creating crawling animation
-            double animatedDashOffset = staticOffset + trimOffsetDegrees;
-
-            if (cycleLength > 0) {
-                // Normalize to cycle so dashes don't visually resize
-                animatedDashOffset = animatedDashOffset % cycleLength;
-                if (animatedDashOffset < 0) {
-                    animatedDashOffset += cycleLength;
-                }
-            }
-
-            gc.setLineDashOffset(animatedDashOffset);
-            logger.debug("Applied stroke dashes: {} cycle={} static offset={} trim offset={} effective offset={}",
-                    java.util.Arrays.toString(dashes), cycleLength, staticOffset, trimOffsetDegrees, animatedDashOffset);
+            // Use stroke dash offset only; trim offset is handled by trim-path geometry.
+            gc.setLineDashOffset(staticOffset);
+            logger.debug("Applied stroke dashes: {} with static offset {} (trim offset ignored for dash phase)",
+                    java.util.Arrays.toString(dashes), staticOffset);
         }
     }
 
@@ -922,7 +903,7 @@ public class PathRenderer implements ShapeRenderer {
             return 1.0;
         }
 
-        int samples = 48;
+        int samples = 96;
         double[] ts = new double[samples + 1];
         double[] lengths = new double[samples + 1];
 
