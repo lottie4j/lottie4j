@@ -4,6 +4,7 @@ import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
+import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
@@ -363,9 +364,15 @@ class CompareWithWebViewTest {
                 
                         window.seekToFrame = function(frame) {
                             animation.goToAndStop(frame, true);
-                            // Force one layout pass to flush renderer state.
+                            // Force layout reflow to ensure DOM is updated
                             var svg = document.querySelector('svg');
-                            if (svg) { void svg.getBoundingClientRect(); }
+                            if (svg) {
+                                void svg.getBoundingClientRect();
+                                // Force a repaint by accessing and modifying a style property
+                                var originalOpacity = svg.style.opacity;
+                                svg.style.opacity = (originalOpacity === '' || originalOpacity === '1') ? '0.9999' : '1';
+                                svg.style.opacity = originalOpacity === '' ? '' : originalOpacity;
+                            }
                         };
                 
                         window.isAnimationReady = function() {
@@ -407,7 +414,8 @@ class CompareWithWebViewTest {
     }
 
     /**
-     * Seeks both renderers to the target frame and waits until WebView reports the expected frame.
+     * Seeks both renderers to the target frame and waits until both are confirmed rendered.
+     * Uses FX pulse cycles to ensure rendering is complete without blocking threads.
      */
     private void seekAndSyncFrame(LottiePlayer fxPlayer, WebView webView, int targetFrame) throws InterruptedException {
         CountDownLatch updateLatch = new CountDownLatch(1);
@@ -422,8 +430,9 @@ class CompareWithWebViewTest {
         });
         updateLatch.await();
 
-        boolean synced = waitForWebViewFrame(webView, targetFrame, 2000);
-        if (!synced) {
+        // Verify WebView has the correct frame
+        boolean webViewSynced = waitForWebViewFrame(webView, targetFrame, 2000);
+        if (!webViewSynced) {
             CountDownLatch debugLatch = new CountDownLatch(1);
             final String[] debug = new String[1];
             Platform.runLater(() -> {
@@ -438,8 +447,9 @@ class CompareWithWebViewTest {
             System.out.printf("WARNING: WebView did not sync to frame %d in time. %s%n", targetFrame, debug[0]);
         }
 
-        // Let both pipelines settle before snapshot without sleeping.
-        waitForFxPulses(2);
+        // Wait for both renderers to complete rendering on next pulse cycle.
+        // This ensures FX's scene graph is updated and WebView DOM is settled.
+        waitForBothRenderersReady(webView, targetFrame, 3000);
     }
 
     /**
@@ -509,6 +519,61 @@ class CompareWithWebViewTest {
             CountDownLatch pulse = new CountDownLatch(1);
             Platform.runLater(pulse::countDown);
             pulse.await();
+        }
+    }
+
+    /**
+     * Waits until both renderers confirm they have rendered the target frame.
+     * Uses AnimationTimer to ensure rendering is complete on the next pulse cycle.
+     */
+    private void waitForBothRenderersReady(WebView webView, int targetFrame, long timeoutMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        CountDownLatch readyLatch = new CountDownLatch(1);
+
+        Platform.runLater(() -> {
+            AnimationTimer timer = new AnimationTimer() {
+                private static final int REQUIRED_PULSES = 2;
+                private int pulseCount = 0;
+
+                @Override
+                public void handle(long now) {
+                    pulseCount++;
+
+                    // After multiple pulse cycles, check if WebView is ready
+                    if (pulseCount >= REQUIRED_PULSES) {
+                        try {
+                            // Verify WebView frame - it should report the target frame after rendering
+                            Object frameObj = webView.getEngine().executeScript("window.getCurrentFrame && window.getCurrentFrame()");
+                            int webViewFrame = frameObj instanceof Number n ? n.intValue() : -1;
+
+                            // If WebView reports the correct frame and enough pulses have passed, we're ready
+                            if (webViewFrame == targetFrame) {
+                                this.stop();
+                                readyLatch.countDown();
+                            }
+                        } catch (Exception e) {
+                            // Continue waiting
+                        }
+
+                        // Timeout check
+                        if (System.currentTimeMillis() >= deadline) {
+                            this.stop();
+                            readyLatch.countDown();
+                        }
+                    }
+                }
+            };
+            timer.start();
+        });
+
+        try {
+            boolean completed = readyLatch.await(timeoutMs + 500, TimeUnit.MILLISECONDS);
+            if (!completed) {
+                System.out.printf("WARNING: Timeout waiting for both renderers to be ready for frame %d%n", targetFrame);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         }
     }
 
