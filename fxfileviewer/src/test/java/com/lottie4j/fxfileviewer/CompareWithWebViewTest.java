@@ -18,7 +18,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 class CompareWithWebViewTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CompareWithWebViewTest.class);
@@ -80,7 +81,6 @@ class CompareWithWebViewTest {
 
     @ParameterizedTest
     @MethodSource("lottieJsonFiles")
-    @Disabled("WebView rendering requires display - run locally only")
     void testLoadLottieFile(String fileName) throws Exception {
         logger.info("Testing: {}", fileName);
 
