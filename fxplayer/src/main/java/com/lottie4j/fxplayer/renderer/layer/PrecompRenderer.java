@@ -89,7 +89,6 @@ public class PrecompRenderer {
         }
 
         gc.save();
-        applyPrecompBoundsClip(gc, layer);
 
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
             Layer precompLayer = asset.layers().get(i);
@@ -98,12 +97,15 @@ public class PrecompRenderer {
             }
             logger.debug("Rendering precomp layer [{}] ind={} name='{}'",
                     i, precompLayer.indexLayer(), precompLayer.name());
+
             renderPrecompLayer(gc,
                     precompLayer,
                     localFrame,
                     precompLayersByIndex,
                     assetsById,
                     animation,
+                    -1,
+                    -1,
                     layerActivityEvaluator,
                     solidColorLayerRenderer,
                     shapeGroupRenderer,
@@ -111,25 +113,6 @@ public class PrecompRenderer {
         }
 
         gc.restore();
-    }
-
-    private void applyPrecompBoundsClip(GraphicsContext gc, Layer precompLayer) {
-        if (precompLayer.width() == null || precompLayer.height() == null) {
-            return;
-        }
-
-        double width = precompLayer.width();
-        double height = precompLayer.height();
-        if (width <= 0 || height <= 0) {
-            return;
-        }
-
-        gc.beginPath();
-        gc.rect(0, 0, width, height);
-        gc.closePath();
-        gc.clip();
-
-        logger.debug("Applied precomp bounds clip for {}: {}x{}", precompLayer.name(), width, height);
     }
 
     /**
@@ -141,6 +124,8 @@ public class PrecompRenderer {
                                     Map<Integer, Layer> precompLayersByIndex,
                                     Map<String, Asset> assetsById,
                                     Animation animation,
+                                    double precompWidth,
+                                    double precompHeight,
                                     LayerActivityEvaluator layerActivityEvaluator,
                                     SolidColorLayerRenderer solidColorLayerRenderer,
                                     ShapeGroupRenderer shapeGroupRenderer,
@@ -148,7 +133,8 @@ public class PrecompRenderer {
         // Check for Gaussian Blur effect and render with blur if needed
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
-            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius,
+            // Pass precomp bounds to clip the blur effect to the precomp boundaries
+            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, precompWidth, precompHeight,
                     (blurGc, blurLayer, blurFrame) -> renderPrecompLayerInternal(blurGc, blurLayer, blurFrame, precompLayersByIndex, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate));
             return;
         }

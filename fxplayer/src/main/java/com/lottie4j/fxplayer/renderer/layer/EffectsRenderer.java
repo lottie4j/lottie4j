@@ -2,9 +2,11 @@ package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.model.Layer;
+import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.GaussianBlur;
+import javafx.scene.image.WritableImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +36,8 @@ public class EffectsRenderer {
         }
 
         logger.info("Layer {} has {} effects", layer.name(), layer.effects().size());
+        // Log track matte and mask info for blur layers
+        logger.info("  Layer matteMode: {}, hasMask: {}", layer.matteMode(), layer.masks() != null && !layer.masks().isEmpty());
 
         for (var effect : layer.effects()) {
             logger.info("  Effect type: {}, enabled: {}", effect.type(), effect.enabled());
@@ -107,28 +111,78 @@ public class EffectsRenderer {
      * @param layerRenderer callback to render the layer content
      */
     public void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius, LayerRenderer layerRenderer) {
-        gc.save();
+        renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, -1, -1, layerRenderer);
+    }
 
-        // Keep geometry unchanged; only apply a blur effect so positions/transforms stay correct.
-        if (blurRadius > 40) {
-            BoxBlur blur = new BoxBlur(blurRadius, blurRadius, 3);
-            gc.setEffect(blur);
-            layerRenderer.render(gc, layer, frame);
-            gc.setEffect(null);
-        } else if (blurRadius > 20) {
-            BoxBlur blur = new BoxBlur(blurRadius, blurRadius, 2);
-            gc.setEffect(blur);
-            layerRenderer.render(gc, layer, frame);
-            gc.setEffect(null);
-        } else {
-            GaussianBlur blur = new GaussianBlur(blurRadius);
-            gc.setEffect(blur);
-            layerRenderer.render(gc, layer, frame);
-            gc.setEffect(null);
+    /**
+     * Renders a layer with Gaussian Blur effect applied and optional bounds clipping.
+     *
+     * @param gc            graphics context
+     * @param layer         layer to render
+     * @param frame         animation frame
+     * @param blurRadius    blur radius to apply
+     * @param boundsWidth   clipping width in local coordinates; <= 0 disables bounds clipping
+     * @param boundsHeight  clipping height in local coordinates; <= 0 disables bounds clipping
+     * @param layerRenderer callback to render the layer content
+     */
+    public void renderLayerWithGaussianBlur(GraphicsContext gc,
+                                            Layer layer,
+                                            double frame,
+                                            double blurRadius,
+                                            double boundsWidth,
+                                            double boundsHeight,
+                                            LayerRenderer layerRenderer) {
+        logger.info("renderLayerWithGaussianBlur called for layer {}: blurRadius={}, boundsWidth={}, boundsHeight={}",
+                layer.name(), blurRadius, boundsWidth, boundsHeight);
+
+        if (boundsWidth > 0 && boundsHeight > 0) {
+            // Create offscreen buffer with padding for blur spread
+            double padding = Math.ceil(blurRadius * 2);
+            double offscreenWidth = boundsWidth + padding * 2;
+            double offscreenHeight = boundsHeight + padding * 2;
+            logger.info("Creating offscreen buffer: {}x{} with padding={}", offscreenWidth, offscreenHeight, padding);
+
+            // Render blurred content into expanded offscreen buffer to allow blur to spread
+            WritableImage blurredImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+                offscreenGc.save();
+                // Translate to account for padding
+                offscreenGc.translate(padding, padding);
+                applyBlurEffect(offscreenGc, blurRadius);
+                layerRenderer.render(offscreenGc, layer, frame);
+                offscreenGc.setEffect(null);
+                offscreenGc.restore();
+            });
+
+            // Draw back to main canvas with clipping to precomp bounds
+            gc.save();
+            gc.beginPath();
+            gc.rect(0, 0, boundsWidth, boundsHeight);
+            gc.closePath();
+            gc.clip();
+            // Draw image offset by negative padding to align content
+            gc.drawImage(blurredImage, -padding, -padding);
+            gc.restore();
+
+            logger.info("Applied bounded blur for layer {}: radius={} bounds={}x{}", layer.name(), blurRadius, boundsWidth, boundsHeight);
+            return;
         }
 
+        gc.save();
+        applyBlurEffect(gc, blurRadius);
+        layerRenderer.render(gc, layer, frame);
+        gc.setEffect(null);
         gc.restore();
         logger.info("Applied blur for layer {}: radius={}", layer.name(), blurRadius);
+    }
+
+    private void applyBlurEffect(GraphicsContext gc, double blurRadius) {
+        if (blurRadius > 40) {
+            gc.setEffect(new BoxBlur(blurRadius, blurRadius, 3));
+        } else if (blurRadius > 20) {
+            gc.setEffect(new BoxBlur(blurRadius, blurRadius, 2));
+        } else {
+            gc.setEffect(new GaussianBlur(blurRadius));
+        }
     }
 
     /**
