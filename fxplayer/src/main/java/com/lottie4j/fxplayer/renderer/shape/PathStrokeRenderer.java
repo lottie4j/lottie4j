@@ -322,10 +322,14 @@ public class PathStrokeRenderer {
             List<Double> tangOut = tangentsOut.get(i);
             List<Double> tangIn = tangentsIn.get(nextIdx);
             if (tangOut.size() >= 2 && tangIn.size() >= 2) {
-                double x0 = p0.get(0), y0 = p0.get(1);
-                double x1 = x0 + tangOut.get(0), y1 = y0 + tangOut.get(1);
-                double x2 = p3.get(0) + tangIn.get(0), y2 = p3.get(1) + tangIn.get(1);
-                double x3 = p3.get(0), y3 = p3.get(1);
+                double x0 = p0.get(0);
+                double y0 = p0.get(1);
+                double x1 = x0 + tangOut.get(0);
+                double y1 = y0 + tangOut.get(1);
+                double x2 = p3.get(0) + tangIn.get(0);
+                double y2 = p3.get(1) + tangIn.get(1);
+                double x3 = p3.get(0);
+                double y3 = p3.get(1);
                 return approximateBezierLength(x0, y0, x1, y1, x2, y2, x3, y3);
             }
         }
@@ -383,10 +387,14 @@ public class PathStrokeRenderer {
             List<Double> tangOut = tangentsOut.get(i);
             List<Double> tangIn = tangentsIn.get(nextIdx);
             if (tangOut.size() >= 2 && tangIn.size() >= 2) {
-                double x0 = p0.get(0), y0 = p0.get(1);
-                double x1 = x0 + tangOut.get(0), y1 = y0 + tangOut.get(1);
-                double x2 = p3.get(0) + tangIn.get(0), y2 = p3.get(1) + tangIn.get(1);
-                double x3 = p3.get(0), y3 = p3.get(1);
+                double x0 = p0.get(0);
+                double y0 = p0.get(1);
+                double x1 = x0 + tangOut.get(0);
+                double y1 = y0 + tangOut.get(1);
+                double x2 = p3.get(0) + tangIn.get(0);
+                double y2 = p3.get(1) + tangIn.get(1);
+                double x3 = p3.get(0);
+                double y3 = p3.get(1);
 
                 double t2 = t * t;
                 double t3 = t2 * t;
@@ -428,16 +436,16 @@ public class PathStrokeRenderer {
         double cp1y = p0y + (dt / 3.0) * dpy;
 
         double mt1 = 1 - t1;
-        double mt1_2 = mt1 * mt1;
-        double mt1_3 = mt1_2 * mt1;
-        double t1_2 = t1 * t1;
-        double t1_3 = t1_2 * t1;
+        double mt12 = mt1 * mt1;
+        double mt13 = mt12 * mt1;
+        double t12 = t1 * t1;
+        double t13 = t12 * t1;
 
-        double p3x = mt1_3 * x0 + 3 * mt1_2 * t1 * x1 + 3 * mt1 * t1_2 * x2 + t1_3 * x3;
-        double p3y = mt1_3 * y0 + 3 * mt1_2 * t1 * y1 + 3 * mt1 * t1_2 * y2 + t1_3 * y3;
+        double p3x = mt13 * x0 + 3 * mt12 * t1 * x1 + 3 * mt1 * t12 * x2 + t13 * x3;
+        double p3y = mt13 * y0 + 3 * mt12 * t1 * y1 + 3 * mt1 * t12 * y2 + t13 * y3;
 
-        double dpx1 = 3 * mt1_2 * (x1 - x0) + 6 * mt1 * t1 * (x2 - x1) + 3 * t1_2 * (x3 - x2);
-        double dpy1 = 3 * mt1_2 * (y1 - y0) + 6 * mt1 * t1 * (y2 - y1) + 3 * t1_2 * (y3 - y2);
+        double dpx1 = 3 * mt12 * (x1 - x0) + 6 * mt1 * t1 * (x2 - x1) + 3 * t12 * (x3 - x2);
+        double dpy1 = 3 * mt12 * (y1 - y0) + 6 * mt1 * t1 * (y2 - y1) + 3 * t12 * (y3 - y2);
 
         double cp2x = p3x - (dt / 3.0) * dpx1;
         double cp2y = p3y - (dt / 3.0) * dpy1;

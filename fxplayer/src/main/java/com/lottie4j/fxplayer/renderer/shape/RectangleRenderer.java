@@ -124,9 +124,8 @@ public class RectangleRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
                 double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
 
-                logger.debug("Drawing rectangle stroke with color and width: "
-                        + strokeStyle.get().getColor(frame)
-                        + strokeWidth + " (compensated: " + compensatedWidth + ")");
+                logger.debug("Drawing rectangle stroke with color {} and width: {} (compensated: {})",
+                        strokeStyle.get().getColor(frame), strokeWidth, compensatedWidth);
                 gc.setStroke(strokeStyle.get().getColor(frame));
                 gc.setLineWidth(compensatedWidth);
                 if (radius > 0) {

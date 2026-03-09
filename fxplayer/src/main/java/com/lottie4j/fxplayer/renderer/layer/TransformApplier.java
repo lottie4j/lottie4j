@@ -140,13 +140,13 @@ public class TransformApplier {
             scaleY *= rx3DScale;
 
             if (includeOpacity) {
-                logger.debug("Scaling by: " + scaleX + ", " + scaleY);
+                logger.debug("Scaling by: {},{}", scaleX, scaleY);
             } else {
-                logger.debug("Scaling by (without opacity): " + scaleX + ", " + scaleY);
+                logger.debug("Scaling by (without opacity): {},{}", scaleX, scaleY);
             }
 
             if (scaleX <= 0 || scaleY <= 0) {
-                logger.debug("WARNING: Zero or negative scale detected! scaleX=" + scaleX + ", scaleY=" + scaleY);
+                logger.debug("WARNING: Zero or negative scale detected! scaleX={}, scaleY={}", scaleX, scaleY);
             }
 
             gc.scale(scaleX, scaleY);
@@ -158,9 +158,9 @@ public class TransformApplier {
             double anchorX = layer.transform().anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = layer.transform().anchor().getValue(AnimatedValueType.Y, frame);
             if (includeOpacity) {
-                logger.debug("Layer anchor: " + anchorX + ", " + anchorY);
+                logger.debug("Layer anchor: {},{}", anchorX, anchorY);
             } else {
-                logger.debug("Layer anchor (without opacity): " + anchorX + ", " + anchorY);
+                logger.debug("Layer anchor (without opacity): {},{}", anchorX, anchorY);
             }
             gc.translate(-anchorX, -anchorY);
         }
@@ -185,7 +185,7 @@ public class TransformApplier {
         if (transform.opacity() != null) {
             double opacityValue = transform.opacity().getValue(0, frame);
             double opacity = opacityValue / 100.0;
-            logger.debug("Group opacity raw: " + opacityValue + ", normalized: " + opacity);
+            logger.debug("Group opacity raw: {}, normalized: {}", opacityValue, opacity);
             if (opacity > 0) {
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
             }
@@ -194,27 +194,27 @@ public class TransformApplier {
         if (transform.position() != null) {
             double x = transform.position().getValue(AnimatedValueType.X, frame);
             double y = transform.position().getValue(AnimatedValueType.Y, frame);
-            logger.debug("Group translation: " + x + ", " + y);
+            logger.debug("Group translation: {},{}", x, y);
             gc.translate(x, y);
         }
 
         if (transform.rotation() != null) {
             double rotationDegrees = transform.rotation().getValue(0, frame);
-            logger.debug("Group rotation: " + rotationDegrees + " degrees");
+            logger.debug("Group rotation: {} degrees", rotationDegrees);
             gc.rotate(rotationDegrees);
         }
 
         if (transform.scale() != null) {
             double scaleX = transform.scale().getValue(AnimatedValueType.X, frame) / 100.0;
             double scaleY = transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0;
-            logger.debug("Group scale: " + scaleX + ", " + scaleY);
+            logger.debug("Group scale: {},{}", scaleX, scaleY);
             gc.scale(scaleX, scaleY);
         }
 
         if (transform.anchor() != null) {
             double anchorX = transform.anchor().getValue(AnimatedValueType.X, frame);
             double anchorY = transform.anchor().getValue(AnimatedValueType.Y, frame);
-            logger.debug("Group anchor: " + anchorX + ", " + anchorY);
+            logger.debug("Group anchor: {},{}", anchorX, anchorY);
             gc.translate(-anchorX, -anchorY);
         }
     }

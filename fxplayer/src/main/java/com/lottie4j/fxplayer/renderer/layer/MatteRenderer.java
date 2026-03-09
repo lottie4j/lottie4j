@@ -34,7 +34,7 @@ public class MatteRenderer {
         // For ALPHA matte mode: content should only show where matte is opaque
 
         MatteMode matteMode = matteUser.matteMode();
-        logger.debug("Rendering with blend mode matte: " + matteMode);
+        logger.debug("Rendering with blend mode matte: {}", matteMode);
 
         // First render the content layer normally
         layerRenderer.render(gc, matteUser, frame);
@@ -86,16 +86,18 @@ public class MatteRenderer {
         contentGc.scale(scale, scale);
 
         // Render the matte source to the matte canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte source layer: " + matteSource.name() + " (shapes: " + (matteSource.shapes() != null ? matteSource.shapes().size() : 0) + ", parent: " + matteSource.indexParent() + ")");
+        logger.debug("Rendering matte source layer: {} (shapes: {}), parent: {}",
+                matteSource.name(), (matteSource.shapes() != null ? matteSource.shapes().size() : 0), matteSource.indexParent());
         layerRenderer.render(matteGc, matteSource, frame);
 
         // Render the content layer to the content canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte user layer: " + matteUser.name() + " (shapes: " + (matteUser.shapes() != null ? matteUser.shapes().size() : 0) + ", parent: " + matteUser.indexParent() + ")");
+        logger.debug("Rendering matte user layer: {} (shapes: {}), parent: {}",
+                matteUser.name(), (matteUser.shapes() != null ? matteUser.shapes().size() : 0), matteUser.indexParent());
         layerRenderer.render(contentGc, matteUser, frame);
 
         // Get the matte mode
         MatteMode matteMode = matteUser.matteMode();
-        logger.debug("Applying matte mode: " + matteMode);
+        logger.debug("Applying matte mode: {}", matteMode);
 
         // Snapshot both canvases with transparent background
         SnapshotParameters params = new SnapshotParameters();
@@ -138,7 +140,7 @@ public class MatteRenderer {
         gc.restore();
 
         long endTime = System.nanoTime();
-        logger.debug("Matte rendering took: " + ((endTime - startTime) / 1_000_000) + "ms");
+        logger.debug("Matte rendering took: {}ms", ((endTime - startTime) / 1_000_000));
     }
 
     /**

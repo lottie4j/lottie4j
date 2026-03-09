@@ -31,7 +31,7 @@ public class PolystarRenderer implements ShapeRenderer {
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         if (!(shape instanceof Polystar polystar)) {
-            logger.warn("PolystarRenderer called with non-Polystar shape: " + shape.getClass().getSimpleName());
+            logger.warn("PolystarRenderer called with non-Polystar shape: {}", shape.getClass().getSimpleName());
             return;
         }
 
@@ -56,7 +56,7 @@ public class PolystarRenderer implements ShapeRenderer {
                 (int) Math.round(polystar.points().getValue(0, frame)) : 5;
 
         if (numPoints < 3) {
-            logger.warn("Polystar must have at least 3 points, got: " + numPoints);
+            logger.warn("Polystar must have at least 3 points, got: {}", numPoints);
             numPoints = 3;
         }
 

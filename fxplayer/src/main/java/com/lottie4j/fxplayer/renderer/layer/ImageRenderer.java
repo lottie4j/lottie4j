@@ -39,14 +39,14 @@ public class ImageRenderer {
                 .orElse(null);
 
         if (asset == null) {
-            logger.warn("Could not find asset with ID: " + layer.referenceId());
+            logger.warn("Could not find asset with ID: {}", layer.referenceId());
             return;
         }
 
         // Get the image data from the asset
         Image image = getImageFromAsset(asset);
         if (image == null) {
-            logger.warn("Could not load image from asset: " + asset.id());
+            logger.warn("Could not load image from asset: {}", asset.id());
             return;
         }
 
@@ -57,7 +57,7 @@ public class ImageRenderer {
         // Draw the image (0, 0 because transforms are already applied)
         gc.drawImage(image, 0, 0, width, height);
 
-        logger.debug("Rendered image layer: " + layer.name() + " (" + width + "x" + height + ")");
+        logger.debug("Rendered image layer: {} ({},{})", layer.name(), width, height);
     }
 
     /**
