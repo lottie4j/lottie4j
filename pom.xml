@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.lottie4j</groupId>
     <artifactId>lottie4j</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Lottie4J</name>
     <description>Java library for parsing and rendering Lottie animations</description>
