@@ -134,7 +134,7 @@ public class PathStrokeRenderer {
         }
 
         if (Math.abs(visibleWindow) < 0.01) {
-            logger.warn("EMPTY_PATH FRAME {}: visibleWindow={} - NOT RENDERING", frame, visibleWindow);
+            logger.debug("EMPTY_PATH FRAME {}: visibleWindow={} - NOT RENDERING", frame, visibleWindow);
             return;
         }
 
