@@ -28,6 +28,12 @@ public class PolystarRenderer implements ShapeRenderer {
     private static final Logger logger = LoggerFactory.getLogger(PolystarRenderer.class);
 
     /**
+     * Creates a new PolystarRenderer.
+     */
+    public PolystarRenderer() {
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
      * Renders a Lottie polystar (polygon or star) shape with fill and stroke support.

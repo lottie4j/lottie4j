@@ -13,6 +13,18 @@ import java.util.List;
 /**
  * Top level object, describing the
  * <a href="https://lottiefiles.github.io/lottie-docs/composition/#animation">Lottie Docs: Animation</a>
+ *
+ * @param version          Lottie format version
+ * @param name             animation name
+ * @param matchName        animation match name
+ * @param has3dLayers      flag indicating 3D layers
+ * @param framesPerSecond  frames per second
+ * @param inPoint          start frame
+ * @param outPoint         end frame
+ * @param width            animation width in pixels
+ * @param height           animation height in pixels
+ * @param assets           list of assets used in the animation
+ * @param layers           list of layers in the animation
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

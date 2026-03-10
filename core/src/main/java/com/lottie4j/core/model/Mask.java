@@ -8,6 +8,10 @@ import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/layers/#masks">Lottie Docs: Mask</a>
+ *
+ * @param name      mask name
+ * @param matchName mask match name
+ * @param inverted  whether the mask is inverted
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Mask(

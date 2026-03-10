@@ -28,6 +28,12 @@ public class RectangleRenderer implements ShapeRenderer {
     private static final Logger logger = LoggerFactory.getLogger(RectangleRenderer.class);
 
     /**
+     * Creates a new RectangleRenderer.
+     */
+    public RectangleRenderer() {
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
      * Renders a Lottie rectangle shape with support for rounded corners, gradients, and both fill and stroke styles.

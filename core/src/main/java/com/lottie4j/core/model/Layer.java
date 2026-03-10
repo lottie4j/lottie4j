@@ -15,6 +15,36 @@ import java.util.List;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/layers/">Lottie Docs: Layer</a>
+ *
+ * @param name           layer name
+ * @param matchName      layer match name
+ * @param has3dLayers    flag indicating 3D layers
+ * @param hidden         layer visibility flag
+ * @param layerType      type of the layer
+ * @param indexLayer     layer index
+ * @param indexParent    parent layer index
+ * @param timeStretch    time stretch value
+ * @param inPoint        in point for layer timing
+ * @param outPoint       out point for layer timing
+ * @param startTime      start time of the layer
+ * @param blendMode      blend mode for the layer
+ * @param clazz          CSS class attribute
+ * @param idAttribute    ID attribute
+ * @param tagName        HTML tag name
+ * @param matteMode      matte mode for masking
+ * @param matteTarget    matte target layer
+ * @param masks          list of masks applied to the layer
+ * @param effects        list of effects applied to the layer
+ * @param transform      transform properties for the layer
+ * @param autoRotate     auto-rotation flag
+ * @param hix            unknown property
+ * @param shapes         list of shapes for shape layers
+ * @param referenceId    reference ID for precomposition layers
+ * @param width          width for precomposition layers
+ * @param height         height for precomposition layers
+ * @param timeRemapping  time remapping for precomposition layers
+ * @param solidColor     solid color for solid color layers
+ * @param textData       text data for text layers
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

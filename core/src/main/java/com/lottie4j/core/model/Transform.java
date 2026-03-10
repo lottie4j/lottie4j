@@ -10,6 +10,17 @@ import com.lottie4j.core.info.PropertyListingList;
 
 /**
  * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
+ *
+ * @param anchor   anchor point
+ * @param position position
+ * @param scale    scale
+ * @param rotation rotation
+ * @param rx       X-axis rotation
+ * @param ry       Y-axis rotation
+ * @param rz       Z-axis rotation
+ * @param skew     skew angle
+ * @param skewAxis skew axis
+ * @param opacity  opacity
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
