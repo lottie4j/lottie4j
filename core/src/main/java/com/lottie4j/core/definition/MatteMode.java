@@ -21,6 +21,12 @@ public enum MatteMode implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a MatteMode with the specified value and label.
+     *
+     * @param value the numeric value representing this matte mode
+     * @param label the human-readable label for this matte mode
+     */
     MatteMode(int value, String label) {
         this.value = value;
         this.label = label;
@@ -28,6 +34,10 @@ public enum MatteMode implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the matte mode value
+     * @return the MatteMode corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any MatteMode
      */
     @JsonCreator
     public static MatteMode fromValue(String value) throws LottieModelDefinitionException {
@@ -37,10 +47,20 @@ public enum MatteMode implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(MatteMode.class, value));
     }
 
+    /**
+     * Returns the numeric value of this matte mode.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this matte mode.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

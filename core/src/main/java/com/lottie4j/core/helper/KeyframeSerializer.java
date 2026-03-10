@@ -13,17 +13,26 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Custom serializer for Keyframe lists that handles proper JSON formatting.
+ * A custom serializer is needed as:
+ * <ul>
+ *     <li>A single value must be written as value</li>
+ *     <li>Multiple values must be written as array</li>
+ *     <li>Zero value must be written as 0 and not 0.0</li>
+ * </ul>
+ */
 public class KeyframeSerializer extends JsonSerializer {
 
     private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
-     * A custom serializer is needed as
-     * <ul>
-     *     <li>A single value must be written as value</li>
-     *     <li>Multiple values must be written as array</li>
-     *     <li>Zero value must be written as 0 and not 0.0</li>
-     * </ul>
+     * Serializes a list of keyframes to JSON.
+     *
+     * @param o the object to serialize (expected to be a List of Keyframes)
+     * @param jsonGenerator the JSON generator
+     * @param serializerProvider the serializer provider
+     * @throws IOException if serialization fails
      */
     @Override
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
@@ -38,6 +47,13 @@ public class KeyframeSerializer extends JsonSerializer {
         }
     }
 
+    /**
+     * Converts a keyframe to its JSON string representation.
+     * Formats numbers as integers when appropriate and handles timed keyframes.
+     *
+     * @param keyframe the keyframe to convert
+     * @return the string representation
+     */
     private String getNumberValue(Keyframe keyframe) {
         if (keyframe instanceof NumberKeyframe numberKeyframe) {
             return Math.round(numberKeyframe.doubleValue()) == numberKeyframe.doubleValue() ?

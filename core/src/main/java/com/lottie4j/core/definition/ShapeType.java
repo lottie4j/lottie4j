@@ -35,12 +35,26 @@ public enum ShapeType implements DefinitionWithLabel {
     private final String label;
     private final ShapeGroup shapeGroup;
 
+    /**
+     * Constructs a ShapeType with the specified value, label, and shape group.
+     *
+     * @param value the string value representing this shape type
+     * @param label the human-readable label for this shape type
+     * @param shapeGroup the shape group category this type belongs to
+     */
     ShapeType(String value, String label, ShapeGroup shapeGroup) {
         this.value = value;
         this.label = label;
         this.shapeGroup = shapeGroup;
     }
 
+    /**
+     * Creates a ShapeType from its string value.
+     *
+     * @param value the string representation of the shape type
+     * @return the ShapeType corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any ShapeType
+     */
     @JsonCreator
     public static ShapeType fromValue(String value) throws LottieModelDefinitionException {
         for (ShapeType shapeType : ShapeType.values()) {
@@ -51,15 +65,30 @@ public enum ShapeType implements DefinitionWithLabel {
         throw new LottieModelDefinitionException(ShapeType.class, value);
     }
 
+    /**
+     * Returns the string value of this shape type.
+     *
+     * @return the string value
+     */
     public String value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this shape type.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;
     }
 
+    /**
+     * Returns the shape group category this type belongs to.
+     *
+     * @return the shape group
+     */
     public ShapeGroup shapeGroup() {
         return shapeGroup;
     }

@@ -137,6 +137,13 @@ public record Animated(
         return startValue + (endValue - startValue) * easedProgress;
     }
 
+    /**
+     * Get value for multi-value animated properties (like position, color) at a specific frame.
+     *
+     * @param valueType the type of value to retrieve (X, Y, RED, GREEN, etc.)
+     * @param frame     the current animation frame
+     * @return the interpolated value at the given frame
+     */
     public Double getValue(AnimatedValueType valueType, double frame) {
         // Check if this uses separated dimensions (s: true means x and y are separate Animated objects)
         if (s != null && s) {
@@ -225,6 +232,13 @@ public record Animated(
         return startValue + (endValue - startValue) * progress;
     }
 
+    /**
+     * Extracts a specific value from a timed keyframe by index.
+     *
+     * @param keyframe the keyframe to extract from
+     * @param index    the index of the value within the keyframe
+     * @return the value at the specified index, or 0 if not available
+     */
     private Double getValueFromKeyframe(TimedKeyframe keyframe, int index) {
         if (keyframe.values() == null || keyframe.values().isEmpty() || index >= keyframe.values().size()) {
             return 0D;
@@ -232,6 +246,12 @@ public record Animated(
         return keyframe.values().get(index).doubleValue();
     }
 
+    /**
+     * Gets a static (non-animated) value from keyframe at specified index.
+     *
+     * @param idx the keyframe index
+     * @return the value, or 0 if not available
+     */
     public Double getValue(int idx) {
         if (keyframes == null || keyframes.isEmpty() || keyframes.size() <= idx) {
             return 0D;
@@ -279,7 +299,14 @@ public record Animated(
     }
 
     /**
-     * Calculate cubic Bezier value at t for control points p0, p1, p2, p3
+     * Calculate cubic Bezier value at t for control points p0, p1, p2, p3.
+     *
+     * @param t  the parameter value (0-1)
+     * @param p0 first control point
+     * @param p1 second control point
+     * @param p2 third control point
+     * @param p3 fourth control point
+     * @return the Bezier curve value at parameter t
      */
     private double cubicBezier(double t, double p0, double p1, double p2, double p3) {
         double t2 = t * t;
@@ -292,7 +319,14 @@ public record Animated(
     }
 
     /**
-     * Calculate derivative of cubic Bezier at t for control points p0, p1, p2, p3
+     * Calculate derivative of cubic Bezier at t for control points p0, p1, p2, p3.
+     *
+     * @param t  the parameter value (0-1)
+     * @param p0 first control point
+     * @param p1 second control point
+     * @param p2 third control point
+     * @param p3 fourth control point
+     * @return the derivative of the Bezier curve at parameter t
      */
     private double cubicBezierDerivative(double t, double p0, double p1, double p2, double p3) {
         double t2 = t * t;

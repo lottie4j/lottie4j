@@ -32,6 +32,12 @@ public enum EffectType implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs an EffectType with the specified value and label.
+     *
+     * @param value the numeric value representing this effect type
+     * @param label the human-readable label for this effect type
+     */
     EffectType(int value, String label) {
         this.value = value;
         this.label = label;
@@ -39,6 +45,10 @@ public enum EffectType implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the effect type value
+     * @return the EffectType corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any EffectType
      */
     @JsonCreator
     public static EffectType fromValue(String value) throws LottieModelDefinitionException {
@@ -48,10 +58,20 @@ public enum EffectType implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(EffectType.class, value));
     }
 
+    /**
+     * Returns the numeric value of this effect type.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this effect type.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

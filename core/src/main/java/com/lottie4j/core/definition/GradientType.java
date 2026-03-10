@@ -18,6 +18,12 @@ public enum GradientType implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a GradientType with the specified value and label.
+     *
+     * @param value the numeric value representing this gradient type
+     * @param label the human-readable label for this gradient type
+     */
     GradientType(int value, String label) {
         this.value = value;
         this.label = label;
@@ -25,6 +31,10 @@ public enum GradientType implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the gradient type value
+     * @return the GradientType corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any GradientType
      */
     @JsonCreator
     public static GradientType fromValue(String value) throws LottieModelDefinitionException {
@@ -34,10 +44,20 @@ public enum GradientType implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(GradientType.class, value));
     }
 
+    /**
+     * Returns the numeric value of this gradient type.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this gradient type.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

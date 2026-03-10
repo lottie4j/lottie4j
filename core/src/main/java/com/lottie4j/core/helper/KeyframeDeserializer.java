@@ -16,10 +16,23 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Custom deserializer for Keyframe objects that handles both single values and arrays.
+ * Determines whether to create TimedKeyframe or NumberKeyframe based on JSON structure.
+ */
 public class KeyframeDeserializer extends JsonDeserializer {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
+    /**
+     * Deserializes JSON into a list of Keyframe objects.
+     * Handles both array and single value representations.
+     *
+     * @param jsonParser the JSON parser
+     * @param deserializationContext the deserialization context
+     * @return list of deserialized keyframes
+     * @throws IOException if parsing fails
+     */
     @Override
     public List<Keyframe> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
         List<Keyframe> rt = new ArrayList<>();
@@ -38,6 +51,12 @@ public class KeyframeDeserializer extends JsonDeserializer {
         return rt;
     }
 
+    /**
+     * Determines the appropriate Keyframe type based on JSON node structure.
+     *
+     * @param node the JSON node to parse
+     * @return a TimedKeyframe if timing fields are present, otherwise a NumberKeyframe
+     */
     private Keyframe getKeyframe(JsonNode node) {
         if (node.has("i") || node.has("o") || node.has("t") || node.has("x")) {
             return mapper.convertValue(node, TimedKeyframe.class);
@@ -46,6 +65,12 @@ public class KeyframeDeserializer extends JsonDeserializer {
         }
     }
 
+    /**
+     * Extracts a double value from a JSON node, handling both integer and decimal types.
+     *
+     * @param node the JSON node
+     * @return the double value
+     */
     private Double getValue(JsonNode node) {
         if (node instanceof IntNode) {
             return (double) node.intValue();

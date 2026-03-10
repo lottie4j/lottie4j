@@ -18,6 +18,12 @@ public enum FillRule implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a FillRule with the specified value and label.
+     *
+     * @param value the numeric value representing this fill rule
+     * @param label the human-readable label for this fill rule
+     */
     FillRule(int value, String label) {
         this.value = value;
         this.label = label;
@@ -25,6 +31,10 @@ public enum FillRule implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the fill rule value
+     * @return the FillRule corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any FillRule
      */
     @JsonCreator
     public static FillRule fromValue(String value) throws LottieModelDefinitionException {
@@ -34,10 +44,20 @@ public enum FillRule implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(FillRule.class, value));
     }
 
+    /**
+     * Returns the numeric value of this fill rule.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this fill rule.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

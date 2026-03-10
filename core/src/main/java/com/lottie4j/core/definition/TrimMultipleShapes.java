@@ -18,6 +18,12 @@ public enum TrimMultipleShapes implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a TrimMultipleShapes with the specified value and label.
+     *
+     * @param value the numeric value representing this trim mode
+     * @param label the human-readable label for this trim mode
+     */
     TrimMultipleShapes(int value, String label) {
         this.value = value;
         this.label = label;
@@ -25,6 +31,10 @@ public enum TrimMultipleShapes implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the trim mode value
+     * @return the TrimMultipleShapes corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any TrimMultipleShapes
      */
     @JsonCreator
     public static TrimMultipleShapes fromValue(String value) throws LottieModelDefinitionException {
@@ -34,10 +44,20 @@ public enum TrimMultipleShapes implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(TrimMultipleShapes.class, value));
     }
 
+    /**
+     * Returns the numeric value of this trim mode.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this trim mode.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

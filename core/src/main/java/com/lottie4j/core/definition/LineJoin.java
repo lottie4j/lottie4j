@@ -19,6 +19,12 @@ public enum LineJoin implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a LineJoin with the specified value and label.
+     *
+     * @param value the numeric value representing this line join type
+     * @param label the human-readable label for this line join type
+     */
     LineJoin(int value, String label) {
         this.value = value;
         this.label = label;
@@ -26,6 +32,10 @@ public enum LineJoin implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the line join value
+     * @return the LineJoin corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any LineJoin
      */
     @JsonCreator
     public static LineJoin fromValue(String value) throws LottieModelDefinitionException {
@@ -35,10 +45,20 @@ public enum LineJoin implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(LineJoin.class, value));
     }
 
+    /**
+     * Returns the numeric value of this line join type.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this line join type.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

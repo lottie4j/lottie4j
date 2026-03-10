@@ -32,6 +32,12 @@ public enum BlendMode implements DefinitionWithLabel {
     private final int value;
     private final String label;
 
+    /**
+     * Constructs a BlendMode with the specified value and label.
+     *
+     * @param value the numeric value representing this blend mode
+     * @param label the human-readable label for this blend mode
+     */
     BlendMode(int value, String label) {
         this.value = value;
         this.label = label;
@@ -39,6 +45,10 @@ public enum BlendMode implements DefinitionWithLabel {
 
     /**
      * Some files seem to contain decimal values. So some extra convertion is needed.
+     *
+     * @param value the string representation of the blend mode value
+     * @return the BlendMode corresponding to the given value
+     * @throws LottieModelDefinitionException if the value doesn't match any BlendMode
      */
     @JsonCreator
     public static BlendMode fromValue(String value) throws LottieModelDefinitionException {
@@ -48,10 +58,20 @@ public enum BlendMode implements DefinitionWithLabel {
                 .orElseThrow(() -> new LottieModelDefinitionException(BlendMode.class, value));
     }
 
+    /**
+     * Returns the numeric value of this blend mode.
+     *
+     * @return the numeric value
+     */
     public int value() {
         return value;
     }
 
+    /**
+     * Returns the human-readable label for this blend mode.
+     *
+     * @return the label
+     */
     @Override
     public String label() {
         return label;

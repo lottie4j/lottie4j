@@ -9,10 +9,23 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Custom serializer for nested lists of Double values (List of List of Double).
+ * Formats numbers as integers when appropriate and handles coordinate pairs.
+ */
 public class ListListSerializer extends JsonSerializer {
 
     private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
+    /**
+     * Serializes a nested list structure to JSON.
+     * Each inner list is expected to contain coordinate pairs.
+     *
+     * @param o the object to serialize (expected to be a List of List of Doubles)
+     * @param jsonGenerator the JSON generator
+     * @param serializerProvider the serializer provider
+     * @throws IOException if serialization fails
+     */
     @Override
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         String rt = "[" +
@@ -23,6 +36,13 @@ public class ListListSerializer extends JsonSerializer {
         jsonGenerator.writeRawValue(rt);
     }
 
+    /**
+     * Formats a double value for JSON output.
+     * Returns "0" for zero, integer format for whole numbers, otherwise decimal format.
+     *
+     * @param value the value to format
+     * @return the formatted string
+     */
     private String getValue(Double value) {
         return value == 0 ? "0" : (value % 1) == 0 ? String.valueOf(Math.round(value)) : String.valueOf(value);
     }

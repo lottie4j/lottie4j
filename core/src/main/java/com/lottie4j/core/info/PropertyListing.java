@@ -5,5 +5,10 @@ package com.lottie4j.core.info;
  */
 public interface PropertyListing {
 
+    /**
+     * Returns a structured property listing for this object.
+     *
+     * @return property listing with labels and values
+     */
     PropertyListingList getList();
 }

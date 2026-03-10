@@ -11,8 +11,21 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Custom deserializer for Double lists that handles both single values and arrays.
+ * Normalizes single double values into a list for consistent handling.
+ */
 public class ListDoubleDeserializer extends JsonDeserializer {
 
+    /**
+     * Deserializes JSON into a list of Double values.
+     * Accepts both array notation and single values.
+     *
+     * @param jsonParser the JSON parser
+     * @param deserializationContext the deserialization context
+     * @return list of double values
+     * @throws IOException if parsing fails
+     */
     @Override
     public List<Double> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
         List<Double> rt = new ArrayList<>();
