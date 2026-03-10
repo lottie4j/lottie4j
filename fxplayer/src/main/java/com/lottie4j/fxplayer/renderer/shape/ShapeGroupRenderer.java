@@ -241,7 +241,7 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Add a Path shape's bezier curves to the current canvas path.
+     * Adds a Path shape's Bezier curves to the current canvas path.
      *
      * @param gc    graphics context
      * @param path  path shape
@@ -324,7 +324,8 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Gets interpolated bezier for animated paths.
+     * Gets interpolated Bezier definition for animated paths.
+     * Currently not fully implemented for combined path rendering.
      *
      * @param animatedBezier animated bezier data
      * @param frame          animation frame

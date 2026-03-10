@@ -3,6 +3,10 @@ package com.lottie4j.fxplayer.util;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
 
+/**
+ * Utility for extracting frame timing and composition dimensions from Lottie animations.
+ * Provides safe defaults when animation properties are absent.
+ */
 public final class FrameTiming {
 
     /**

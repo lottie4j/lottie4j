@@ -150,6 +150,17 @@ public class EffectsRenderer {
         logger.debug("Applied direct blur (no bounds) for layer {}: radius={}", layer.name(), blurRadius);
     }
 
+    /**
+     * Renders layer content with blur applied, clipped to specified bounds.
+     *
+     * @param gc            graphics context
+     * @param layer         layer to render
+     * @param frame         animation frame
+     * @param blurRadius    blur radius
+     * @param boundsWidth   clipping width
+     * @param boundsHeight  clipping height
+     * @param layerRenderer callback to render layer content
+     */
     private void renderWithBoundedBlur(GraphicsContext gc,
                                        Layer layer,
                                        double frame,
@@ -186,6 +197,13 @@ public class EffectsRenderer {
                 layer.name(), blurRadius, padding, padding, boundsWidth, boundsHeight, boundsWidth, boundsHeight);
     }
 
+    /**
+     * Applies the appropriate blur effect based on radius magnitude.
+     * Uses BoxBlur for large radii and GaussianBlur for smaller ones.
+     *
+     * @param gc         graphics context
+     * @param blurRadius blur radius
+     */
     private void applyBlurEffect(GraphicsContext gc, double blurRadius) {
         if (blurRadius > 40) {
             gc.setEffect(new BoxBlur(blurRadius, blurRadius, 3));

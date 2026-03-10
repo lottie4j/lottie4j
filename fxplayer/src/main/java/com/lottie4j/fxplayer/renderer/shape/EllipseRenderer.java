@@ -22,6 +22,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * Renders Lottie ellipse shapes with support for fill, stroke, gradients, and trim path.
+ * Handles both full ellipse rendering and arc rendering when trim path is applied.
+ */
 public class EllipseRenderer implements ShapeRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(EllipseRenderer.class);

@@ -1,5 +1,9 @@
 package com.lottie4j.fxplayer.util;
 
+/**
+ * Helper utility for normalizing and clamping Lottie animation values.
+ * Handles conversion between different value ranges (0-1 vs 0-255).
+ */
 public class LottieValueHelper {
 
     /**

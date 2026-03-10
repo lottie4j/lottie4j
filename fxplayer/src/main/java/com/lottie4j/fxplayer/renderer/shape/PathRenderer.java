@@ -31,6 +31,11 @@ public class PathRenderer implements ShapeRenderer {
     /**
      * Builds the JavaFX path for the current frame, applies fill styles,
      * then delegates stroke and trim-path rendering.
+     *
+     * @param gc          graphics context
+     * @param shape       path shape to render
+     * @param parentGroup parent group containing styles
+     * @param frame       animation frame
      */
     @Override
     public void render(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
@@ -67,6 +72,14 @@ public class PathRenderer implements ShapeRenderer {
         gc.restore();
     }
 
+    /**
+     * Builds the path geometry by adding vertices and Bezier curves to the graphics context.
+     *
+     * @param gc          graphics context
+     * @param vertices    path vertices
+     * @param tangentsIn  incoming tangent vectors
+     * @param tangentsOut outgoing tangent vectors
+     */
     private void buildPathGeometry(GraphicsContext gc,
                                    List<List<Double>> vertices,
                                    List<List<Double>> tangentsIn,
@@ -107,6 +120,15 @@ public class PathRenderer implements ShapeRenderer {
         }
     }
 
+    /**
+     * Closes the path with a Bezier curve if marked as closed.
+     *
+     * @param gc          graphics context
+     * @param closed      whether the path should be closed
+     * @param vertices    path vertices
+     * @param tangentsIn  incoming tangent vectors
+     * @param tangentsOut outgoing tangent vectors
+     */
     private void closePathIfNeeded(GraphicsContext gc,
                                    Boolean closed,
                                    List<List<Double>> vertices,
@@ -136,6 +158,14 @@ public class PathRenderer implements ShapeRenderer {
         gc.closePath();
     }
 
+    /**
+     * Applies fill color or gradient to the current path.
+     *
+     * @param gc          graphics context
+     * @param parentGroup parent group containing fill styles
+     * @param frame       animation frame
+     * @param bounds      bounding box for gradient coordinate transformation
+     */
     private void applyFill(GraphicsContext gc, Group parentGroup, double frame, double[] bounds) {
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
@@ -172,6 +202,9 @@ public class PathRenderer implements ShapeRenderer {
 
     /**
      * Returns solid fill style from the parent group if present.
+     *
+     * @param group parent group to search
+     * @return optional fill style
      */
     private Optional<FillStyle> getFillStyle(Group group) {
         if (group == null) {
@@ -187,6 +220,9 @@ public class PathRenderer implements ShapeRenderer {
 
     /**
      * Returns gradient fill style from the parent group if present.
+     *
+     * @param group parent group to search
+     * @return optional gradient fill style
      */
     private Optional<GradientFillStyle> getGradientFillStyle(Group group) {
         if (group == null) {
@@ -202,6 +238,10 @@ public class PathRenderer implements ShapeRenderer {
 
     /**
      * Resolves either fixed or interpolated Bezier definition for the frame.
+     *
+     * @param shape path shape containing bezier data
+     * @param frame animation frame
+     * @return bezier definition for rendering
      */
     private BezierDefinition getBezierDefinition(Path shape, double frame) {
         if (shape.bezier() instanceof FixedBezier fixedBezier) {

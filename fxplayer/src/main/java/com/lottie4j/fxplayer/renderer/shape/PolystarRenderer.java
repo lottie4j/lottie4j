@@ -117,9 +117,8 @@ public class PolystarRenderer implements ShapeRenderer {
 
         // If roundness is applied, use quadratic curves instead of straight lines
         if (outerRoundness > 0 || innerRoundness > 0) {
-            // Implement quadratic curve drawing for rounded corners
+            // TODO: Implement quadratic curve drawing for rounded corners
             // Use gc.quadraticCurveTo() for rounded corners
-            // TODO
         }
     }
 

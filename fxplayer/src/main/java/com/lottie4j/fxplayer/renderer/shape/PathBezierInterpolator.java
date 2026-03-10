@@ -139,7 +139,14 @@ public class PathBezierInterpolator {
     }
 
     /**
-     * Evaluates a cubic Bezier at parameter {@code t}.
+     * Evaluates a cubic Bezier curve at parameter {@code t}.
+     *
+     * @param t  parameter value in [0, 1]
+     * @param p0 first control point
+     * @param p1 second control point
+     * @param p2 third control point
+     * @param p3 fourth control point
+     * @return evaluated curve value at parameter t
      */
     private double cubicBezier(double t, double p0, double p1, double p2, double p3) {
         double t2 = t * t;
@@ -151,7 +158,14 @@ public class PathBezierInterpolator {
     }
 
     /**
-     * Evaluates the derivative of a cubic Bezier at parameter {@code t}.
+     * Evaluates the derivative of a cubic Bezier curve at parameter {@code t}.
+     *
+     * @param t  parameter value in [0, 1]
+     * @param p0 first control point
+     * @param p1 second control point
+     * @param p2 third control point
+     * @param p3 fourth control point
+     * @return derivative value at parameter t
      */
     private double cubicBezierDerivative(double t, double p0, double p1, double p2, double p3) {
         double t2 = t * t;

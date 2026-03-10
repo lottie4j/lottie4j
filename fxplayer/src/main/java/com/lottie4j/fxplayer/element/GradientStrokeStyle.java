@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Wrapper for Lottie gradient stroke definitions, converting them to JavaFX gradient paints.
+ * Supports both linear and radial gradients with alpha channel interpolation.
+ */
 public class GradientStrokeStyle {
 
     private final GradientStroke gradientStroke;

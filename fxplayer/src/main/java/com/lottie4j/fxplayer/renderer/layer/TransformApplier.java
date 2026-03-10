@@ -7,6 +7,10 @@ import javafx.scene.canvas.GraphicsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Applies transform operations from Lottie layers and shape groups to JavaFX graphics context.
+ * Handles translation, rotation, scaling, anchors, and opacity transforms with proper nesting support.
+ */
 public class TransformApplier {
 
     private static final Logger logger = LoggerFactory.getLogger(TransformApplier.class);

@@ -152,6 +152,19 @@ public class PrecompRenderer {
 
     /**
      * Renders a single layer inside a precomposition, including recursive nested precomps.
+     *
+     * @param gc                      graphics context
+     * @param layer                   precomp child layer
+     * @param frame                   local precomp frame
+     * @param precompLayersByIndex    layer lookup map
+     * @param assetsById              asset lookup map
+     * @param animation               root animation
+     * @param precompWidth            precomp width for clipping
+     * @param precompHeight           precomp height for clipping
+     * @param layerActivityEvaluator  layer activity callback
+     * @param solidColorLayerRenderer solid color renderer callback
+     * @param shapeGroupRenderer      shape group renderer callback
+     * @param shapeRendererDelegate   shape renderer callback
      */
     private void renderPrecompLayer(GraphicsContext gc,
                                     Layer layer,
@@ -197,6 +210,19 @@ public class PrecompRenderer {
 
     /**
      * Internal rendering method for precomp layers (without blur handling).
+     *
+     * @param gc                      graphics context
+     * @param layer                   precomp child layer
+     * @param frame                   local precomp frame
+     * @param precompLayersByIndex    layer lookup map
+     * @param assetsById              asset lookup map
+     * @param animation               root animation
+     * @param parentPrecompWidth      parent precomp width
+     * @param parentPrecompHeight     parent precomp height
+     * @param layerActivityEvaluator  layer activity callback
+     * @param solidColorLayerRenderer solid color renderer callback
+     * @param shapeGroupRenderer      shape group renderer callback
+     * @param shapeRendererDelegate   shape renderer callback
      */
     private void renderPrecompLayerInternal(GraphicsContext gc,
                                             Layer layer,
@@ -302,6 +328,16 @@ public class PrecompRenderer {
     /**
      * Renders only the content of a precomp layer (shapes/images) without applying transforms.
      * Used for blur rendering where transforms are applied externally.
+     *
+     * @param gc                      graphics context
+     * @param layer                   precomp layer
+     * @param frame                   local precomp frame
+     * @param assetsById              asset lookup map
+     * @param animation               root animation
+     * @param layerActivityEvaluator  layer activity callback
+     * @param solidColorLayerRenderer solid color renderer callback
+     * @param shapeGroupRenderer      shape group renderer callback
+     * @param shapeRendererDelegate   shape renderer callback
      */
     private void renderPrecompLayerContentOnly(GraphicsContext gc,
                                                Layer layer,
@@ -357,6 +393,15 @@ public class PrecompRenderer {
         transformApplier.applyLayerTransformWithoutOpacity(gc, parent, frame);
     }
 
+    /**
+     * Resolves the effective width of a precomposition from layer, asset, or animation fallbacks.
+     *
+     * @param layer          precomp layer
+     * @param asset          precomp asset
+     * @param animation      root animation
+     * @param inheritedWidth width inherited from parent precomp
+     * @return resolved width, or -1 if unavailable
+     */
     private double resolvePrecompWidth(Layer layer, Asset asset, Animation animation, double inheritedWidth) {
         if (layer.width() != null && layer.width() > 0) {
             return layer.width();
@@ -375,6 +420,15 @@ public class PrecompRenderer {
         return -1;
     }
 
+    /**
+     * Resolves the effective height of a precomposition from layer, asset, or animation fallbacks.
+     *
+     * @param layer           precomp layer
+     * @param asset           precomp asset
+     * @param animation       root animation
+     * @param inheritedHeight height inherited from parent precomp
+     * @return resolved height, or -1 if unavailable
+     */
     private double resolvePrecompHeight(Layer layer, Asset asset, Animation animation, double inheritedHeight) {
         if (layer.height() != null && layer.height() > 0) {
             return layer.height();

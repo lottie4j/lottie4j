@@ -134,26 +134,55 @@ public class LottiePlayer extends Canvas {
         renderFrame(getInPoint());
     }
 
+    /**
+     * Gets the starting frame index for playback.
+     *
+     * @return animation in-point frame
+     */
     private int getInPoint() {
         return FrameTiming.getInPoint(animation);
     }
 
+    /**
+     * Gets the ending frame index for playback.
+     *
+     * @return animation out-point frame
+     */
     private int getOutPoint() {
         return FrameTiming.getOutPoint(animation);
     }
 
+    /**
+     * Gets the animation playback frame rate.
+     *
+     * @return frames per second
+     */
     private int getFramesPerSecond() {
         return FrameTiming.getFramesPerSecond(animation);
     }
 
+    /**
+     * Gets the animation composition width.
+     *
+     * @return animation width in pixels
+     */
     private int getAnimationWidth() {
         return FrameTiming.getAnimationWidth(animation);
     }
 
+    /**
+     * Gets the animation composition height.
+     *
+     * @return animation height in pixels
+     */
     private int getAnimationHeight() {
         return FrameTiming.getAnimationHeight(animation);
     }
 
+    /**
+     * Starts playing the animation from the current frame position.
+     * Animation will loop continuously until stopped.
+     */
     public void play() {
         if (isPlaying) return;
 
@@ -188,10 +217,18 @@ public class LottiePlayer extends Canvas {
         animationTimer.start();
     }
 
+    /**
+     * Plays the animation once from the beginning and stops.
+     */
     public void playOnceFromStart() {
         playOnceFromStart(null);
     }
 
+    /**
+     * Plays the animation once from the beginning and executes a callback when finished.
+     *
+     * @param onFinished callback invoked when playback completes
+     */
     public void playOnceFromStart(Consumer<File> onFinished) {
         if (isPlaying) {
             stop();
@@ -230,6 +267,9 @@ public class LottiePlayer extends Canvas {
         animationTimer.start();
     }
 
+    /**
+     * Stops playback if the animation is currently playing.
+     */
     public void stop() {
         if (animationTimer != null) {
             animationTimer.stop();
@@ -238,16 +278,31 @@ public class LottiePlayer extends Canvas {
         isPlaying = false;
     }
 
+    /**
+     * Seeks to a specific frame and renders it.
+     *
+     * @param frame frame number to seek to (will be clamped to valid range)
+     */
     public void seekToFrame(double frame) {
         double clampedFrame = Math.max(getInPoint(), Math.min(getOutPoint(), frame));
         currentFrameProperty.set(clampedFrame);
         render(clampedFrame, visibleLayerIndices);
     }
 
+    /**
+     * Gets the property tracking the current frame position.
+     *
+     * @return observable double property for current frame
+     */
     public DoubleProperty currentFrameProperty() {
         return currentFrameProperty;
     }
 
+    /**
+     * Renders the specified frame, showing all layers.
+     *
+     * @param frame frame number to render
+     */
     public void render(double frame) {
         render(frame, null);
     }
@@ -381,10 +436,23 @@ public class LottiePlayer extends Canvas {
         }
     }
 
+    /**
+     * Checks whether a layer is active (visible) at the given frame.
+     *
+     * @param layer layer to check
+     * @param frame frame to evaluate
+     * @return true if the layer should be rendered at this frame
+     */
     private boolean isLayerActiveAtFrame(Layer layer, double frame) {
         return LayerActivity.isActiveAtFrame(layer, frame);
     }
 
+    /**
+     * Checks whether a layer should be skipped due to its parent using mattes.
+     *
+     * @param layer layer to evaluate
+     * @return true if the layer should be skipped
+     */
     private boolean shouldSkipDueToParent(Layer layer) {
         if (layer.indexParent() == null) {
             return false; // No parent
@@ -404,6 +472,13 @@ public class LottiePlayer extends Canvas {
         return shouldSkipDueToParent(parent);
     }
 
+    /**
+     * Renders a layer, applying effects like Gaussian blur if needed.
+     *
+     * @param gc    graphics context
+     * @param layer layer to render
+     * @param frame animation frame
+     */
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
         // Check for Gaussian Blur effect and render with blur if needed
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
@@ -415,6 +490,13 @@ public class LottiePlayer extends Canvas {
         renderLayerInternal(gc, layer, frame);
     }
 
+    /**
+     * Internal layer rendering method that handles transforms, opacity, and layer content.
+     *
+     * @param gc    graphics context
+     * @param layer layer to render
+     * @param frame animation frame
+     */
     private void renderLayerInternal(GraphicsContext gc, Layer layer, double frame) {
         gc.save();
 
@@ -509,6 +591,13 @@ public class LottiePlayer extends Canvas {
         gc.restore();
     }
 
+    /**
+     * Renders a precomposition layer by delegating to the precomp renderer.
+     *
+     * @param gc    graphics context
+     * @param layer precomposition layer
+     * @param frame parent timeline frame
+     */
     private void renderPrecompositionLayer(GraphicsContext gc, Layer layer, double frame) {
         precompRenderer.renderPrecompositionLayer(
                 gc,
@@ -523,6 +612,13 @@ public class LottiePlayer extends Canvas {
         );
     }
 
+    /**
+     * Recursively applies transforms from parent layers.
+     *
+     * @param gc    graphics context
+     * @param layer layer whose parent transforms should be applied
+     * @param frame animation frame
+     */
     private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {
         if (layer.indexParent() == null) {
             return; // No parent
@@ -541,6 +637,13 @@ public class LottiePlayer extends Canvas {
         applyLayerTransform(gc, parent, frame);
     }
 
+    /**
+     * Renders a primitive shape using the appropriate shape renderer.
+     *
+     * @param shape       shape to render
+     * @param parentGroup parent group containing styles
+     * @param frame       animation frame
+     */
     private void renderShapeTypeShape(BaseShape shape, Group parentGroup, double frame) {
         ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
         if (renderer == null) {
@@ -551,41 +654,89 @@ public class LottiePlayer extends Canvas {
     }
 
 
+    /**
+     * Applies a shape group transform to the graphics context.
+     *
+     * @param gc        graphics context
+     * @param transform transform definition
+     * @param frame     animation frame
+     */
     private void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
         transformApplier.applyGroupTransform(gc, transform, frame);
     }
 
+    /**
+     * Applies layer transform including position, rotation, scale, and opacity.
+     *
+     * @param gc    graphics context
+     * @param layer layer whose transform is applied
+     * @param frame animation frame
+     */
     private void applyLayerTransform(GraphicsContext gc, Layer layer, double frame) {
         transformApplier.applyLayerTransform(gc, layer, frame);
     }
 
     /**
-     * Apply layer transform WITHOUT opacity - used for parent transforms where opacity should not inherit
+     * Applies layer transform WITHOUT opacity - used for parent transforms where opacity should not inherit.
+     *
+     * @param gc    graphics context
+     * @param layer layer whose transform is applied
+     * @param frame animation frame
      */
     private void applyLayerTransformWithoutOpacity(GraphicsContext gc, Layer layer, double frame) {
         transformApplier.applyLayerTransformWithoutOpacity(gc, layer, frame);
     }
 
+    /**
+     * Internal convenience method for rendering a frame.
+     *
+     * @param frame frame number to render
+     */
     private void renderFrame(double frame) {
         render(frame);
     }
 
+    /**
+     * Checks if the animation is currently playing.
+     *
+     * @return true if animation is playing
+     */
     public boolean isPlaying() {
         return isPlaying;
     }
 
+    /**
+     * Gets the current frame being displayed.
+     *
+     * @return current frame number
+     */
     public double getCurrentFrame() {
         return currentFrameProperty.get();
     }
 
+    /**
+     * Gets the animation model being rendered.
+     *
+     * @return animation object
+     */
     public Animation getAnimation() {
         return animation;
     }
 
+    /**
+     * Gets the current background color.
+     *
+     * @return background color
+     */
     public Color getBackgroundColor() {
         return backgroundColor;
     }
 
+    /**
+     * Sets the background color and re-renders the current frame.
+     *
+     * @param color new background color
+     */
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
         // Re-render current frame with new background

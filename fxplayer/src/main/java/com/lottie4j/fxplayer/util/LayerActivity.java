@@ -2,6 +2,10 @@ package com.lottie4j.fxplayer.util;
 
 import com.lottie4j.core.model.Layer;
 
+/**
+ * Utility for determining layer visibility and activity at specific animation frames.
+ * Checks whether a layer should be rendered based on its in-point and out-point.
+ */
 public final class LayerActivity {
 
     /**

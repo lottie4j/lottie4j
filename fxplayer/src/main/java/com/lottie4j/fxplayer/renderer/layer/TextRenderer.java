@@ -22,7 +22,11 @@ public class TextRenderer {
     private static final String DEFAULT_FONT_FAMILY = "Arial";
 
     /**
-     * Render a text layer
+     * Renders a text layer with animated text properties, fonts, and colors.
+     *
+     * @param gc    graphics context to render to
+     * @param layer text layer containing text data and keyframes
+     * @param frame animation frame to sample
      */
     public void render(GraphicsContext gc, Layer layer, double frame) {
         if (layer.textData() == null || layer.textData().document() == null || layer.textData().document().keyframes() == null || layer.textData().document().keyframes().isEmpty()) {
@@ -481,14 +485,22 @@ public class TextRenderer {
     }
 
     /**
-     * Clamp value between 0 and 1
+     * Clamps a value to the range [0, 1].
+     *
+     * @param v value to clamp
+     * @return clamped value between 0 and 1
      */
     private double clamp01(double v) {
         return Math.max(0, Math.min(1, v));
     }
 
     /**
-     * Read a numeric animator property by key (supports static and keyframed values).
+     * Reads a numeric animator property by key (supports static and keyframed values).
+     *
+     * @param aMap  animator map containing properties
+     * @param key   property key to look up
+     * @param frame current animation frame
+     * @return resolved numeric value, or {@code null} when unavailable
      */
     private Double getAnimatedNumberFromAnimatorMap(Map<String, Object> aMap, String key, double frame) {
         Object prop = aMap.get(key);

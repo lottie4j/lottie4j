@@ -45,6 +45,11 @@ public class OffscreenRenderer {
      */
     @FunctionalInterface
     public interface OffscreenRenderingTask {
+        /**
+         * Performs rendering to an off-screen graphics context.
+         *
+         * @param gc off-screen graphics context
+         */
         void render(GraphicsContext gc);
     }
 }

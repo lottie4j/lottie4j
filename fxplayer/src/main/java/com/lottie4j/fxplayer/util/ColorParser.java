@@ -3,6 +3,10 @@ package com.lottie4j.fxplayer.util;
 import javafx.scene.paint.Color;
 import org.slf4j.Logger;
 
+/**
+ * Utility for parsing hex color strings into JavaFX Color objects.
+ * Supports both 6-character (RGB) and 8-character (RGBA) hex formats.
+ */
 public final class ColorParser {
 
     /**
