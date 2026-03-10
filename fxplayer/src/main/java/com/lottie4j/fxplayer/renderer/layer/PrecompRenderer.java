@@ -61,6 +61,30 @@ public class PrecompRenderer {
                                           SolidColorLayerRenderer solidColorLayerRenderer,
                                           ShapeGroupRenderer shapeGroupRenderer,
                                           ShapeRendererDelegate shapeRendererDelegate) {
+        renderPrecompositionLayer(gc,
+                layer,
+                frame,
+                assetsById,
+                animation,
+                -1,
+                -1,
+                layerActivityEvaluator,
+                solidColorLayerRenderer,
+                shapeGroupRenderer,
+                shapeRendererDelegate);
+    }
+
+    private void renderPrecompositionLayer(GraphicsContext gc,
+                                           Layer layer,
+                                           double frame,
+                                           Map<String, Asset> assetsById,
+                                           Animation animation,
+                                           double inheritedWidth,
+                                           double inheritedHeight,
+                                           LayerActivityEvaluator layerActivityEvaluator,
+                                           SolidColorLayerRenderer solidColorLayerRenderer,
+                                           ShapeGroupRenderer shapeGroupRenderer,
+                                           ShapeRendererDelegate shapeRendererDelegate) {
         if (layer.referenceId() == null) {
             logger.warn("Precomposition layer has no referenceId: {}", layer.name());
             return;
@@ -78,8 +102,10 @@ public class PrecompRenderer {
         }
 
         double localFrame = FrameTiming.toLocalFrame(layer, frame);
-        logger.debug("Rendering precomposition: {} with {} layers at localFrame={} (global={})",
-                layer.referenceId(), asset.layers().size(), localFrame, frame);
+        double precompWidth = resolvePrecompWidth(layer, asset, animation, inheritedWidth);
+        double precompHeight = resolvePrecompHeight(layer, asset, animation, inheritedHeight);
+        logger.debug("Rendering precomposition: {} with {} layers at localFrame={} (global={}), bounds={}x{} (inherited={}x{})",
+                layer.referenceId(), asset.layers().size(), localFrame, frame, precompWidth, precompHeight, inheritedWidth, inheritedHeight);
 
         Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
         for (Layer precompLayer : asset.layers()) {
@@ -90,13 +116,22 @@ public class PrecompRenderer {
 
         gc.save();
 
+        if (precompWidth > 0 && precompHeight > 0) {
+            // Clip all child rendering to precomp bounds (including blurred layers).
+            logger.debug("Setting precomp clip for {}: rect(0,0,{},{})", layer.referenceId(), precompWidth, precompHeight);
+            gc.beginPath();
+            gc.rect(0, 0, precompWidth, precompHeight);
+            gc.clip();
+        } else {
+            logger.debug("No precomp clip for {} - bounds {}x{}", layer.referenceId(), precompWidth, precompHeight);
+        }
+
         for (int i = asset.layers().size() - 1; i >= 0; i--) {
             Layer precompLayer = asset.layers().get(i);
             if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
                 continue;
             }
-            logger.debug("Rendering precomp layer [{}] ind={} name='{}'",
-                    i, precompLayer.indexLayer(), precompLayer.name());
+            logger.debug("Rendering precomp layer [{}] ind={} name='{}'", i, precompLayer.indexLayer(), precompLayer.name());
 
             renderPrecompLayer(gc,
                     precompLayer,
@@ -104,8 +139,8 @@ public class PrecompRenderer {
                     precompLayersByIndex,
                     assetsById,
                     animation,
-                    -1,
-                    -1,
+                    precompWidth,
+                    precompHeight,
                     layerActivityEvaluator,
                     solidColorLayerRenderer,
                     shapeGroupRenderer,
@@ -133,13 +168,31 @@ public class PrecompRenderer {
         // Check for Gaussian Blur effect and render with blur if needed
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
-            // Pass precomp bounds to clip the blur effect to the precomp boundaries
+            logger.debug("Rendering blurred layer {} in precomp with bounds {}x{}", layer.name(), precompWidth, precompHeight);
+
+            // Check layer opacity - skip rendering if transparent
+            if (layer.transform() != null && layer.transform().opacity() != null) {
+                double opacity = layer.transform().opacity().getValue(0, frame);
+                if (opacity <= 0) {
+                    logger.debug("Skipping blurred precomp layer {} - opacity is {}", layer.name(), opacity);
+                    return;
+                }
+            }
+
+            // Render with blur, passing transforms to be applied inside offscreen buffer
+            // Then composite back with precomp clip active
             effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, precompWidth, precompHeight,
-                    (blurGc, blurLayer, blurFrame) -> renderPrecompLayerInternal(blurGc, blurLayer, blurFrame, precompLayersByIndex, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate));
+                    (blurGc, blurLayer, blurFrame) -> {
+                        // Apply transforms inside the offscreen buffer
+                        applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompLayersByIndex);
+                        transformApplier.applyLayerTransform(blurGc, blurLayer, blurFrame);
+                        // Render content
+                        renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+                    });
             return;
         }
 
-        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation, precompWidth, precompHeight, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
     }
 
     /**
@@ -151,6 +204,8 @@ public class PrecompRenderer {
                                             Map<Integer, Layer> precompLayersByIndex,
                                             Map<String, Asset> assetsById,
                                             Animation animation,
+                                            double parentPrecompWidth,
+                                            double parentPrecompHeight,
                                             LayerActivityEvaluator layerActivityEvaluator,
                                             SolidColorLayerRenderer solidColorLayerRenderer,
                                             ShapeGroupRenderer shapeGroupRenderer,
@@ -176,6 +231,8 @@ public class PrecompRenderer {
                     frame,
                     assetsById,
                     animation,
+                    parentPrecompWidth,
+                    parentPrecompHeight,
                     layerActivityEvaluator,
                     solidColorLayerRenderer,
                     shapeGroupRenderer,
@@ -187,7 +244,7 @@ public class PrecompRenderer {
         } else if (layer.layerType() == LayerType.TEXT) {
             textRenderer.render(gc, layer, frame);
         } else if (layer.layerType() != LayerType.NULL) {
-            renderPrecompShapes(layer, frame, shapeGroupRenderer, shapeRendererDelegate);
+            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate);
         } else {
             logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
         }
@@ -198,12 +255,14 @@ public class PrecompRenderer {
     /**
      * Renders shape content for a non-null precomp layer.
      *
+     * @param gc                    destination graphics context
      * @param layer                 precomp child layer containing shapes
      * @param frame                 local precomp frame
      * @param shapeGroupRenderer    callback used for group shapes
      * @param shapeRendererDelegate callback used for direct shape primitives
      */
-    private void renderPrecompShapes(Layer layer,
+    private void renderPrecompShapes(GraphicsContext gc,
+                                     Layer layer,
                                      double frame,
                                      ShapeGroupRenderer shapeGroupRenderer,
                                      ShapeRendererDelegate shapeRendererDelegate) {
@@ -230,13 +289,45 @@ public class PrecompRenderer {
             }
 
             switch (shape.shapeType().shapeGroup()) {
-                case GROUP -> shapeGroupRenderer.render(shape, frame, layerTrimPath);
+                case GROUP -> shapeGroupRenderer.render(gc, shape, frame, layerTrimPath);
                 case SHAPE -> shapeRendererDelegate.render(shape, null, frame);
                 case STYLE -> {
                     // Styles are consumed by parent group renderers.
                 }
                 default -> logger.debug("Unsupported shape type: {}", shape.shapeType().shapeGroup());
             }
+        }
+    }
+
+    /**
+     * Renders only the content of a precomp layer (shapes/images) without applying transforms.
+     * Used for blur rendering where transforms are applied externally.
+     */
+    private void renderPrecompLayerContentOnly(GraphicsContext gc,
+                                               Layer layer,
+                                               double frame,
+                                               Map<String, Asset> assetsById,
+                                               Animation animation,
+                                               LayerActivityEvaluator layerActivityEvaluator,
+                                               SolidColorLayerRenderer solidColorLayerRenderer,
+                                               ShapeGroupRenderer shapeGroupRenderer,
+                                               ShapeRendererDelegate shapeRendererDelegate) {
+        logger.debug("renderPrecompLayerContentOnly called for {} type={}", layer.name(), layer.layerType());
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            logger.warn("Nested precomp blur not supported for content-only rendering: {}", layer.name());
+            return;
+        } else if (layer.layerType() == LayerType.IMAGE) {
+            imageRenderer.render(gc, layer, animation);
+        } else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            solidColorLayerRenderer.render(gc, layer);
+        } else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
+        } else if (layer.layerType() != LayerType.NULL) {
+            logger.debug("Rendering shapes for layer {} - has {} shapes", layer.name(),
+                    layer.shapes() != null ? layer.shapes().size() : 0);
+            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate);
+        } else {
+            logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
         }
     }
 
@@ -264,6 +355,54 @@ public class PrecompRenderer {
 
         applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
         transformApplier.applyLayerTransformWithoutOpacity(gc, parent, frame);
+    }
+
+    private double resolvePrecompWidth(Layer layer, Asset asset, Animation animation, double inheritedWidth) {
+        if (layer.width() != null && layer.width() > 0) {
+            return layer.width();
+        }
+        if (asset.width() != null && asset.width() > 0) {
+            return asset.width();
+        }
+        if (inheritedWidth > 0) {
+            logger.debug("Using inherited precomp width {} for {}", inheritedWidth, layer.referenceId());
+            return inheritedWidth;
+        }
+        if (animation.width() != null && animation.width() > 0) {
+            logger.debug("Using root animation width {} as fallback for precomp {}", animation.width(), layer.referenceId());
+            return animation.width();
+        }
+        return -1;
+    }
+
+    private double resolvePrecompHeight(Layer layer, Asset asset, Animation animation, double inheritedHeight) {
+        if (layer.height() != null && layer.height() > 0) {
+            return layer.height();
+        }
+
+        // Asset height is currently modeled as String; parse when numeric.
+        if (asset.height() != null) {
+            try {
+                double parsed = Double.parseDouble(asset.height());
+                if (parsed > 0) {
+                    return parsed;
+                }
+            } catch (NumberFormatException ex) {
+                logger.debug("Unable to parse precomp asset height '{}' for {}", asset.height(), asset.id());
+            }
+        }
+
+        if (inheritedHeight > 0) {
+            logger.debug("Using inherited precomp height {} for {}", inheritedHeight, layer.referenceId());
+            return inheritedHeight;
+        }
+
+        if (animation.height() != null && animation.height() > 0) {
+            logger.debug("Using root animation height {} as fallback for precomp {}", animation.height(), layer.referenceId());
+            return animation.height();
+        }
+
+        return -1;
     }
 
     /**
@@ -303,11 +442,12 @@ public class PrecompRenderer {
         /**
          * Renders a grouped shape item.
          *
+         * @param gc            destination graphics context
          * @param shape         group shape item
          * @param frame         frame to sample
          * @param layerTrimPath optional trim path inherited from layer context
          */
-        void render(BaseShape shape, double frame, TrimPath layerTrimPath);
+        void render(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath);
     }
 
     /**
@@ -325,4 +465,6 @@ public class PrecompRenderer {
         void render(BaseShape shape, Group parentGroup, double frame);
     }
 }
+
+
 
