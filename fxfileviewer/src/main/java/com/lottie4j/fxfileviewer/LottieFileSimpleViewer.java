@@ -26,6 +26,11 @@ public class LottieFileSimpleViewer extends Application {
     private static final Logger logger = LoggerFactory.getLogger(LottieFileSimpleViewer.class);
     private BorderPane root;
 
+    /**
+     * Creates a new LottieFileSimpleViewer.
+     */
+    public LottieFileSimpleViewer() {
+    }
 
     /**
      * Initializes the JavaFX application stage and UI components.

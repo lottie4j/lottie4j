@@ -29,6 +29,12 @@ public class PathRenderer implements ShapeRenderer {
     private final PathBezierInterpolator bezierInterpolator = new PathBezierInterpolator();
 
     /**
+     * Creates a new PathRenderer.
+     */
+    public PathRenderer() {
+    }
+
+    /**
      * Builds the JavaFX path for the current frame, applies fill styles,
      * then delegates stroke and trim-path rendering.
      *

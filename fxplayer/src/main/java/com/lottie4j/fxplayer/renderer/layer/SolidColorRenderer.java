@@ -16,6 +16,12 @@ public class SolidColorRenderer {
     private static final Logger logger = LoggerFactory.getLogger(SolidColorRenderer.class);
 
     /**
+     * Creates a new SolidColorRenderer.
+     */
+    public SolidColorRenderer() {
+    }
+
+    /**
      * Renders a solid color layer as a filled rectangle.
      *
      * @param gc              graphics context

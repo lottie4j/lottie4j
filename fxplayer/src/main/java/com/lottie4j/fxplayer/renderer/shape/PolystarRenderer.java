@@ -19,6 +19,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * Renders Lottie polystar shapes including both regular polygons and star shapes.
+ * Supports animated properties for position, rotation, radius, and point count with optional inner radius and corner rounding for stars.
+ */
 public class PolystarRenderer implements ShapeRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(PolystarRenderer.class);

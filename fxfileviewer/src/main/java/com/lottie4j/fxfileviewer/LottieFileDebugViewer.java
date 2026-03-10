@@ -73,6 +73,12 @@ public class LottieFileDebugViewer extends Application {
     private LayerTileView layerTileView;
 
     /**
+     * Creates a new LottieFileDebugViewer.
+     */
+    public LottieFileDebugViewer() {
+    }
+
+    /**
      * Initializes the JavaFX application with dual-view rendering.
      * Sets up both JavaFX and WebView players side-by-side with controls and layer inspection tools.
      *

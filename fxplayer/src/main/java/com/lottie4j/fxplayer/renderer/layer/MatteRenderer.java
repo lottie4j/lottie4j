@@ -21,6 +21,12 @@ public class MatteRenderer {
     private static final Logger logger = LoggerFactory.getLogger(MatteRenderer.class);
 
     /**
+     * Creates a new MatteRenderer.
+     */
+    public MatteRenderer() {
+    }
+
+    /**
      * Renders a layer with simple blend-mode-based matte (simpler but less accurate).
      *
      * @param gc            graphics context

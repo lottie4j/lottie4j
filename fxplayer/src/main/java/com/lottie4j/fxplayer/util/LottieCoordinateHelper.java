@@ -35,6 +35,12 @@ import com.lottie4j.core.model.shape.shape.Rectangle;
 public class LottieCoordinateHelper {
 
     /**
+     * Creates a new LottieCoordinateHelper.
+     */
+    public LottieCoordinateHelper() {
+    }
+
+    /**
      * Extracts position and size data from a Lottie Rectangle and converts coordinates
      * from center-based (Lottie) to top-left based (JavaFX).
      *
@@ -123,14 +129,21 @@ public class LottieCoordinateHelper {
 
     /**
      * Lottie positioning data extracted from Lottie format.
+     *
+     * @param x         center x position in Lottie coordinates
+     * @param y         center y position in Lottie coordinates
+     * @param width     rectangle width
+     * @param height    rectangle height
+     * @param topLeftX  converted top-left x for JavaFX
+     * @param topLeftY  converted top-left y for JavaFX
      */
     public record LottiePosition(
-            double x,           // Center x position in Lottie coordinates
-            double y,           // Center y position in Lottie coordinates
-            double width,       // Rectangle width
-            double height,      // Rectangle height
-            double topLeftX,    // Converted top-left x for JavaFX
-            double topLeftY     // Converted top-left y for JavaFX
+            double x,
+            double y,
+            double width,
+            double height,
+            double topLeftX,
+            double topLeftY
     ) {
     }
 }

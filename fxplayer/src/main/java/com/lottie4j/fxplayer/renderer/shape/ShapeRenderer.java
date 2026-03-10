@@ -4,6 +4,10 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import javafx.scene.canvas.GraphicsContext;
 
+/**
+ * Interface for rendering Lottie shape primitives to JavaFX graphics context.
+ * Implementations handle specific shape types such as paths, rectangles, ellipses, and polystars.
+ */
 public interface ShapeRenderer {
     /**
      * Renders a single Lottie shape instance.

@@ -20,6 +20,12 @@ public class ImageRenderer {
     private static final Logger logger = LoggerFactory.getLogger(ImageRenderer.class);
 
     /**
+     * Creates a new ImageRenderer.
+     */
+    public ImageRenderer() {
+    }
+
+    /**
      * Render an image layer
      *
      * @param gc        the graphics context to draw on

@@ -1,3 +1,7 @@
+/**
+ * JavaFX file viewer application for Lottie animations.
+ * Provides both simple and debug viewers with playback controls and layer inspection.
+ */
 module com.lottie4j.fxdemo {
     requires com.fasterxml.jackson.databind;
     requires com.lottie4j.core;

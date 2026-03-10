@@ -22,6 +22,12 @@ public class TextRenderer {
     private static final String DEFAULT_FONT_FAMILY = "Arial";
 
     /**
+     * Creates a new TextRenderer.
+     */
+    public TextRenderer() {
+    }
+
+    /**
      * Renders a text layer with animated text properties, fonts, and colors.
      *
      * @param gc    graphics context to render to

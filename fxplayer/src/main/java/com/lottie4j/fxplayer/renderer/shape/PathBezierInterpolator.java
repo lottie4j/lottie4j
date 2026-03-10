@@ -13,6 +13,12 @@ import java.util.List;
 public class PathBezierInterpolator {
 
     /**
+     * Creates a new PathBezierInterpolator.
+     */
+    public PathBezierInterpolator() {
+    }
+
+    /**
      * Interpolates the animated Bezier between surrounding keyframes.
      *
      * @param animatedBezier animated path data

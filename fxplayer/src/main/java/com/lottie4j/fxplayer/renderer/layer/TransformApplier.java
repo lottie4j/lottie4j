@@ -16,6 +16,12 @@ public class TransformApplier {
     private static final Logger logger = LoggerFactory.getLogger(TransformApplier.class);
 
     /**
+     * Creates a new TransformApplier.
+     */
+    public TransformApplier() {
+    }
+
+    /**
      * Applies the full transform stack for a layer, including animated opacity.
      *
      * @param gc    graphics context to transform

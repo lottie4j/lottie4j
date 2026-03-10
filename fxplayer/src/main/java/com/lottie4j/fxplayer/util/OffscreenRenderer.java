@@ -13,6 +13,12 @@ import javafx.scene.paint.Color;
 public class OffscreenRenderer {
 
     /**
+     * Creates a new OffscreenRenderer.
+     */
+    public OffscreenRenderer() {
+    }
+
+    /**
      * Renders content to an off-screen canvas and returns it as an image.
      *
      * @param width    width of the off-screen canvas

@@ -13,6 +13,13 @@ import org.slf4j.LoggerFactory;
  * Converts Lottie fill definitions into JavaFX fill operations with proper color and opacity handling.
  */
 public class FillRenderer {
+
+    /**
+     * Creates a new FillRenderer.
+     */
+    public FillRenderer() {
+    }
+
     /**
      * Applies fill color and opacity from a Lottie fill style to the graphics context.
      *

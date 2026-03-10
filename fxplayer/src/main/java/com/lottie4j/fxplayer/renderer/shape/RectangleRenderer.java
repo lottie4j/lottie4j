@@ -19,6 +19,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+/**
+ * Renders Lottie rectangle shapes with support for rounded corners, fill, stroke, and gradient styles.
+ * Handles center-based positioning from Lottie format and converts to JavaFX top-left coordinate system.
+ */
 public class RectangleRenderer implements ShapeRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(RectangleRenderer.class);

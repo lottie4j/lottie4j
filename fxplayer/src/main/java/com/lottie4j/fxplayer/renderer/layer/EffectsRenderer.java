@@ -19,6 +19,12 @@ public class EffectsRenderer {
     private static final Logger logger = LoggerFactory.getLogger(EffectsRenderer.class);
 
     /**
+     * Creates a new effects renderer.
+     */
+    public EffectsRenderer() {
+    }
+
+    /**
      * Extracts the Gaussian Blur radius from layer effects at a specific frame.
      *
      * @param layer layer to check for blur effects
@@ -121,8 +127,8 @@ public class EffectsRenderer {
      * @param layer         layer to render
      * @param frame         animation frame
      * @param blurRadius    blur radius to apply
-     * @param boundsWidth   clipping width in local coordinates; <= 0 disables bounds clipping
-     * @param boundsHeight  clipping height in local coordinates; <= 0 disables bounds clipping
+     * @param boundsWidth   clipping width in local coordinates; values less than or equal to 0 disable bounds clipping
+     * @param boundsHeight  clipping height in local coordinates; values less than or equal to 0 disable bounds clipping
      * @param layerRenderer callback to render the layer content
      */
     public void renderLayerWithGaussianBlur(GraphicsContext gc,

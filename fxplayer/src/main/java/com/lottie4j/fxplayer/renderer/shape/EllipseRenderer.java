@@ -31,6 +31,12 @@ public class EllipseRenderer implements ShapeRenderer {
     private static final Logger logger = LoggerFactory.getLogger(EllipseRenderer.class);
 
     /**
+     * Creates a new EllipseRenderer.
+     */
+    public EllipseRenderer() {
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
      * Renders a Lottie ellipse shape with optional fill, stroke, gradient, and trim path support.

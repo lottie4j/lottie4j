@@ -32,6 +32,12 @@ public class PathStrokeRenderer {
     private static final Logger logger = LoggerFactory.getLogger(PathStrokeRenderer.class);
 
     /**
+     * Creates a new PathStrokeRenderer.
+     */
+    public PathStrokeRenderer() {
+    }
+
+    /**
      * Renders stroke output for path-based shapes, including Trim Path handling.
      * <p>
      * This class owns stroke-specific behavior (line style, dashes, trim-window extraction,

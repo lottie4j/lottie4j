@@ -9,6 +9,12 @@ import javafx.application.Application;
  */
 public class Launcher {
     /**
+     * Creates a new Launcher.
+     */
+    public Launcher() {
+    }
+
+    /**
      * Application entry point that delegates to the JavaFX Application launcher.
      *
      * @param args command-line arguments passed to the application
