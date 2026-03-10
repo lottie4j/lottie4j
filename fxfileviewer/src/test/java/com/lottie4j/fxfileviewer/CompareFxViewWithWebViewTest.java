@@ -46,9 +46,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>The test snapshots both renderers at selected frames and computes an SSIM-based similarity score.</p>
  */
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
-class CompareWithWebViewTest {
+class CompareFxViewWithWebViewTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(CompareWithWebViewTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
 
     private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
