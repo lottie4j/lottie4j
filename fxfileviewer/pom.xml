@@ -92,7 +92,7 @@
                 <version>3.0.0-M5</version>
                 <configuration>
                     <argLine>
-                        --add-opens com.lottie4j.fxdemo/com.lottie4j.fxfileviewer=ALL-UNNAMED
+                        --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
                     </argLine>
                 </configuration>
             </plugin>
