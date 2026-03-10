@@ -72,6 +72,12 @@ public class LottieFileDebugViewer extends Application {
     private LayerTreeView layerTreeView;
     private LayerTileView layerTileView;
 
+    /**
+     * Initializes the JavaFX application with dual-view rendering.
+     * Sets up both JavaFX and WebView players side-by-side with controls and layer inspection tools.
+     *
+     * @param primaryStage the primary stage for this application
+     */
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Lottie4J Animation Viewer");
@@ -133,6 +139,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Called when the application is being stopped.
+     * Ensures any playing animation is stopped and UI is reset.
+     */
     @Override
     public void stop() {
         if (lottiePlayer != null) {
@@ -146,18 +156,38 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Gets the starting frame (in-point) of the current animation.
+     *
+     * @return the in-point frame number, or 0 if not defined
+     */
     private int getInPoint() {
         return animation != null && animation.inPoint() != null ? animation.inPoint() : 0;
     }
 
+    /**
+     * Gets the ending frame (out-point) of the current animation.
+     *
+     * @return the out-point frame number, or 60 if not defined
+     */
     private int getOutPoint() {
         return animation != null && animation.outPoint() != null ? animation.outPoint() : 60;
     }
 
+    /**
+     * Gets the frames per second rate of the current animation.
+     *
+     * @return the FPS value, or 30 if not defined
+     */
     private int getFramesPerSecond() {
         return animation != null && animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
     }
 
+    /**
+     * Creates the control panel with playback controls, frame slider, and other UI elements.
+     *
+     * @return HBox containing all control panel components
+     */
     private HBox createControlPanel() {
         var controlPanel = new HBox(10);
         controlPanel.setPadding(new Insets(10));
@@ -231,6 +261,10 @@ public class LottieFileDebugViewer extends Application {
         return controlPanel;
     }
 
+    /**
+     * Configures animation control UI elements based on the loaded animation properties.
+     * Enables buttons, sets up the frame slider range, and updates labels.
+     */
     private void setupAnimationControls() {
         if (animation == null) return;
 
@@ -252,6 +286,12 @@ public class LottieFileDebugViewer extends Application {
         updateFrameLabel();
     }
 
+    /**
+     * Loads a Lottie animation file and sets up all viewer components.
+     * Creates player instances, layer trees, and synchronizes UI elements.
+     *
+     * @param file the Lottie animation file to load
+     */
     private void loadAnimation(File file) {
         // Pause any currently playing animation
         if (lottiePlayer != null && lottiePlayer.isPlaying()) {
@@ -366,7 +406,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
-    // Update play/pause methods:
+    /**
+     * Starts animation playback in loop mode for both JavaFX and WebView players.
+     * Synchronizes both renderers and updates button states.
+     */
     private void startAnimationLoop() {
         if (lottiePlayer != null) {
             // Synchronize both players - start FX player first
@@ -384,6 +427,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Plays animation once from start to end for both players.
+     * Re-enables play buttons when animation completes.
+     */
     private void startAnimationOnce() {
         if (lottiePlayer != null) {
             // Start FX player once
@@ -406,6 +453,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Pauses both JavaFX and WebView animation players.
+     * Updates button states to reflect paused state.
+     */
     private void pauseAnimation() {
         if (lottiePlayer != null) {
             lottiePlayer.stop();
@@ -422,6 +473,9 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Clears the canvas with a placeholder message when no animation is loaded.
+     */
     private void clearCanvas() {
         gc.setFill(Color.LIGHTGRAY);
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -431,6 +485,9 @@ public class LottieFileDebugViewer extends Application {
                 canvas.getWidth() / 2 - 100, canvas.getHeight() / 2);
     }
 
+    /**
+     * Updates the frame label to display the current frame and total frames.
+     */
     private void updateFrameLabel() {
         if (animation != null) {
             frameLabel.setText(String.format("Frame: %d / %d",
@@ -438,6 +495,14 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Loads a Lottie animation into the WebView using the lottie-web JavaScript library.
+     * Generates HTML with embedded animation data and control functions.
+     *
+     * @param lottieFile the Lottie JSON file to load
+     * @param width the width of the player in pixels
+     * @param height the height of the player in pixels
+     */
     private void loadLottieInWebView(File lottieFile, int width, int height) {
         try {
             // Read the Lottie JSON file
@@ -525,6 +590,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Updates the background color for all player views and components.
+     * Applies the color to JavaFX player, layer views, and WebView.
+     */
     private void updateBackgroundColor() {
         // Update FX player background
         if (lottiePlayer != null) {
@@ -553,6 +622,10 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Takes a screenshot of both players at the current frame.
+     * Saves the combined image to the screenshot directory.
+     */
     private void takeScreenshot() {
         if (lottiePlayer == null || webView == null || currentAnimationFile == null) {
             return;
@@ -561,6 +634,10 @@ public class LottieFileDebugViewer extends Application {
         takeScreenshotPlayers();
     }
 
+    /**
+     * Takes screenshots of all frames from in-point to out-point.
+     * Runs asynchronously to avoid blocking the UI thread.
+     */
     private void takeAllScreenshots() {
         if (lottiePlayer == null || webView == null || currentAnimationFile == null || animation == null) {
             return;
@@ -647,6 +724,10 @@ public class LottieFileDebugViewer extends Application {
         }).start();
     }
 
+    /**
+     * Captures and saves a snapshot of both player views to a PNG file.
+     * Creates the screenshot directory if it doesn't exist.
+     */
     private void takeScreenshotPlayers() {
         try {
             // Create the screenshot directory if it doesn't exist
@@ -671,6 +752,13 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
+    /**
+     * Saves a WritableImage to a PNG file using custom PNG encoder.
+     *
+     * @param image the image to save
+     * @param file the destination file
+     * @throws IOException if writing the file fails
+     */
     private void saveWritableImage(WritableImage image, File file) throws IOException {
         int width = (int) image.getWidth();
         int height = (int) image.getHeight();

@@ -27,6 +27,12 @@ public class LottieFileSimpleViewer extends Application {
     private BorderPane root;
 
 
+    /**
+     * Initializes the JavaFX application stage and UI components.
+     * Sets up the menu bar, scene, and handles command-line arguments for loading animations.
+     *
+     * @param primaryStage the primary stage for this application
+     */
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Lottie4J Animation Simple Viewer");
@@ -53,6 +59,12 @@ public class LottieFileSimpleViewer extends Application {
         }
     }
 
+    /**
+     * Loads and displays a Lottie animation file.
+     * Creates a new LottiePlayer instance and starts playback automatically.
+     *
+     * @param file the Lottie animation file to load
+     */
     private void loadAnimation(File file) {
         try {
             var animation = new LottiePlayer(LottieFileLoader.load(file));

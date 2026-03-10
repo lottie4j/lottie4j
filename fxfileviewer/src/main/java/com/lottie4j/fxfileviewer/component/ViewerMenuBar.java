@@ -20,11 +20,21 @@ import java.util.function.Consumer;
 
 import static com.lottie4j.fxfileviewer.util.AlertHelper.showError;
 
+/**
+ * Menu bar component for the Lottie file viewer application.
+ * Provides File and Help menus with options to open Lottie files and view application information.
+ */
 public class ViewerMenuBar extends MenuBar {
     private static final Logger logger = LoggerFactory.getLogger(ViewerMenuBar.class);
 
     private final Consumer<File> onFileSelected;
 
+    /**
+     * Creates a menu bar for the viewer application.
+     *
+     * @param stage the primary stage for displaying file chooser dialogs
+     * @param onFileSelected callback invoked when a Lottie file is selected
+     */
     public ViewerMenuBar(Stage stage, Consumer<File> onFileSelected) {
         this.onFileSelected = onFileSelected;
 
@@ -41,6 +51,11 @@ public class ViewerMenuBar extends MenuBar {
         getMenus().addAll(fileMenu, helpMenu);
     }
 
+    /**
+     * Opens a file chooser dialog for selecting Lottie animation files.
+     *
+     * @param stage the stage to use as parent for the file chooser dialog
+     */
     private void openFile(Stage stage) {
         var fileChooser = new FileChooser();
         fileChooser.setTitle("Open Lottie Animation");
@@ -55,6 +70,9 @@ public class ViewerMenuBar extends MenuBar {
         }
     }
 
+    /**
+     * Displays an information dialog with application details and links.
+     */
     private void showAbout() {
         var alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("About");
@@ -70,6 +88,11 @@ public class ViewerMenuBar extends MenuBar {
         alert.showAndWait();
     }
 
+    /**
+     * Creates a clickable hyperlink to the Lottie4J website.
+     *
+     * @return HBox containing the link with label
+     */
     private HBox createClickableLink() {
         var link = new Hyperlink("https://lottie4j.com/");
         link.setOnAction(e -> {

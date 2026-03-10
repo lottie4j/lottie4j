@@ -16,6 +16,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Renderer for precomposition layers in Lottie animations.
+ * <p>
+ * A precomposition (precomp) is a nested composition that contains its own set of layers
+ * referenced from the animation's asset collection. This renderer handles the recursive
+ * rendering of precomp layers, including:
+ * <ul>
+ * <li>Resolving precomp assets and their child layers</li>
+ * <li>Managing local frame timing within nested compositions</li>
+ * <li>Applying parent transform hierarchies</li>
+ * <li>Handling different layer types (shape, image, text, solid color, nested precomps)</li>
+ * <li>Applying effects such as Gaussian blur</li>
+ * <li>Clipping content to precomp boundaries</li>
+ * </ul>
+ * <p>
+ * The renderer delegates specific layer type rendering to callback interfaces, allowing
+ * flexible integration with different rendering strategies.
+ */
 public class PrecompRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(PrecompRenderer.class);
@@ -351,7 +369,6 @@ public class PrecompRenderer {
         logger.debug("renderPrecompLayerContentOnly called for {} type={}", layer.name(), layer.layerType());
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             logger.warn("Nested precomp blur not supported for content-only rendering: {}", layer.name());
-            return;
         } else if (layer.layerType() == LayerType.IMAGE) {
             imageRenderer.render(gc, layer, animation);
         } else if (layer.layerType() == LayerType.SOLD_COLOR) {
