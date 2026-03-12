@@ -26,9 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -38,11 +36,18 @@ public class LottiePlayer extends Canvas {
 
     private static final Logger logger = LoggerFactory.getLogger(LottiePlayer.class);
     private static final double DEBUG_FPS_SMOOTHING = 0.2;
+    private static final double MIN_ADAPTIVE_OFFSCREEN_SCALE = 0.45;
+    private static final double MAX_ADAPTIVE_OFFSCREEN_SCALE = 1.0;
+    private static final double ADAPTIVE_SCALE_DOWN_STEP = 0.06;
+    private static final double ADAPTIVE_SCALE_UP_STEP = 0.02;
     private final Animation animation;
     private final GraphicsContext gc;
     private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
     private final Map<Integer, Layer> layersByIndex;
     private final Map<String, Asset> assetsById;
+    private final Map<Layer, Boolean> skipDueToParentCache = new IdentityHashMap<>();
+    private final Map<Layer, List<Layer>> parentChainCache = new IdentityHashMap<>();
+    private final Map<Layer, TrimPath> layerTrimPathCache = new IdentityHashMap<>();
     private final ImageRenderer imageRenderer = new ImageRenderer();
     private final TextRenderer textRenderer = new TextRenderer();
     private final TransformApplier transformApplier = new TransformApplier();
@@ -62,6 +67,8 @@ public class LottiePlayer extends Canvas {
     private Set<Integer> visibleLayerIndices = null;  // null means all layers visible
     private long lastDebugRenderNanos = 0L;
     private double measuredPlaybackFps = 0.0;
+    private double adaptiveOffscreenScale = 1.0;
+    private double smoothedRenderMillis = 16.67;
 
     /**
      * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
@@ -137,8 +144,69 @@ public class LottiePlayer extends Canvas {
             }
         }
 
+        buildRenderCaches();
+
         // Initial render
         renderFrame(getInPoint());
+    }
+
+    /**
+     * Pre-computes static layer metadata so the hot render loop avoids repeated tree traversal.
+     */
+    private void buildRenderCaches() {
+        if (animation.layers() == null) {
+            return;
+        }
+
+        for (Layer layer : animation.layers()) {
+            layerTrimPathCache.put(layer, resolveLayerTrimPath(layer));
+            skipDueToParentCache.put(layer, computeSkipDueToParent(layer));
+            parentChainCache.put(layer, buildParentChain(layer));
+        }
+    }
+
+    private TrimPath resolveLayerTrimPath(Layer layer) {
+        if (layer.shapes() == null) {
+            return null;
+        }
+        for (BaseShape shape : layer.shapes()) {
+            if (shape instanceof TrimPath trimPath) {
+                return trimPath;
+            }
+        }
+        return null;
+    }
+
+    private boolean computeSkipDueToParent(Layer layer) {
+        Integer parentIndex = layer.indexParent();
+        int guard = 0;
+        while (parentIndex != null && guard++ < layersByIndex.size()) {
+            Layer parent = layersByIndex.get(parentIndex);
+            if (parent == null) {
+                return false;
+            }
+            if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
+                return true;
+            }
+            parentIndex = parent.indexParent();
+        }
+        return false;
+    }
+
+    private List<Layer> buildParentChain(Layer layer) {
+        List<Layer> chain = new ArrayList<>();
+        Integer parentIndex = layer.indexParent();
+        int guard = 0;
+        while (parentIndex != null && guard++ < layersByIndex.size()) {
+            Layer parent = layersByIndex.get(parentIndex);
+            if (parent == null) {
+                break;
+            }
+            chain.add(parent);
+            parentIndex = parent.indexParent();
+        }
+        Collections.reverse(chain);
+        return chain;
     }
 
     /**
@@ -340,6 +408,8 @@ public class LottiePlayer extends Canvas {
             logger.debug("Visible layers: {}", visibleLayerIndices);
         }
 
+        long renderStartNanos = System.nanoTime();
+
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
         gc.setFill(backgroundColor);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
@@ -438,6 +508,9 @@ public class LottiePlayer extends Canvas {
 
         gc.restore();
 
+        long renderEndNanos = System.nanoTime();
+        updateAdaptiveOffscreenScale((renderEndNanos - renderStartNanos) / 1_000_000.0);
+
         if (debug) {
             long nowNanos = System.nanoTime();
             if (lastDebugRenderNanos > 0L) {
@@ -455,6 +528,18 @@ public class LottiePlayer extends Canvas {
             lastDebugRenderNanos = nowNanos;
 
             drawDebugOverlay(gc, frame, scale);
+        }
+    }
+
+    private void updateAdaptiveOffscreenScale(double renderMillis) {
+        // Exponential smoothing to avoid resolution oscillation on bursty frames.
+        smoothedRenderMillis = smoothedRenderMillis * 0.85 + renderMillis * 0.15;
+
+        double targetMillis = 1000.0 / Math.max(1.0, getFramesPerSecond());
+        if (smoothedRenderMillis > targetMillis * 1.25) {
+            adaptiveOffscreenScale = Math.max(MIN_ADAPTIVE_OFFSCREEN_SCALE, adaptiveOffscreenScale - ADAPTIVE_SCALE_DOWN_STEP);
+        } else if (smoothedRenderMillis < targetMillis * 0.85) {
+            adaptiveOffscreenScale = Math.min(MAX_ADAPTIVE_OFFSCREEN_SCALE, adaptiveOffscreenScale + ADAPTIVE_SCALE_UP_STEP);
         }
     }
 
@@ -507,22 +592,7 @@ public class LottiePlayer extends Canvas {
      * @return true if the layer should be skipped
      */
     private boolean shouldSkipDueToParent(Layer layer) {
-        if (layer.indexParent() == null) {
-            return false; // No parent
-        }
-
-        Layer parent = layersByIndex.get(layer.indexParent());
-        if (parent == null) {
-            return false; // Parent not found
-        }
-
-        // Check if parent should be skipped
-        if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
-            return true;
-        }
-
-        // Recursively check parent's parent
-        return shouldSkipDueToParent(parent);
+        return skipDueToParentCache.getOrDefault(layer, computeSkipDueToParent(layer));
     }
 
     /**
@@ -656,14 +726,7 @@ public class LottiePlayer extends Canvas {
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
                 logger.debug("Layer has {} shapes", layer.shapes().size());
 
-                // First pass: collect any layer-level modifiers (like TrimPath)
-                TrimPath layerTrimPath = null;
-                for (BaseShape shape : layer.shapes()) {
-                    if (shape instanceof TrimPath trim) {
-                        layerTrimPath = trim;
-                        logger.debug("Found layer-level TrimPath");
-                    }
-                }
+                TrimPath layerTrimPath = layerTrimPathCache.getOrDefault(layer, null);
 
                 // Second pass: render shapes in REVERSE order (bottom-to-top: last shape renders first)
                 for (int i = layer.shapes().size() - 1; i >= 0; i--) {
@@ -728,21 +791,14 @@ public class LottiePlayer extends Canvas {
      * @param frame animation frame
      */
     private void applyParentTransforms(GraphicsContext gc, Layer layer, double frame) {
-        if (layer.indexParent() == null) {
-            return; // No parent
-        }
-
-        Layer parent = layersByIndex.get(layer.indexParent());
-        if (parent == null) {
-            logger.warn("Parent layer not found: {}", layer.indexParent());
+        List<Layer> parentChain = parentChainCache.get(layer);
+        if (parentChain == null || parentChain.isEmpty()) {
             return;
         }
 
-        // Recursively apply parent's parent transforms first
-        applyParentTransforms(gc, parent, frame);
-
-        // Then apply this parent's transform
-        applyLayerTransform(gc, parent, frame);
+        for (Layer parent : parentChain) {
+            applyLayerTransform(gc, parent, frame);
+        }
     }
 
     /**
@@ -952,7 +1008,8 @@ public class LottiePlayer extends Canvas {
     private double resolveRenderResolutionScale(GraphicsContext graphicsContext) {
         double sx = graphicsContext.getCanvas().getWidth() / Math.max(1.0, getAnimationWidth());
         double sy = graphicsContext.getCanvas().getHeight() / Math.max(1.0, getAnimationHeight());
-        return Math.clamp(Math.min(sx, sy), 0.1, 1.0);
+        double fitScale = Math.clamp(Math.min(sx, sy), 0.1, 1.0);
+        return Math.clamp(Math.min(fitScale, adaptiveOffscreenScale), 0.1, 1.0);
     }
 
     /**
@@ -986,14 +1043,7 @@ public class LottiePlayer extends Canvas {
             if (layer.shapes() != null && !layer.shapes().isEmpty()) {
                 logger.debug("Layer has {} shapes", layer.shapes().size());
 
-                // First pass: collect any layer-level modifiers (like TrimPath)
-                TrimPath layerTrimPath = null;
-                for (BaseShape shape : layer.shapes()) {
-                    if (shape instanceof TrimPath trim) {
-                        layerTrimPath = trim;
-                        logger.debug("Found layer-level TrimPath");
-                    }
-                }
+                TrimPath layerTrimPath = layerTrimPathCache.getOrDefault(layer, null);
 
                 // Second pass: render shapes in REVERSE order (bottom-to-top: last shape renders first)
                 for (int i = layer.shapes().size() - 1; i >= 0; i--) {
@@ -1036,4 +1086,6 @@ public class LottiePlayer extends Canvas {
         seekToFrame(getCurrentFrame());
     }
 }
+
+
 
