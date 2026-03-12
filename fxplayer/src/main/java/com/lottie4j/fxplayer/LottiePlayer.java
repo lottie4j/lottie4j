@@ -578,6 +578,9 @@ public class LottiePlayer extends Canvas {
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
                         }
+                        case MODIFIER -> {
+                            // Modifiers are consumed by group-level rendering passes.
+                        }
                         default -> logger.warn("Unsupported shape type: {}", shape.shapeType().shapeGroup());
                     }
                 }
@@ -865,6 +868,9 @@ public class LottiePlayer extends Canvas {
                         case SHAPE -> renderShapeTypeShape(shape, null, frame);
                         case STYLE -> {
                             // Skip - styles (Fill, Stroke, etc.) are handled within groups
+                        }
+                        case MODIFIER -> {
+                            // Modifiers are consumed by group-level rendering passes.
                         }
                         default -> logger.warn("Unsupported shape type: {}", shape.shapeType().shapeGroup());
                     }

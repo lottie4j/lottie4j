@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Renderer for precomposition layers in Lottie animations.
@@ -42,6 +43,7 @@ public class PrecompRenderer {
     private final TextRenderer textRenderer;
     private final ImageRenderer imageRenderer;
     private final EffectsRenderer effectsRenderer;
+    private final MatteRenderer matteRenderer;
 
     /**
      * Creates a precomposition renderer with required collaborators.
@@ -55,6 +57,7 @@ public class PrecompRenderer {
         this.textRenderer = textRenderer;
         this.imageRenderer = imageRenderer;
         this.effectsRenderer = new EffectsRenderer();
+        this.matteRenderer = new MatteRenderer();
     }
 
     /**
@@ -144,12 +147,52 @@ public class PrecompRenderer {
             logger.debug("No precomp clip for {} - bounds {}x{}", layer.referenceId(), precompWidth, precompHeight);
         }
 
-        for (int i = asset.layers().size() - 1; i >= 0; i--) {
-            Layer precompLayer = asset.layers().get(i);
+        List<Layer> precompLayers = asset.layers();
+        for (int i = precompLayers.size() - 1; i >= 0; i--) {
+            Layer precompLayer = precompLayers.get(i);
             if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
                 continue;
             }
             logger.debug("Rendering precomp layer [{}] ind={} name='{}'", i, precompLayer.indexLayer(), precompLayer.name());
+
+            Optional<Layer> matteSource = resolveActiveMatteSource(precompLayers, i, localFrame, layerActivityEvaluator);
+            if (precompLayer.matteMode() != null && matteSource.isPresent()) {
+                Layer resolvedMatteSource = matteSource.get();
+                logger.debug("Rendering matted precomp layer {} with matte from {}", precompLayer.name(), resolvedMatteSource.name());
+                matteRenderer.renderLayerWithMatte(
+                        gc,
+                        precompLayer,
+                        resolvedMatteSource,
+                        localFrame,
+                        (int) Math.max(1, precompWidth),
+                        (int) Math.max(1, precompHeight),
+                        (matteGc, matteLayer, matteFrame) -> renderPrecompLayer(
+                                matteGc,
+                                matteLayer,
+                                matteFrame,
+                                precompLayersByIndex,
+                                assetsById,
+                                animation,
+                                precompWidth,
+                                precompHeight,
+                                layerActivityEvaluator,
+                                solidColorLayerRenderer,
+                                shapeGroupRenderer,
+                                shapeRendererDelegate
+                        )
+                );
+                continue;
+            }
+
+            if (precompLayer.matteTarget() != null && precompLayer.matteTarget() == 1) {
+                logger.debug("Skipping matte source layer in precomp: {}", precompLayer.name());
+                continue;
+            }
+
+            if (shouldSkipDueToParentMatte(precompLayer, precompLayersByIndex)) {
+                logger.debug("Skipping precomp layer with skipped parent: {}", precompLayer.name());
+                continue;
+            }
 
             renderPrecompLayer(gc,
                     precompLayer,
@@ -218,7 +261,7 @@ public class PrecompRenderer {
                         applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompLayersByIndex);
                         transformApplier.applyLayerTransform(blurGc, blurLayer, blurFrame);
                         // Render content
-                        renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, assetsById, animation, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+                        renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, animation, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
                     });
             return;
         }
@@ -338,6 +381,9 @@ public class PrecompRenderer {
                 case STYLE -> {
                     // Styles are consumed by parent group renderers.
                 }
+                case MODIFIER -> {
+                    // Modifiers are consumed by group-level rendering passes.
+                }
                 default -> logger.debug("Unsupported shape type: {}", shape.shapeType().shapeGroup());
             }
         }
@@ -350,9 +396,7 @@ public class PrecompRenderer {
      * @param gc                      graphics context
      * @param layer                   precomp layer
      * @param frame                   local precomp frame
-     * @param assetsById              asset lookup map
      * @param animation               root animation
-     * @param layerActivityEvaluator  layer activity callback
      * @param solidColorLayerRenderer solid color renderer callback
      * @param shapeGroupRenderer      shape group renderer callback
      * @param shapeRendererDelegate   shape renderer callback
@@ -360,9 +404,7 @@ public class PrecompRenderer {
     private void renderPrecompLayerContentOnly(GraphicsContext gc,
                                                Layer layer,
                                                double frame,
-                                               Map<String, Asset> assetsById,
                                                Animation animation,
-                                               LayerActivityEvaluator layerActivityEvaluator,
                                                SolidColorLayerRenderer solidColorLayerRenderer,
                                                ShapeGroupRenderer shapeGroupRenderer,
                                                ShapeRendererDelegate shapeRendererDelegate) {
@@ -476,6 +518,49 @@ public class PrecompRenderer {
         return -1;
     }
 
+    private Optional<Layer> resolveActiveMatteSource(List<Layer> layers,
+                                                     int matteUserIndex,
+                                                     double frame,
+                                                     LayerActivityEvaluator layerActivityEvaluator) {
+        if (matteUserIndex > 0) {
+            Layer previous = layers.get(matteUserIndex - 1);
+            if (isMatteSource(previous, frame, layerActivityEvaluator)) {
+                return Optional.of(previous);
+            }
+        }
+        if (matteUserIndex + 1 < layers.size()) {
+            Layer next = layers.get(matteUserIndex + 1);
+            if (isMatteSource(next, frame, layerActivityEvaluator)) {
+                return Optional.of(next);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private boolean isMatteSource(Layer layer, double frame, LayerActivityEvaluator layerActivityEvaluator) {
+        return layer != null
+                && layer.matteTarget() != null
+                && layer.matteTarget() == 1
+                && layerActivityEvaluator.isActive(layer, frame);
+    }
+
+    private boolean shouldSkipDueToParentMatte(Layer layer, Map<Integer, Layer> precompLayersByIndex) {
+        if (layer.indexParent() == null) {
+            return false;
+        }
+
+        Layer parent = precompLayersByIndex.get(layer.indexParent());
+        if (parent == null) {
+            return false;
+        }
+
+        if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
+            return true;
+        }
+
+        return shouldSkipDueToParentMatte(parent, precompLayersByIndex);
+    }
+
     /**
      * Callback for checking whether a layer should render at a frame.
      */
@@ -536,6 +621,3 @@ public class PrecompRenderer {
         void render(BaseShape shape, Group parentGroup, double frame);
     }
 }
-
-
-

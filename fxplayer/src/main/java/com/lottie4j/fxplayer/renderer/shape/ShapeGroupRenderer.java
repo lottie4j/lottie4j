@@ -1,26 +1,37 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.definition.FillRule;
+import com.lottie4j.core.definition.MergeMode;
 import com.lottie4j.core.definition.ShapeGroup;
+import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
+import com.lottie4j.core.model.shape.modifier.Merge;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
+import com.lottie4j.core.model.shape.shape.Ellipse;
 import com.lottie4j.core.model.shape.shape.Path;
+import com.lottie4j.core.model.shape.shape.Rectangle;
 import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+import javafx.geometry.Bounds;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Renderer for shape groups with support for transforms, trim paths, and combined path rendering.
@@ -32,6 +43,8 @@ public class ShapeGroupRenderer {
 
     private final TransformApplier transformApplier;
     private final ShapeRendererFactory shapeRendererFactory;
+    private final Set<String> unsupportedModifierWarnings = ConcurrentHashMap.newKeySet();
+    private final PathBezierInterpolator pathBezierInterpolator = new PathBezierInterpolator();
 
     /**
      * Creates a shape group renderer.
@@ -92,7 +105,7 @@ public class ShapeGroupRenderer {
             Group effectiveGroup = createGroupWithTrimPath(group, effectiveTrimPath);
 
             // Check if this group has multiple Path shapes with a single Fill (needs combined rendering)
-            boolean hasMultiplePaths = renderGroupWithCombinedPaths(gc, group, effectiveGroup, frame, effectiveTrimPath);
+            boolean hasMultiplePaths = renderGroupWithCombinedPaths(gc, group, frame, effectiveTrimPath);
 
             if (!hasMultiplePaths) {
                 // If the group has opacity that varies per frame and contains overlapping shapes,
@@ -106,12 +119,12 @@ public class ShapeGroupRenderer {
                         transformApplier.applyGroupTransform(gc, groupTransform, frame);
                     }
 
-                    // Render all non-transform/non-modifier shapes in reverse order
+                    // Render all non-transform/non-trim shapes in reverse order
                     // Lottie renders shapes bottom-to-top (last in array is drawn first, appears behind)
                     for (int i = group.shapes().size() - 1; i >= 0; i--) {
                         BaseShape item = group.shapes().get(i);
                         if (item instanceof Transform || item instanceof TrimPath) {
-                            continue; // Skip modifiers, they're applied to the shapes
+                            continue; // Transform is applied at group level, TrimPath is resolved via effectiveTrimPath
                         }
 
                         switch (item.shapeType().shapeGroup()) {
@@ -120,6 +133,7 @@ public class ShapeGroupRenderer {
                             case STYLE -> {
                                 // Skip - styles (Fill, Stroke, etc.) are handled within groups
                             }
+                            case MODIFIER -> handleModifier(item);
                             default ->
                                     logger.warn("Not defined how to render shape type: {}", item.shapeType().shapeGroup());
                         }
@@ -169,12 +183,11 @@ public class ShapeGroupRenderer {
      *
      * @param gc                graphics context
      * @param group             original group
-     * @param effectiveGroup    group with effective trim path
      * @param frame             animation frame
      * @param effectiveTrimPath effective trim path
      * @return true if rendered as combined paths, false otherwise
      */
-    private boolean renderGroupWithCombinedPaths(GraphicsContext gc, Group group, Group effectiveGroup, double frame, TrimPath effectiveTrimPath) {
+    private boolean renderGroupWithCombinedPaths(GraphicsContext gc, Group group, double frame, TrimPath effectiveTrimPath) {
         // Count Path shapes and check for Fill
         List<Path> paths = new ArrayList<>();
         Fill fill = null;
@@ -188,6 +201,14 @@ public class ShapeGroupRenderer {
             } else if (item instanceof Transform transform) {
                 groupTransform = transform;
             }
+        }
+
+        logger.debug("GROUP: {} - found {} paths, fill={}, transform={}",
+                group.name(), paths.size(), fill != null, groupTransform != null);
+
+        if (renderGroupWithMergeModifier(gc, group, fill, groupTransform, frame, effectiveTrimPath)) {
+            logger.debug("  -> used MERGE rendering");
+            return true;
         }
 
         // Only use combined rendering if we have multiple paths with a fill
@@ -240,102 +261,260 @@ public class ShapeGroupRenderer {
         return true;
     }
 
-    /**
-     * Adds a Path shape's Bezier curves to the current canvas path.
-     *
-     * @param gc    graphics context
-     * @param path  path shape
-     * @param frame animation frame
-     */
-    private void addPathToCanvas(GraphicsContext gc, Path path, double frame) {
-        if (path.bezier() == null) return;
-
-        BezierDefinition bezierDef;
-        if (path.bezier() instanceof FixedBezier fixedBezier) {
-            bezierDef = fixedBezier.bezier();
-        } else if (path.bezier() instanceof AnimatedBezier animatedBezier) {
-            bezierDef = getInterpolatedBezier(animatedBezier, frame);
-        } else {
-            return;
+    private boolean renderGroupWithMergeModifier(GraphicsContext gc,
+                                                 Group group,
+                                                 Fill fill,
+                                                 Transform groupTransform,
+                                                 double frame,
+                                                 TrimPath effectiveTrimPath) {
+        Merge merge = null;
+        int mergeIndex = -1;
+        for (int i = 0; i < group.shapes().size(); i++) {
+            BaseShape shape = group.shapes().get(i);
+            if (shape instanceof Merge m) {
+                merge = m;
+                mergeIndex = i;
+                break;
+            }
         }
 
-        if (bezierDef == null || bezierDef.vertices() == null || bezierDef.vertices().isEmpty()) return;
+        if (merge == null || fill == null || mergeIndex < 1) {
+            logger.debug("MERGE SKIP - merge={}, fill={}, mergeIndex={} in group: {}",
+                    merge != null, fill != null, mergeIndex, group.name());
+            return false;
+        }
 
-        List<List<Double>> vertices = bezierDef.vertices();
-        List<List<Double>> tangentsIn = bezierDef.tangentsIn();
-        List<List<Double>> tangentsOut = bezierDef.tangentsOut();
+        logger.debug("MERGE FOUND: group={}, mergeIndex={}, mergeMode={}, fill_color={}",
+                group.name(), mergeIndex, merge.mergeMode(), fill.color());
+
+        List<javafx.scene.shape.Shape> mergeInputs = new ArrayList<>();
+        for (int i = 0; i < mergeIndex; i++) {
+            BaseShape input = group.shapes().get(i);
+            logger.debug("  MERGE INPUT [{}]: type={}", i, input.getClass().getSimpleName());
+            javafx.scene.shape.Shape fxShape = toFxShape(input, frame);
+            if (fxShape != null) {
+                mergeInputs.add(fxShape);
+                logger.debug("    -> converted to FxShape: {}", fxShape.getClass().getSimpleName());
+            } else {
+                logger.debug("    -> toFxShape returned NULL");
+            }
+        }
+
+        logger.debug("MERGE INPUTS COLLECTED: {} inputs for group: {}", mergeInputs.size(), group.name());
+
+        if (mergeInputs.isEmpty()) {
+            logger.debug("MERGE SKIP - no inputs collected in group: {}", group.name());
+            return false;
+        }
+
+        // Single input still renders (no-op merge)
+        if (mergeInputs.size() == 1) {
+            logger.debug("MERGE RENDERING: single-input merge (no-op) in group: {}", group.name());
+        }
+
+        javafx.scene.shape.Shape merged = mergeInputs.get(0);
+        MergeMode mode = merge.mergeMode() != null ? merge.mergeMode() : MergeMode.NORMAL;
+        for (int i = 1; i < mergeInputs.size(); i++) {
+            merged = applyMergeMode(merged, mergeInputs.get(i), mode);
+        }
+
+        gc.save();
+        if (groupTransform != null) {
+            transformApplier.applyGroupTransform(gc, groupTransform, frame);
+        }
+
+        javafx.scene.shape.FillRule fxFillRule = fill.fillRule() == FillRule.EVEN_ODD
+                ? javafx.scene.shape.FillRule.EVEN_ODD
+                : javafx.scene.shape.FillRule.NON_ZERO;
+        var fillColor = new FillStyle(fill).getColor(frame);
+        logger.debug("MERGE RENDERING PATH: merged shape type={}, fillRule={}, fillColor={}",
+                merged.getClass().getSimpleName(), fxFillRule, fillColor);
+
+        if (!renderMergedShape(gc, merged, fxFillRule, fillColor)) {
+            logger.debug("MERGE RENDER FAILED: renderMergedShape returned false for group: {}", group.name());
+            gc.restore();
+            return false;
+        }
+        gc.restore();
+
+        logger.debug("MERGE RENDER SUCCESS: {} with {} inputs in group {}", mode, mergeInputs.size(), group.name());
+
+        for (int i = group.shapes().size() - 1; i >= 0; i--) {
+            BaseShape item = group.shapes().get(i);
+            if (item.shapeType().shapeGroup() == ShapeGroup.GROUP) {
+                renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
+            }
+        }
+
+        logger.debug("Rendered merge modifier {} with {} inputs in group {}", mode, mergeInputs.size(), group.name());
+        return true;
+    }
+
+    private javafx.scene.shape.Shape applyMergeMode(javafx.scene.shape.Shape left,
+                                                    javafx.scene.shape.Shape right,
+                                                    MergeMode mergeMode) {
+        return switch (mergeMode) {
+            case NORMAL, ADD -> javafx.scene.shape.Shape.union(left, right);
+            case SUBTRACT -> javafx.scene.shape.Shape.subtract(left, right);
+            case INTERSECT -> javafx.scene.shape.Shape.intersect(left, right);
+            case EXCLUDE -> {
+                javafx.scene.shape.Shape union = javafx.scene.shape.Shape.union(left, right);
+                javafx.scene.shape.Shape intersection = javafx.scene.shape.Shape.intersect(left, right);
+                yield javafx.scene.shape.Shape.subtract(union, intersection);
+            }
+        };
+    }
+
+    private javafx.scene.shape.Shape toFxShape(BaseShape shape, double frame) {
+        if (shape instanceof Path path) {
+            logger.debug("  toFxShape: Path -> converting bezier");
+            BezierDefinition bezierDefinition = resolveBezier(path, frame);
+            if (bezierDefinition == null) {
+                logger.debug("    toFxShape: Path -> bezier was NULL");
+                return null;
+            }
+            logger.debug("    toFxShape: Path -> created FxPath");
+            return createFxPath(bezierDefinition);
+        }
+        if (shape instanceof Ellipse ellipse) {
+            if (ellipse.size() == null) {
+                logger.debug("  toFxShape: Ellipse -> size is NULL");
+                return null;
+            }
+            double width = ellipse.size().getValue(AnimatedValueType.WIDTH, frame);
+            double height = ellipse.size().getValue(AnimatedValueType.HEIGHT, frame);
+            double centerX = ellipse.position() != null ? ellipse.position().getValue(AnimatedValueType.X, frame) : 0;
+            double centerY = ellipse.position() != null ? ellipse.position().getValue(AnimatedValueType.Y, frame) : 0;
+            logger.debug("  toFxShape: Ellipse -> created at ({},{}) size {}x{}", centerX, centerY, width, height);
+            return new javafx.scene.shape.Ellipse(centerX, centerY, width / 2.0, height / 2.0);
+        }
+        if (shape instanceof Rectangle rectangle) {
+            if (rectangle.size() == null) {
+                logger.debug("  toFxShape: Rectangle -> size is NULL");
+                return null;
+            }
+            double width = rectangle.size().getValue(AnimatedValueType.WIDTH, frame);
+            double height = rectangle.size().getValue(AnimatedValueType.HEIGHT, frame);
+            double centerX = rectangle.position() != null ? rectangle.position().getValue(AnimatedValueType.X, frame) : 0;
+            double centerY = rectangle.position() != null ? rectangle.position().getValue(AnimatedValueType.Y, frame) : 0;
+            javafx.scene.shape.Rectangle fxRect = new javafx.scene.shape.Rectangle(centerX - width / 2.0, centerY - height / 2.0, width, height);
+            if (rectangle.roundedCornerRadius() != null) {
+                double radius = rectangle.roundedCornerRadius().getValue(0, frame);
+                fxRect.setArcWidth(radius * 2.0);
+                fxRect.setArcHeight(radius * 2.0);
+            }
+            logger.debug("  toFxShape: Rectangle -> created at ({},{}) size {}x{}", centerX, centerY, width, height);
+            return fxRect;
+        }
+        logger.debug("  toFxShape: UNSUPPORTED type: {}", shape.getClass().getSimpleName());
+        return null;
+    }
+
+    private BezierDefinition resolveBezier(Path path, double frame) {
+        if (path.bezier() instanceof FixedBezier fixedBezier) {
+            return fixedBezier.bezier();
+        }
+        if (path.bezier() instanceof AnimatedBezier animatedBezier) {
+            return pathBezierInterpolator.getInterpolatedBezier(animatedBezier, frame);
+        }
+        return null;
+    }
+
+    private javafx.scene.shape.Path createFxPath(BezierDefinition bezierDefinition) {
+        javafx.scene.shape.Path fxPath = new javafx.scene.shape.Path();
+        List<List<Double>> vertices = bezierDefinition.vertices();
+        List<List<Double>> tangentsIn = bezierDefinition.tangentsIn();
+        List<List<Double>> tangentsOut = bezierDefinition.tangentsOut();
+
+        if (vertices == null || vertices.isEmpty()) {
+            return fxPath;
+        }
 
         boolean first = true;
         for (int i = 0; i < vertices.size(); i++) {
             List<Double> vertex = vertices.get(i);
-            if (vertex.size() < 2) continue;
+            if (vertex.size() < 2) {
+                continue;
+            }
 
             double x = vertex.get(0);
             double y = vertex.get(1);
-
             if (first) {
-                gc.moveTo(x, y);
+                fxPath.getElements().add(new MoveTo(x, y));
                 first = false;
-            } else {
-                if (tangentsIn != null && tangentsOut != null &&
-                        i - 1 < tangentsOut.size() && i < tangentsIn.size()) {
-                    List<Double> prevTangentOut = tangentsOut.get(i - 1);
-                    List<Double> currentTangentIn = tangentsIn.get(i);
+                continue;
+            }
 
-                    if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
-                        List<Double> prevVertex = vertices.get(i - 1);
-                        double cp1x = prevVertex.get(0) + prevTangentOut.get(0);
-                        double cp1y = prevVertex.get(1) + prevTangentOut.get(1);
-                        double cp2x = x + currentTangentIn.get(0);
-                        double cp2y = y + currentTangentIn.get(1);
-                        gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
-                    } else {
-                        gc.lineTo(x, y);
-                    }
-                } else {
-                    gc.lineTo(x, y);
+            if (tangentsIn != null && tangentsOut != null && i - 1 < tangentsOut.size() && i < tangentsIn.size()) {
+                List<Double> prevTangentOut = tangentsOut.get(i - 1);
+                List<Double> currentTangentIn = tangentsIn.get(i);
+                if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
+                    List<Double> previousVertex = vertices.get(i - 1);
+                    fxPath.getElements().add(new CubicCurveTo(
+                            previousVertex.get(0) + prevTangentOut.get(0),
+                            previousVertex.get(1) + prevTangentOut.get(1),
+                            x + currentTangentIn.get(0),
+                            y + currentTangentIn.get(1),
+                            x,
+                            y
+                    ));
+                    continue;
                 }
             }
+
+            fxPath.getElements().add(new LineTo(x, y));
         }
 
-        // Handle closing bezier curve
-        if (bezierDef.closed() != null && bezierDef.closed() && vertices.size() > 1) {
+        if (Boolean.TRUE.equals(bezierDefinition.closed()) && vertices.size() > 1) {
             int lastIdx = vertices.size() - 1;
-            if (tangentsIn != null && tangentsOut != null &&
-                    lastIdx < tangentsOut.size() && 0 < tangentsIn.size()) {
+            if (tangentsIn != null && tangentsOut != null && lastIdx < tangentsOut.size() && !tangentsIn.isEmpty()) {
                 List<Double> lastTangentOut = tangentsOut.get(lastIdx);
                 List<Double> firstTangentIn = tangentsIn.get(0);
                 if (lastTangentOut.size() >= 2 && firstTangentIn.size() >= 2) {
                     List<Double> lastVertex = vertices.get(lastIdx);
                     List<Double> firstVertex = vertices.get(0);
-                    double cp1x = lastVertex.get(0) + lastTangentOut.get(0);
-                    double cp1y = lastVertex.get(1) + lastTangentOut.get(1);
-                    double cp2x = firstVertex.get(0) + firstTangentIn.get(0);
-                    double cp2y = firstVertex.get(1) + firstTangentIn.get(1);
-                    gc.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstVertex.get(0), firstVertex.get(1));
-                    // Note: Don't call closePath() here - JavaFX will handle it
-                } else {
-                    gc.closePath();
+                    fxPath.getElements().add(new CubicCurveTo(
+                            lastVertex.get(0) + lastTangentOut.get(0),
+                            lastVertex.get(1) + lastTangentOut.get(1),
+                            firstVertex.get(0) + firstTangentIn.get(0),
+                            firstVertex.get(1) + firstTangentIn.get(1),
+                            firstVertex.get(0),
+                            firstVertex.get(1)
+                    ));
                 }
-            } else {
+            }
+            fxPath.getElements().add(new ClosePath());
+        }
+
+        return fxPath;
+    }
+
+    private boolean drawFxShapePath(GraphicsContext gc, javafx.scene.shape.Shape shape, javafx.scene.shape.FillRule fillRule) {
+        if (!(shape instanceof javafx.scene.shape.Path path) || path.getElements().isEmpty()) {
+            return false;
+        }
+
+        path.setFillRule(fillRule);
+        gc.setFillRule(fillRule);
+        gc.beginPath();
+
+        for (PathElement element : path.getElements()) {
+            if (element instanceof MoveTo moveTo) {
+                gc.moveTo(moveTo.getX(), moveTo.getY());
+            } else if (element instanceof LineTo lineTo) {
+                gc.lineTo(lineTo.getX(), lineTo.getY());
+            } else if (element instanceof CubicCurveTo cubicCurveTo) {
+                gc.bezierCurveTo(
+                        cubicCurveTo.getControlX1(), cubicCurveTo.getControlY1(),
+                        cubicCurveTo.getControlX2(), cubicCurveTo.getControlY2(),
+                        cubicCurveTo.getX(), cubicCurveTo.getY()
+                );
+            } else if (element instanceof ClosePath) {
                 gc.closePath();
             }
         }
-    }
 
-    /**
-     * Gets interpolated Bezier definition for animated paths.
-     * Currently not fully implemented for combined path rendering.
-     *
-     * @param animatedBezier animated bezier data
-     * @param frame          animation frame
-     * @return interpolated bezier definition, or null if not supported yet
-     */
-    private BezierDefinition getInterpolatedBezier(AnimatedBezier animatedBezier, double frame) {
-        // This method should already exist in PathRenderer - we need to extract it or duplicate it
-        // For now, return null and we'll need to implement it
-        logger.warn("Animated bezier not yet supported in combined path rendering");
-        return null;
+        return true;
     }
 
     /**
@@ -424,6 +603,7 @@ public class ShapeGroupRenderer {
                     case STYLE -> {
                         // Skip
                     }
+                    case MODIFIER -> handleModifier(item);
                     default ->
                             logger.warn("Unsupported shape type in off-screen rendering: {}", item.shapeType().shapeGroup());
                 }
@@ -446,5 +626,92 @@ public class ShapeGroupRenderer {
 
         logger.debug("Finished off-screen rendering for group: {}", group.name());
     }
-}
 
+    /**
+     * Handles non-trim shape modifiers that are not yet supported by the JavaFX renderer.
+     * Logs once per modifier type to avoid frame-by-frame log spam.
+     */
+    private void handleModifier(BaseShape modifier) {
+        if (modifier instanceof TrimPath || modifier instanceof Merge) {
+            return;
+        }
+
+        String modifierType = modifier.shapeType() != null ? modifier.shapeType().name() : modifier.getClass().getSimpleName();
+        if (unsupportedModifierWarnings.add(modifierType)) {
+            logger.warn("Skipping unsupported modifier: {}", modifierType);
+        } else {
+            logger.debug("Skipping unsupported modifier: {}", modifierType);
+        }
+    }
+
+    private void addPathToCanvas(GraphicsContext gc, Path path, double frame) {
+        BezierDefinition bezierDefinition = resolveBezier(path, frame);
+        if (bezierDefinition == null) {
+            return;
+        }
+
+        javafx.scene.shape.Path fxPath = createFxPath(bezierDefinition);
+        for (PathElement element : fxPath.getElements()) {
+            if (element instanceof MoveTo moveTo) {
+                gc.moveTo(moveTo.getX(), moveTo.getY());
+            } else if (element instanceof LineTo lineTo) {
+                gc.lineTo(lineTo.getX(), lineTo.getY());
+            } else if (element instanceof CubicCurveTo cubicCurveTo) {
+                gc.bezierCurveTo(
+                        cubicCurveTo.getControlX1(), cubicCurveTo.getControlY1(),
+                        cubicCurveTo.getControlX2(), cubicCurveTo.getControlY2(),
+                        cubicCurveTo.getX(), cubicCurveTo.getY()
+                );
+            } else if (element instanceof ClosePath) {
+                gc.closePath();
+            }
+        }
+    }
+
+    private boolean renderMergedShape(GraphicsContext gc,
+                                      javafx.scene.shape.Shape merged,
+                                      javafx.scene.shape.FillRule fillRule,
+                                      Color fillColor) {
+        if (drawFxShapePath(gc, merged, fillRule)) {
+            logger.debug("MERGED SHAPE RENDERED via path: {}", merged.getClass().getSimpleName());
+            gc.setFill(fillColor);
+            gc.fill();
+            return true;
+        }
+
+        // JavaFX boolean ops may return non-Path shapes; snapshot rendering keeps these visible.
+        logger.debug("MERGED SHAPE RENDERING via snapshot: {} (non-Path result from boolean op)", merged.getClass().getSimpleName());
+        return drawShapeViaSnapshot(gc, merged, fillRule, fillColor);
+    }
+
+    private boolean drawShapeViaSnapshot(GraphicsContext gc,
+                                         javafx.scene.shape.Shape shape,
+                                         javafx.scene.shape.FillRule fillRule,
+                                         Color fillColor) {
+        Bounds bounds = shape.getLayoutBounds();
+        if (bounds == null || bounds.getWidth() <= 0 || bounds.getHeight() <= 0) {
+            return false;
+        }
+
+        shape.setStroke(null);
+        shape.setFill(fillColor);
+        if (shape instanceof javafx.scene.shape.Path path) {
+            path.setFillRule(fillRule);
+        }
+
+        double padding = 2.0;
+        int imageWidth = Math.max(1, (int) Math.ceil(bounds.getWidth() + 2 * padding));
+        int imageHeight = Math.max(1, (int) Math.ceil(bounds.getHeight() + 2 * padding));
+
+        javafx.scene.Group node = new javafx.scene.Group(shape);
+        node.setTranslateX(-bounds.getMinX() + padding);
+        node.setTranslateY(-bounds.getMinY() + padding);
+
+        SnapshotParameters snapshotParameters = new SnapshotParameters();
+        snapshotParameters.setFill(Color.TRANSPARENT);
+        WritableImage image = node.snapshot(snapshotParameters, new WritableImage(imageWidth, imageHeight));
+
+        gc.drawImage(image, bounds.getMinX() - padding, bounds.getMinY() - padding);
+        return true;
+    }
+}
