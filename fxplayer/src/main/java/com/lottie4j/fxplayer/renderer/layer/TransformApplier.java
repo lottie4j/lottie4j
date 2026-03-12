@@ -8,48 +8,70 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Applies transform operations from Lottie layers and shape groups to JavaFX graphics context.
- * Handles translation, rotation, scaling, anchors, and opacity transforms with proper nesting support.
+ * Applies Lottie layer and shape-group transform data to a JavaFX {@link GraphicsContext}.
+ *
+ * <p>The applier samples animated transform properties for a specific frame and mutates the provided graphics
+ * context in Lottie's expected order: opacity, position, rotation, scale, then anchor compensation.
+ * Separate entry points are provided for cases where opacity should be inherited and cases where callers need
+ * only geometric transforms, such as parent propagation or off-screen intermediate rendering.
+ *
+ * <p>All methods operate on the caller's current graphics state. Callers are expected to bracket usage with
+ * {@link GraphicsContext#save()} and {@link GraphicsContext#restore()} when they need isolation.
  */
 public class TransformApplier {
 
     private static final Logger logger = LoggerFactory.getLogger(TransformApplier.class);
 
     /**
-     * Creates a new TransformApplier.
+     * Creates a new transform applier.
+     *
+     * <p>The class is stateless and safe to reuse across frames and render passes.
      */
     public TransformApplier() {
+        // Constructor for TransformApplier
     }
 
     /**
-     * Applies the full transform stack for a layer, including animated opacity.
+     * Applies a layer's sampled transform stack, including opacity, to the current graphics state.
      *
-     * @param gc    graphics context to transform
-     * @param layer layer providing transform values
-     * @param frame animation frame to sample
+     * <p>This method multiplies the layer opacity into {@link GraphicsContext#getGlobalAlpha()} and then applies
+     * translation, rotation, scale, and anchor offset using the values sampled at {@code frame}. The resulting
+     * transform affects all subsequent drawing until the caller restores the previous state.
+     *
+     * @param gc    graphics context to mutate
+     * @param layer layer whose transform block should be sampled; if the layer has no transform, no changes are made
+     * @param frame animation frame to sample from animated transform values
      */
     public void applyLayerTransform(GraphicsContext gc, Layer layer, double frame) {
         applyLayerTransformInternal(gc, layer, frame, true);
     }
 
     /**
-     * Applies layer transforms without inheriting opacity, used for parent-transform propagation.
+     * Applies only the geometric portion of a layer transform, omitting opacity multiplication.
      *
-     * @param gc    graphics context to transform
-     * @param layer layer providing transform values
-     * @param frame animation frame to sample
+     * <p>This is used when a parent layer's transform must affect descendants without also duplicating its alpha,
+     * or when opacity is handled later at a different compositing stage.
+     *
+     * @param gc    graphics context to mutate
+     * @param layer layer whose transform block should be sampled
+     * @param frame animation frame to sample from animated transform values
      */
     public void applyLayerTransformWithoutOpacity(GraphicsContext gc, Layer layer, double frame) {
         applyLayerTransformInternal(gc, layer, frame, false);
     }
 
     /**
-     * Internal layer transform applier that optionally includes opacity.
+     * Internal implementation for applying layer transforms with optional opacity inheritance.
      *
-     * @param gc             graphics context to transform
-     * @param layer          layer providing transform values
+     * <p>The transform order matches the renderer's layer semantics: opacity first, then position,
+     * rotation, simulated 3D tilt adjustments via scale factors, 2D scale, and finally anchor translation.
+     * When sampled position values contain {@code NaN}, the method attempts a small positive frame offset as
+     * a fallback before aborting the operation.
+     *
+     * @param gc             graphics context to mutate in place
+     * @param layer          layer providing sampled transform values
      * @param frame          animation frame to sample
-     * @param includeOpacity whether opacity should be multiplied into global alpha
+     * @param includeOpacity whether the sampled opacity should be multiplied into the current global alpha
      */
     private void applyLayerTransformInternal(GraphicsContext gc, Layer layer, double frame, boolean includeOpacity) {
         if (layer.transform() == null) {
@@ -186,18 +208,53 @@ public class TransformApplier {
     /**
      * Applies a shape-group transform block to the graphics context.
      *
-     * @param gc        graphics context to transform
-     * @param transform transform block from a Lottie group
-     * @param frame     animation frame to sample
+     * <p>Group transforms are sampled from the supplied {@link Transform} object and applied in the same basic
+     * order as layer transforms. The method updates the graphics context in place and does not save or restore
+     * state on the caller's behalf.
+     *
+     * @param gc        graphics context to mutate
+     * @param transform transform block from a Lottie shape group
+     * @param frame     animation frame to sample from animated transform values
      */
     public void applyGroupTransform(GraphicsContext gc, Transform transform, double frame) {
-        logger.debug("Applying group transform");
+        applyGroupTransformInternal(gc, transform, frame, true);
+    }
+
+    /**
+     * Applies a shape-group transform block without multiplying its opacity into the graphics context.
+     *
+     * <p>This is useful when a group is being rendered into an intermediate buffer and the final alpha will be
+     * applied during a later composite step.
+     *
+     * @param gc        graphics context to mutate
+     * @param transform transform block from a Lottie shape group
+     * @param frame     animation frame to sample from animated transform values
+     */
+    public void applyGroupTransformWithoutOpacity(GraphicsContext gc, Transform transform, double frame) {
+        applyGroupTransformInternal(gc, transform, frame, false);
+    }
+
+    /**
+     * Internal implementation for applying a group transform with optional opacity multiplication.
+     *
+     * <p>The method mutates {@code gc} in place by applying sampled opacity, translation, rotation, scale,
+     * and anchor compensation in sequence. A {@code null} property inside {@code transform} is treated as
+     * absent and simply skipped.
+     *
+     * @param gc             graphics context to mutate
+     * @param transform      shape-group transform block to sample
+     * @param frame          animation frame to sample
+     * @param includeOpacity whether the group's opacity should be multiplied into the current global alpha
+     */
+    private void applyGroupTransformInternal(GraphicsContext gc, Transform transform, double frame, boolean includeOpacity) {
+        logger.debug("Applying group transform{}",
+                includeOpacity ? "" : " (without opacity)");
 
         if (transform.opacity() != null) {
             double opacityValue = transform.opacity().getValue(0, frame);
             double opacity = opacityValue / 100.0;
             logger.debug("Group opacity raw: {}, normalized: {}", opacityValue, opacity);
-            if (opacity > 0) {
+            if (opacity > 0 && includeOpacity) {
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * opacity);
             }
         }

@@ -525,11 +525,44 @@ public class LottiePlayer extends Canvas {
         // Check for Gaussian Blur effect and render with blur if needed
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
-            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, this::renderLayerInternal);
+            if (shouldUseStaticBlurLayerCache(layer, blurRadius)) {
+                effectsRenderer.renderStaticLayerWithGaussianBlurCache(
+                        gc,
+                        layer,
+                        frame,
+                        blurRadius,
+                        Math.max(1, getAnimationWidth()),
+                        Math.max(1, getAnimationHeight()),
+                        this::renderLayerInternal
+                );
+            } else {
+                effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, this::renderLayerInternal);
+            }
             return;
         }
 
         renderLayerInternal(gc, layer, frame);
+    }
+
+    private boolean shouldUseStaticBlurLayerCache(Layer layer, double blurRadius) {
+        return effectsRenderer.canUseStaticBlurLayerCache(layer, blurRadius)
+                && !hasAnimatedParentTransformChain(layer);
+    }
+
+    private boolean hasAnimatedParentTransformChain(Layer layer) {
+        Integer parentIndex = layer.indexParent();
+        int guard = 0;
+        while (parentIndex != null && guard++ < layersByIndex.size()) {
+            Layer parent = layersByIndex.get(parentIndex);
+            if (parent == null) {
+                return false;
+            }
+            if (effectsRenderer.containsAnimation(parent.transform())) {
+                return true;
+            }
+            parentIndex = parent.indexParent();
+        }
+        return false;
     }
 
     /**

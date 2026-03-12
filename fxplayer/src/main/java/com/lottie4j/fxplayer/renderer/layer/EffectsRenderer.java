@@ -1,7 +1,9 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.EffectType;
+import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.BoxBlur;
@@ -10,26 +12,55 @@ import javafx.scene.image.WritableImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.RecordComponent;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * Renderer for layer effects such as Gaussian Blur.
- * Extracts effect values and applies JavaFX effects to the graphics context.
+ * Applies layer-level effects that need JavaFX-side post-processing after the layer content has been drawn.
+ *
+ * <p>The current implementation focuses on Lottie's Gaussian Blur effect. It translates effect values from
+ * Lottie space into JavaFX-compatible blur radii, optionally renders through an off-screen buffer when the
+ * blur must be cropped to known layer bounds, and can cache expensive blurred rasters for frame-invariant
+ * layers.
+ *
+ * <p>Instances are reusable across frames. The internal static-blur cache is keyed by layer identity,
+ * raster size, and sampled blur radius.
  */
 public class EffectsRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(EffectsRenderer.class);
+    private static final double STATIC_BLUR_CACHE_MIN_RADIUS = 20.0;
+    private static final long STATIC_BLUR_CACHE_MAX_PIXEL_COUNT = 8_000_000L;
+
+    private final Map<StaticLayerBlurCacheKey, WritableImage> staticLayerBlurCache = new ConcurrentHashMap<>();
 
     /**
      * Creates a new effects renderer.
+     *
+     * <p>The renderer keeps a per-instance cache for static blurred layer rasters, so callers typically reuse
+     * a single instance for the lifetime of a player or renderer pipeline.
      */
     public EffectsRenderer() {
+        // Constructor for EffectsRenderer
     }
 
     /**
-     * Extracts the Gaussian Blur radius from layer effects at a specific frame.
+     * Extracts the effective Gaussian blur radius for a layer at the supplied frame.
      *
-     * @param layer layer to check for blur effects
-     * @param frame animation frame to sample
-     * @return blur radius scaled for JavaFX, or 0.0 if no blur effect active
+     * <p>The method searches the layer effect list for the first enabled
+     * {@link com.lottie4j.core.definition.EffectType#GAUSSIAN_BLUR} entry and then samples its
+     * {@code Blurriness} property. Because JavaFX blur effects saturate at smaller radii than Lottie-web,
+     * the sampled value is mapped through a heuristic scale curve and clamped to JavaFX's practical maximum.
+     *
+     * @param layer layer whose effects should be inspected; must not be {@code null}
+     * @param frame animation frame to sample from the effect value curve
+     * @return a JavaFX-ready blur radius in the range {@code [0, 63]}; returns {@code 0.0} when the layer has
+     * no enabled Gaussian blur effect or no usable blur value
      */
     public double getGaussianBlurRadius(Layer layer, double frame) {
         // Default to no blur
@@ -108,28 +139,41 @@ public class EffectsRenderer {
     }
 
     /**
-     * Renders a layer with Gaussian Blur effect applied.
+     * Renders a layer with blur applied and no explicit clipping bounds.
      *
-     * @param gc            graphics context
-     * @param layer         layer to render
-     * @param frame         animation frame
-     * @param blurRadius    blur radius to apply
-     * @param layerRenderer callback to render the layer content
+     * <p>This is a convenience overload that delegates to
+     * {@link #renderLayerWithGaussianBlur(GraphicsContext, Layer, double, double, double, double, LayerRenderer)}
+     * with bounds disabled. The supplied callback is expected to render the layer in the current local
+     * coordinate system.
+     *
+     * @param gc            destination graphics context whose current effect state will be temporarily replaced
+     * @param layer         layer being rendered, used for logging only
+     * @param frame         animation frame to render
+     * @param blurRadius    JavaFX blur radius to apply before invoking {@code layerRenderer}
+     * @param layerRenderer callback that draws the layer content into {@code gc}
      */
     public void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius, LayerRenderer layerRenderer) {
         renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, -1, -1, layerRenderer);
     }
 
     /**
-     * Renders a layer with Gaussian Blur effect applied and optional bounds clipping.
+     * Renders a layer with blur applied, optionally cropping the blurred result to known local bounds.
      *
-     * @param gc            graphics context
-     * @param layer         layer to render
-     * @param frame         animation frame
-     * @param blurRadius    blur radius to apply
-     * @param boundsWidth   clipping width in local coordinates; values less than or equal to 0 disable bounds clipping
-     * @param boundsHeight  clipping height in local coordinates; values less than or equal to 0 disable bounds clipping
-     * @param layerRenderer callback to render the layer content
+     * <p>When both bounds are positive, the layer is first rendered into an expanded off-screen image so the
+     * blur kernel has room to spread, then only the central region matching the original layer bounds is drawn
+     * back to the destination context. When either bound is non-positive, the blur effect is applied directly
+     * to the live {@link GraphicsContext}.
+     *
+     * @param gc            destination graphics context; its effect stack is restored before the method returns
+     * @param layer         layer being rendered, used for logging and diagnostics
+     * @param frame         animation frame to render
+     * @param blurRadius    JavaFX blur radius to apply
+     * @param boundsWidth   clipping width in the layer's local coordinate space; values less than or equal to
+     *                      {@code 0} disable bounded rendering
+     * @param boundsHeight  clipping height in the layer's local coordinate space; values less than or equal to
+     *                      {@code 0} disable bounded rendering
+     * @param layerRenderer callback that renders the unblurred layer content in local coordinates with origin
+     *                      at the top-left of the target bounds
      */
     public void renderLayerWithGaussianBlur(GraphicsContext gc,
                                             Layer layer,
@@ -157,15 +201,20 @@ public class EffectsRenderer {
     }
 
     /**
-     * Renders layer content with blur applied, clipped to specified bounds.
+     * Renders into an off-screen buffer with padding, blurs the result, and draws back only the cropped center.
      *
-     * @param gc            graphics context
-     * @param layer         layer to render
-     * @param frame         animation frame
-     * @param blurRadius    blur radius
-     * @param boundsWidth   clipping width
-     * @param boundsHeight  clipping height
-     * @param layerRenderer callback to render layer content
+     * <p>The off-screen image is expanded by roughly two blur radii on each side so the blur can bleed beyond
+     * the original geometry. Only the source rectangle corresponding to the original bounds is copied back to
+     * the destination context, ensuring consistent clipping even when direct JavaFX clipping and effects do not
+     * interact as expected.
+     *
+     * @param gc            destination graphics context
+     * @param layer         layer being rendered
+     * @param frame         animation frame to render
+     * @param blurRadius    blur radius used for padding and JavaFX effect selection
+     * @param boundsWidth   unclipped local width of the layer content
+     * @param boundsHeight  unclipped local height of the layer content
+     * @param layerRenderer callback that renders the layer into the padded off-screen context
      */
     private void renderWithBoundedBlur(GraphicsContext gc,
                                        Layer layer,
@@ -204,11 +253,15 @@ public class EffectsRenderer {
     }
 
     /**
-     * Applies the appropriate blur effect based on radius magnitude.
-     * Uses BoxBlur for large radii and GaussianBlur for smaller ones.
+     * Chooses and installs a JavaFX blur effect for the supplied radius.
      *
-     * @param gc         graphics context
-     * @param blurRadius blur radius
+     * <p>Smaller radii use {@link GaussianBlur} for smoother results, while larger radii switch to
+     * {@link BoxBlur} with additional iterations to approximate heavier blur at lower cost.
+     * The chosen effect is written directly to {@code gc} and remains active until the caller clears or
+     * restores it.
+     *
+     * @param gc         graphics context that receives the blur effect
+     * @param blurRadius blur radius already mapped into JavaFX space
      */
     private void applyBlurEffect(GraphicsContext gc, double blurRadius) {
         if (blurRadius > 40) {
@@ -221,17 +274,210 @@ public class EffectsRenderer {
     }
 
     /**
-     * Callback interface for rendering layer content.
+     * Determines whether a layer is safe and worthwhile to rasterize once and reuse as a blurred image.
+     *
+     * <p>The cache is intentionally conservative. A layer qualifies only when the blur is large enough to be
+     * expensive, the layer has no matte or mask state that could change compositing per frame, and no animated
+     * values are found anywhere in the inspected layer model subtree.
+     *
+     * @param layer      layer to evaluate; {@code null} returns {@code false}
+     * @param blurRadius sampled blur radius for the current frame
+     * @return {@code true} when the layer can be treated as frame-invariant for blurred raster reuse
+     */
+    public boolean canUseStaticBlurLayerCache(Layer layer, double blurRadius) {
+        return layer != null
+                && blurRadius >= STATIC_BLUR_CACHE_MIN_RADIUS
+                && layer.matteMode() == null
+                && (layer.matteTarget() == null || layer.matteTarget() != 1)
+                && (layer.masks() == null || layer.masks().isEmpty())
+                && !containsAnimation(layer);
+    }
+
+    /**
+     * Recursively inspects a model subtree for animation markers.
+     *
+     * <p>The traversal recognizes {@link Animated}, {@link AnimatedBezier}, iterables, arrays, and record
+     * components. Objects are tracked by identity so cyclic graphs can be visited safely.
+     *
+     * @param value root value to inspect; may be {@code null}
+     * @return {@code true} if any visited descendant is explicitly animated, otherwise {@code false}
+     */
+    public boolean containsAnimation(Object value) {
+        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        return containsAnimation(value, visited);
+    }
+
+    /**
+     * Renders a blur-heavy static layer into a cached image and reuses that image across later frames.
+     *
+     * <p>If the requested bounds are invalid or the raster would exceed the configured pixel budget, the method
+     * falls back to live blur rendering. Otherwise, it caches the blurred image by layer identity, integer
+     * raster size, and blur radius bits, then draws the cached image at the current origin of {@code gc}.
+     *
+     * @param gc            destination graphics context that receives the cached image
+     * @param layer         layer to render and cache
+     * @param frame         frame used when the cache entry is first rendered
+     * @param blurRadius    JavaFX blur radius to bake into the cached image
+     * @param boundsWidth   local raster width for the cached image
+     * @param boundsHeight  local raster height for the cached image
+     * @param layerRenderer callback that renders the original layer content into the cache image
+     */
+    public void renderStaticLayerWithGaussianBlurCache(GraphicsContext gc,
+                                                       Layer layer,
+                                                       double frame,
+                                                       double blurRadius,
+                                                       double boundsWidth,
+                                                       double boundsHeight,
+                                                       LayerRenderer layerRenderer) {
+        int imageWidth = Math.max(1, (int) Math.ceil(boundsWidth));
+        int imageHeight = Math.max(1, (int) Math.ceil(boundsHeight));
+        long pixelCount = (long) imageWidth * imageHeight;
+        if (boundsWidth <= 0 || boundsHeight <= 0 || pixelCount > STATIC_BLUR_CACHE_MAX_PIXEL_COUNT) {
+            logger.debug("Skipping static blur cache for layer {} - bounds={}x{}, pixels={}",
+                    layer.name(), boundsWidth, boundsHeight, pixelCount);
+            renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, layerRenderer);
+            return;
+        }
+
+        StaticLayerBlurCacheKey cacheKey = new StaticLayerBlurCacheKey(
+                System.identityHashCode(layer),
+                imageWidth,
+                imageHeight,
+                Double.doubleToLongBits(blurRadius)
+        );
+
+        WritableImage cachedImage = staticLayerBlurCache.computeIfAbsent(cacheKey,
+                unused -> createStaticBlurCacheImage(layer, frame, blurRadius, imageWidth, imageHeight, layerRenderer));
+        gc.drawImage(cachedImage, 0, 0);
+    }
+
+    /**
+     * Creates a new cached blurred raster for a layer.
+     *
+     * <p>The layer is rendered once into an off-screen image of the requested size with the sampled blur already
+     * applied. Callers are responsible for cache-key selection and reuse.
+     *
+     * @param layer         layer to rasterize
+     * @param frame         frame sampled while producing the image
+     * @param blurRadius    JavaFX blur radius to bake into the image
+     * @param imageWidth    cache image width in pixels
+     * @param imageHeight   cache image height in pixels
+     * @param layerRenderer callback that renders the layer into the off-screen context
+     * @return the blurred raster image ready to be drawn back onto the destination context
+     */
+    private WritableImage createStaticBlurCacheImage(Layer layer,
+                                                     double frame,
+                                                     double blurRadius,
+                                                     int imageWidth,
+                                                     int imageHeight,
+                                                     LayerRenderer layerRenderer) {
+        logger.debug("Creating static blur cache image for layer {}: {}x{}, radius={}",
+                layer.name(), imageWidth, imageHeight, blurRadius);
+        return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
+            offscreenGc.save();
+            applyBlurEffect(offscreenGc, blurRadius);
+            layerRenderer.render(offscreenGc, layer, frame);
+            offscreenGc.setEffect(null);
+            offscreenGc.restore();
+        });
+    }
+
+    /**
+     * Internal recursive implementation of {@link #containsAnimation(Object)}.
+     *
+     * @param value   current node being inspected
+     * @param visited identity set used to prevent infinite recursion through shared or cyclic object graphs
+     * @return {@code true} if an animated descendant is found
+     */
+    private boolean containsAnimation(Object value, Set<Object> visited) {
+        if (value == null || isTriviallyStaticValue(value)) {
+            return false;
+        }
+        if (!visited.add(value)) {
+            return false;
+        }
+        if (value instanceof Animated animated) {
+            return (animated.animated() != null && animated.animated() > 0)
+                    || containsAnimation(animated.x(), visited)
+                    || containsAnimation(animated.y(), visited);
+        }
+        if (value instanceof AnimatedBezier animatedBezier) {
+            return animatedBezier.animated() != null && animatedBezier.animated() > 0;
+        }
+        if (value instanceof Iterable<?> iterable) {
+            for (Object entry : iterable) {
+                if (containsAnimation(entry, visited)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (value.getClass().isArray()) {
+            int length = Array.getLength(value);
+            for (int i = 0; i < length; i++) {
+                if (containsAnimation(Array.get(value, i), visited)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!value.getClass().isRecord()) {
+            return false;
+        }
+        for (RecordComponent component : value.getClass().getRecordComponents()) {
+            try {
+                if (containsAnimation(component.getAccessor().invoke(value), visited)) {
+                    return true;
+                }
+            } catch (ReflectiveOperationException ex) {
+                logger.debug("Unable to inspect record component {} on {}",
+                        component.getName(), value.getClass().getSimpleName(), ex);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns whether a value can be treated as inherently non-animated without further traversal.
+     *
+     * @param value value to classify
+     * @return {@code true} for primitive-like scalar wrappers and enums that cannot contain nested animation data
+     */
+    private boolean isTriviallyStaticValue(Object value) {
+        return value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean
+                || value instanceof Character
+                || value instanceof Enum<?>;
+    }
+
+    /**
+     * Callback interface used to render layer content into either the live graphics context or an off-screen
+     * buffer managed by {@link EffectsRenderer}.
      */
     @FunctionalInterface
     public interface LayerRenderer {
         /**
-         * Renders the layer content to the graphics context.
+         * Draws the layer content for a single frame.
          *
-         * @param gc    graphics context
-         * @param layer layer to render
-         * @param frame animation frame
+         * <p>The callback should render only the layer's own pixels. Any required blur effect, padding offset,
+         * or cache target selection is handled by the caller.
+         *
+         * @param gc    graphics context to draw into
+         * @param layer layer being rendered
+         * @param frame animation frame to sample
          */
         void render(GraphicsContext gc, Layer layer, double frame);
+    }
+
+    /**
+     * Cache key for a blurred static layer raster.
+     *
+     * @param layerIdentityHash identity-based hash of the source layer instance
+     * @param width             cached image width in pixels
+     * @param height            cached image height in pixels
+     * @param blurBits          raw {@code double} bits for the sampled blur radius
+     */
+    private record StaticLayerBlurCacheKey(int layerIdentityHash, int width, int height, long blurBits) {
     }
 }

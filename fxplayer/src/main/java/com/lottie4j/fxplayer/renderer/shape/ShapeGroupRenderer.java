@@ -16,15 +16,19 @@ import com.lottie4j.core.model.shape.shape.Ellipse;
 import com.lottie4j.core.model.shape.shape.Path;
 import com.lottie4j.core.model.shape.shape.Rectangle;
 import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.GradientStroke;
+import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.scene.transform.Affine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ShapeGroupRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(ShapeGroupRenderer.class);
+    private static final double OFFSCREEN_BOUNDS_PADDING = 4.0;
 
     private final TransformApplier transformApplier;
     private final ShapeRendererFactory shapeRendererFactory;
@@ -575,45 +580,33 @@ public class ShapeGroupRenderer {
     private void renderGroupWithOffscreenBuffer(GraphicsContext gc, Group group, Group effectiveGroup,
                                                 double frame, TrimPath effectiveTrimPath,
                                                 Transform groupTransform) {
-        // Estimate bounds for the off-screen canvas
-        // For now, use a reasonable default size - in a real implementation, this should be calculated from shapes
-        double offscreenWidth = 2000;
-        double offscreenHeight = 2000;
-
-        // Render group to off-screen image
-        WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
-            // Save the graphics state
-            offscreenGc.save();
-
-            // Apply transforms WITHOUT opacity to the off-screen context
+        Bounds transformedBounds = estimateTransformedGroupBounds(group, frame, groupTransform);
+        if (transformedBounds == null || transformedBounds.getWidth() <= 0 || transformedBounds.getHeight() <= 0) {
+            logger.debug("Group {} produced no tight bounds; falling back to direct rendering", group.name());
             if (groupTransform != null) {
-                transformApplier.applyGroupTransform(offscreenGc, groupTransform, frame);
+                transformApplier.applyGroupTransform(gc, groupTransform, frame);
             }
+            renderGroupItems(gc, group, effectiveGroup, frame, effectiveTrimPath);
+            return;
+        }
 
-            // Render all shapes to the off-screen context
-            for (int i = group.shapes().size() - 1; i >= 0; i--) {
-                BaseShape item = group.shapes().get(i);
-                if (item instanceof Transform || item instanceof TrimPath) {
-                    continue;
-                }
+        double minX = Math.floor(transformedBounds.getMinX());
+        double minY = Math.floor(transformedBounds.getMinY());
+        double maxX = Math.ceil(transformedBounds.getMaxX());
+        double maxY = Math.ceil(transformedBounds.getMaxY());
+        double offscreenWidth = Math.max(1.0, maxX - minX);
+        double offscreenHeight = Math.max(1.0, maxY - minY);
 
-                switch (item.shapeType().shapeGroup()) {
-                    case GROUP -> renderShapeTypeGroup(offscreenGc, item, frame, effectiveTrimPath);
-                    case SHAPE -> renderShape(offscreenGc, item, effectiveGroup, frame);
-                    case STYLE -> {
-                        // Skip
-                    }
-                    case MODIFIER -> handleModifier(item);
-                    default ->
-                            logger.warn("Unsupported shape type in off-screen rendering: {}", item.shapeType().shapeGroup());
-                }
+        WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+            offscreenGc.save();
+            offscreenGc.translate(-minX, -minY);
+            if (groupTransform != null) {
+                transformApplier.applyGroupTransformWithoutOpacity(offscreenGc, groupTransform, frame);
             }
-
-            // Restore the graphics state
+            renderGroupItems(offscreenGc, group, effectiveGroup, frame, effectiveTrimPath);
             offscreenGc.restore();
         });
 
-        // Apply opacity from the group transform when drawing to the main context
         double groupOpacity = 1.0;
         if (groupTransform != null && groupTransform.opacity() != null) {
             groupOpacity = groupTransform.opacity().getValue(0, frame) / 100.0;
@@ -621,10 +614,148 @@ public class ShapeGroupRenderer {
 
         double currentAlpha = gc.getGlobalAlpha();
         gc.setGlobalAlpha(currentAlpha * groupOpacity);
-        gc.drawImage(offscreenImage, 0, 0);
+        gc.drawImage(offscreenImage, minX, minY);
         gc.setGlobalAlpha(currentAlpha);
 
-        logger.debug("Finished off-screen rendering for group: {}", group.name());
+        logger.debug("Finished off-screen rendering for group: {} using tight bounds [{}x{} @ {},{}]",
+                group.name(), offscreenWidth, offscreenHeight, minX, minY);
+    }
+
+    private void renderGroupItems(GraphicsContext gc, Group group, Group effectiveGroup, double frame, TrimPath effectiveTrimPath) {
+        for (int i = group.shapes().size() - 1; i >= 0; i--) {
+            BaseShape item = group.shapes().get(i);
+            if (item instanceof Transform || item instanceof TrimPath) {
+                continue;
+            }
+
+            switch (item.shapeType().shapeGroup()) {
+                case GROUP -> renderShapeTypeGroup(gc, item, frame, effectiveTrimPath);
+                case SHAPE -> renderShape(gc, item, effectiveGroup, frame);
+                case STYLE -> {
+                    // Skip
+                }
+                case MODIFIER -> handleModifier(item);
+                default ->
+                        logger.warn("Unsupported shape type in off-screen rendering: {}", item.shapeType().shapeGroup());
+            }
+        }
+    }
+
+    private Bounds estimateTransformedGroupBounds(Group group, double frame, Transform groupTransform) {
+        Affine transform = new Affine();
+        appendGroupTransform(transform, groupTransform, frame);
+        return estimateGroupBounds(group, frame, transform);
+    }
+
+    private Bounds estimateGroupBounds(Group group, double frame, Affine accumulatedTransform) {
+        Bounds union = null;
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof Transform || item instanceof TrimPath) {
+                continue;
+            }
+            if (item instanceof Group childGroup) {
+                Affine childTransform = new Affine(accumulatedTransform);
+                appendGroupTransform(childTransform, extractGroupTransform(childGroup), frame);
+                union = unionBounds(union, estimateGroupBounds(childGroup, frame, childTransform));
+                continue;
+            }
+            union = unionBounds(union, estimateShapeBounds(item, frame, accumulatedTransform));
+        }
+
+        if (union == null) {
+            return null;
+        }
+
+        return expandBounds(union, resolveStrokePadding(group, frame, accumulatedTransform) + OFFSCREEN_BOUNDS_PADDING);
+    }
+
+    private Bounds estimateShapeBounds(BaseShape shape, double frame, Affine accumulatedTransform) {
+        javafx.scene.shape.Shape fxShape = toFxShape(shape, frame);
+        if (fxShape == null) {
+            return null;
+        }
+        return accumulatedTransform.transform(fxShape.getLayoutBounds());
+    }
+
+    private Transform extractGroupTransform(Group group) {
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof Transform transform) {
+                return transform;
+            }
+        }
+        return null;
+    }
+
+    private void appendGroupTransform(Affine affine, Transform transform, double frame) {
+        if (transform == null) {
+            return;
+        }
+        if (transform.position() != null) {
+            affine.appendTranslation(
+                    transform.position().getValue(AnimatedValueType.X, frame),
+                    transform.position().getValue(AnimatedValueType.Y, frame)
+            );
+        }
+        if (transform.rotation() != null) {
+            affine.appendRotation(transform.rotation().getValue(0, frame));
+        }
+        if (transform.scale() != null) {
+            affine.appendScale(
+                    transform.scale().getValue(AnimatedValueType.X, frame) / 100.0,
+                    transform.scale().getValue(AnimatedValueType.Y, frame) / 100.0
+            );
+        }
+        if (transform.anchor() != null) {
+            affine.appendTranslation(
+                    -transform.anchor().getValue(AnimatedValueType.X, frame),
+                    -transform.anchor().getValue(AnimatedValueType.Y, frame)
+            );
+        }
+    }
+
+    private double resolveStrokePadding(Group group, double frame, Affine accumulatedTransform) {
+        double maxStrokeWidth = 0.0;
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof Stroke stroke && stroke.strokeWidth() != null) {
+                maxStrokeWidth = Math.max(maxStrokeWidth, stroke.strokeWidth().getValue(0, frame));
+            } else if (item instanceof GradientStroke gradientStroke && gradientStroke.strokeWidth() != null) {
+                maxStrokeWidth = Math.max(maxStrokeWidth, gradientStroke.strokeWidth().getValue(0, frame));
+            }
+        }
+        if (maxStrokeWidth <= 0.0) {
+            return 0.0;
+        }
+
+        double scaleX = Math.hypot(accumulatedTransform.getMxx(), accumulatedTransform.getMyx());
+        double scaleY = Math.hypot(accumulatedTransform.getMxy(), accumulatedTransform.getMyy());
+        double scale = Math.max(1.0, Math.max(scaleX, scaleY));
+        return (maxStrokeWidth * scale) / 2.0;
+    }
+
+    private Bounds unionBounds(Bounds left, Bounds right) {
+        if (left == null) {
+            return right;
+        }
+        if (right == null) {
+            return left;
+        }
+        double minX = Math.min(left.getMinX(), right.getMinX());
+        double minY = Math.min(left.getMinY(), right.getMinY());
+        double maxX = Math.max(left.getMaxX(), right.getMaxX());
+        double maxY = Math.max(left.getMaxY(), right.getMaxY());
+        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private Bounds expandBounds(Bounds bounds, double padding) {
+        if (bounds == null) {
+            return null;
+        }
+        return new BoundingBox(
+                bounds.getMinX() - padding,
+                bounds.getMinY() - padding,
+                bounds.getWidth() + padding * 2.0,
+                bounds.getHeight() + padding * 2.0
+        );
     }
 
     /**
