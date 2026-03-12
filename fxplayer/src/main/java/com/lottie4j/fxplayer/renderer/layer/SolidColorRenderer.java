@@ -19,6 +19,7 @@ public class SolidColorRenderer {
      * Creates a new SolidColorRenderer.
      */
     public SolidColorRenderer() {
+        // Constructor for SolidColorRenderer
     }
 
     /**

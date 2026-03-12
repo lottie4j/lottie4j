@@ -25,6 +25,7 @@ public class TextRenderer {
      * Creates a new TextRenderer.
      */
     public TextRenderer() {
+        // Constructor for TextRenderer
     }
 
     /**

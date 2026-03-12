@@ -2,7 +2,6 @@ package com.lottie4j.core.helper;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
@@ -15,13 +14,11 @@ import java.util.stream.Collectors;
  */
 public class ListDoubleSerializer extends JsonSerializer {
 
-    private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
-
     /**
      * Serializes a list of Double values to a JSON array.
      *
-     * @param o the object to serialize (expected to be a List of Doubles)
-     * @param jsonGenerator the JSON generator
+     * @param o                  the object to serialize (expected to be a List of Doubles)
+     * @param jsonGenerator      the JSON generator
      * @param serializerProvider the serializer provider
      * @throws IOException if serialization fails
      */
@@ -29,7 +26,7 @@ public class ListDoubleSerializer extends JsonSerializer {
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         String rt = "[" +
                 ((List<Double>) o).stream()
-                        .map(d -> String.valueOf(d))
+                        .map(String::valueOf)
                         .collect(Collectors.joining(",")) +
                 "]";
         jsonGenerator.writeRawValue(rt);

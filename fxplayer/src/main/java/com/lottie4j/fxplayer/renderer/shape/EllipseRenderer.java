@@ -34,6 +34,7 @@ public class EllipseRenderer implements ShapeRenderer {
      * Creates a new EllipseRenderer.
      */
     public EllipseRenderer() {
+        // Constructor for EllipseRenderer
     }
 
     /**
@@ -88,8 +89,7 @@ public class EllipseRenderer implements ShapeRenderer {
 
         if (trimPath.isPresent()) {
             // Render with trim path (arc)
-            renderWithTrimPath(gc, renderX, renderY, width, height, centerX, centerY,
-                    trimPath.get(), frame, parentGroup);
+            renderWithTrimPath(gc, renderX, renderY, width, height, trimPath.get(), frame, parentGroup);
         } else {
             // Render full ellipse
             // Check for gradient fill first, then regular fill
@@ -210,14 +210,12 @@ public class EllipseRenderer implements ShapeRenderer {
      * @param y           top-left y coordinate
      * @param width       ellipse width
      * @param height      ellipse height
-     * @param centerX     center x coordinate
-     * @param centerY     center y coordinate
      * @param trimPath    trim path modifier
      * @param frame       animation frame
      * @param parentGroup parent group containing styles
      */
     private void renderWithTrimPath(GraphicsContext gc, double x, double y, double width, double height,
-                                    double centerX, double centerY, TrimPath trimPath, double frame, Group parentGroup) {
+                                    TrimPath trimPath, double frame, Group parentGroup) {
         // Get trim values (all in 0-100 range in Lottie, or degrees for offset depending on version)
         double start = trimPath.segmentStart() != null ? trimPath.segmentStart().getValue(0, frame) : 0;
         double end = trimPath.segmentEnd() != null ? trimPath.segmentEnd().getValue(0, frame) : 100;

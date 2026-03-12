@@ -24,6 +24,7 @@ public class MatteRenderer {
      * Creates a new MatteRenderer.
      */
     public MatteRenderer() {
+        // Constructor for MatteRenderer
     }
 
     /**

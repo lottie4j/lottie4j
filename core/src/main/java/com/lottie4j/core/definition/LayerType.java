@@ -24,7 +24,7 @@ public enum LayerType implements DefinitionWithLabel {
     IMAGE_PLACEHOLDER(10D, "Image Placeholder", ""),
     GUIDE(11D, "Guide", ""),
     ADJUSTMENT(12D, "Adjustment", ""),
-    CAMERA(13D, "Camera 	3D Camera", ""),
+    CAMERA(13D, "3D Camera", ""),
     LIGHT(14D, "Light", ""),
     DATA(15D, "Data", "");
 
@@ -36,8 +36,8 @@ public enum LayerType implements DefinitionWithLabel {
     /**
      * Constructs a LayerType with the specified value, label, and description.
      *
-     * @param value the numeric value representing this layer type
-     * @param label the human-readable label for this layer type
+     * @param value       the numeric value representing this layer type
+     * @param label       the human-readable label for this layer type
      * @param description the description explaining this layer type's purpose
      */
     LayerType(Double value, String label, String description) {

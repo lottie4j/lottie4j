@@ -16,6 +16,7 @@ public class PathBezierInterpolator {
      * Creates a new PathBezierInterpolator.
      */
     public PathBezierInterpolator() {
+        // Constructor for PathBezierInterpolator
     }
 
     /**

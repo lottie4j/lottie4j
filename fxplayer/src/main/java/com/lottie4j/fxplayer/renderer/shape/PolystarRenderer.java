@@ -31,6 +31,7 @@ public class PolystarRenderer implements ShapeRenderer {
      * Creates a new PolystarRenderer.
      */
     public PolystarRenderer() {
+        // Constructor for PolystarRenderer
     }
 
     /**

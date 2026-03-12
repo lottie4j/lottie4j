@@ -114,9 +114,8 @@ public class ImageSaver {
      *
      * @param data the uncompressed data
      * @return the compressed data
-     * @throws IOException if compression fails
      */
-    private static byte[] deflate(byte[] data) throws IOException {
+    private static byte[] deflate(byte[] data) {
         Deflater deflater = new Deflater();
         deflater.setInput(data);
         deflater.finish();

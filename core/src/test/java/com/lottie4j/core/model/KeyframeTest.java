@@ -15,7 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class KeyframeTest {
+class KeyframeTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
@@ -31,7 +31,7 @@ public class KeyframeTest {
 
         assertAll(
                 () -> assertEquals(1, animated.keyframes().size()),
-                () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
+                () -> assertInstanceOf(NumberKeyframe.class, animated.keyframes().get(0)),
                 () -> assertEquals(123, ((NumberKeyframe) animated.keyframes().get(0)).intValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
@@ -52,7 +52,7 @@ public class KeyframeTest {
 
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
-                () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
+                () -> assertInstanceOf(NumberKeyframe.class, animated.keyframes().get(0)),
                 () -> assertEquals(128, ((NumberKeyframe) animated.keyframes().get(0)).intValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
@@ -73,7 +73,7 @@ public class KeyframeTest {
 
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
-                () -> assertTrue(animated.keyframes().get(0) instanceof NumberKeyframe),
+                () -> assertInstanceOf(NumberKeyframe.class, animated.keyframes().get(0)),
                 () -> assertEquals(5.01, ((NumberKeyframe) animated.keyframes().get(0)).doubleValue()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
@@ -122,7 +122,7 @@ public class KeyframeTest {
 
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
-                () -> assertTrue(animated.keyframes().get(0) instanceof TimedKeyframe),
+                () -> assertInstanceOf(TimedKeyframe.class, animated.keyframes().get(0)),
                 () -> assertEquals(60, ((TimedKeyframe) animated.keyframes().get(0)).time()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
@@ -153,9 +153,9 @@ public class KeyframeTest {
 
         assertAll(
                 () -> assertEquals(3, keyFrames.size()),
-                () -> assertTrue(keyFrames.get(0) instanceof NumberKeyframe),
-                () -> assertTrue(keyFrames.get(1) instanceof NumberKeyframe),
-                () -> assertTrue(keyFrames.get(2) instanceof TimedKeyframe),
+                () -> assertInstanceOf(NumberKeyframe.class, keyFrames.get(0)),
+                () -> assertInstanceOf(NumberKeyframe.class, keyFrames.get(1)),
+                () -> assertInstanceOf(TimedKeyframe.class, keyFrames.get(2)),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(keyFrames), false)
         );
     }

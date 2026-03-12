@@ -38,8 +38,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Renderer for shape groups with support for transforms, trim paths, and combined path rendering.
- * Handles complex group hierarchies and fill rule application.
+ * Renders Lottie shape groups onto a JavaFX {@link GraphicsContext}.
+ *
+ * <p>This renderer orchestrates group-level concerns that individual shape renderers cannot resolve alone:
+ * transform application, trim-path precedence, multi-path fill-rule rendering, merge modifier composition,
+ * and off-screen compositing for animated group opacity.
+ *
+ * <p>Rendering follows Lottie's reverse item order (last item drawn first). The class delegates concrete shape
+ * drawing to {@link ShapeRenderer} instances obtained from {@link ShapeRendererFactory}, while it handles
+ * group traversal and composition rules.
  */
 public class ShapeGroupRenderer {
 
@@ -52,10 +59,10 @@ public class ShapeGroupRenderer {
     private final PathBezierInterpolator pathBezierInterpolator = new PathBezierInterpolator();
 
     /**
-     * Creates a shape group renderer.
+     * Creates a shape-group renderer.
      *
-     * @param transformApplier     transform applier for group transforms
-     * @param shapeRendererFactory factory for obtaining shape renderers
+     * @param transformApplier     helper used to apply sampled group transforms to JavaFX contexts
+     * @param shapeRendererFactory factory that resolves concrete renderers for leaf shape/style nodes
      */
     public ShapeGroupRenderer(TransformApplier transformApplier, ShapeRendererFactory shapeRendererFactory) {
         this.transformApplier = transformApplier;
@@ -63,12 +70,19 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Renders a shape group with transforms and modifiers applied.
+     * Renders a shape-group node and its descendants for a single frame.
      *
-     * @param gc            graphics context
-     * @param shape         group shape to render
-     * @param frame         animation frame
-     * @param layerTrimPath optional trim path from layer level
+     * <p>The method extracts group-level {@link Transform} and {@link TrimPath} entries, resolves effective trim
+     * precedence (group trim overrides layer trim), and chooses one of three rendering strategies:
+     * combined-path fill rendering, off-screen compositing for animated opacity with overlap, or direct traversal.
+     *
+     * <p>The supplied graphics context is mutated in place and wrapped in {@code save}/{@code restore} for
+     * group-local isolation.
+     *
+     * @param gc            destination graphics context
+     * @param shape         shape node expected to be a {@link Group}; standalone transform nodes are ignored
+     * @param frame         animation frame used for all sampled values
+     * @param layerTrimPath optional trim path inherited from the containing layer
      */
     public void renderShapeTypeGroup(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath) {
         if (shape instanceof Transform) {
@@ -151,11 +165,14 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Creates a group with trim path added to its shapes.
+     * Creates a synthetic group that includes the effective trim-path item.
      *
-     * @param original original group
-     * @param trimPath trim path to add
-     * @return new group with trim path, or original if trimPath is null
+     * <p>This preserves existing group data while ensuring leaf shape renderers see the same trim-path context
+     * chosen by group-vs-layer precedence rules.
+     *
+     * @param original source group definition
+     * @param trimPath effective trim path to include; {@code null} returns {@code original}
+     * @return a new {@link Group} with the trim path appended when needed, otherwise {@code original}
      */
     private Group createGroupWithTrimPath(Group original, TrimPath trimPath) {
         if (trimPath == null) {
@@ -182,15 +199,17 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Handle groups with multiple Path shapes that share a single Fill.
-     * These need to be rendered together with a fill rule to create holes/rings.
-     * Returns true if the group was rendered as combined paths, false otherwise.
+     * Renders a group as a single combined canvas path when multiple paths share one fill.
      *
-     * @param gc                graphics context
-     * @param group             original group
-     * @param frame             animation frame
-     * @param effectiveTrimPath effective trim path
-     * @return true if rendered as combined paths, false otherwise
+     * <p>This path combines sibling path geometry under a single fill-rule evaluation (for holes/rings) and
+     * applies fill opacity once to the composed result. Merge modifiers, when present, are handled first and
+     * short-circuit this strategy.
+     *
+     * @param gc                destination graphics context
+     * @param group             source group being evaluated
+     * @param frame             animation frame to sample
+     * @param effectiveTrimPath trim-path context propagated to nested groups
+     * @return {@code true} if the group was fully rendered via merge or combined-path strategy
      */
     private boolean renderGroupWithCombinedPaths(GraphicsContext gc, Group group, double frame, TrimPath effectiveTrimPath) {
         // Count Path shapes and check for Fill
@@ -266,6 +285,21 @@ public class ShapeGroupRenderer {
         return true;
     }
 
+    /**
+     * Renders a group through Lottie merge-path semantics when a merge modifier is present.
+     *
+     * <p>The method converts merge inputs that precede the merge item into JavaFX shapes, applies the selected
+     * {@link MergeMode} as a left-fold boolean composition, then fills the merged result using the group's fill.
+     * Nested groups are rendered afterward using the same effective trim context.
+     *
+     * @param gc                destination graphics context
+     * @param group             source group containing merge content
+     * @param fill              fill style used to paint the merged geometry; required for rendering
+     * @param groupTransform    transform applied before painting the merged output
+     * @param frame             animation frame to sample
+     * @param effectiveTrimPath trim-path context for nested descendants
+     * @return {@code true} when merge rendering succeeds and the group is handled
+     */
     private boolean renderGroupWithMergeModifier(GraphicsContext gc,
                                                  Group group,
                                                  Fill fill,
@@ -355,6 +389,14 @@ public class ShapeGroupRenderer {
         return true;
     }
 
+    /**
+     * Applies a merge mode between two JavaFX shapes.
+     *
+     * @param left      accumulated shape from previous merge steps
+     * @param right     next shape to combine
+     * @param mergeMode merge operation to apply; {@code NORMAL} and {@code ADD} both map to union
+     * @return merged JavaFX shape produced by boolean operations
+     */
     private javafx.scene.shape.Shape applyMergeMode(javafx.scene.shape.Shape left,
                                                     javafx.scene.shape.Shape right,
                                                     MergeMode mergeMode) {
@@ -370,6 +412,16 @@ public class ShapeGroupRenderer {
         };
     }
 
+    /**
+     * Converts a supported Lottie base shape into an equivalent JavaFX shape.
+     *
+     * <p>Supported inputs currently include {@link Path}, {@link Ellipse}, and {@link Rectangle}.
+     * Unsupported types or incomplete geometry definitions return {@code null}.
+     *
+     * @param shape source Lottie shape node
+     * @param frame animation frame used for animated dimensions and positions
+     * @return JavaFX shape in local group coordinates, or {@code null} when conversion is not possible
+     */
     private javafx.scene.shape.Shape toFxShape(BaseShape shape, double frame) {
         if (shape instanceof Path path) {
             logger.debug("  toFxShape: Path -> converting bezier");
@@ -415,6 +467,13 @@ public class ShapeGroupRenderer {
         return null;
     }
 
+    /**
+     * Resolves the bezier definition for a path at the requested frame.
+     *
+     * @param path  path definition containing either fixed or animated bezier data
+     * @param frame animation frame used when interpolating animated bezier values
+     * @return resolved bezier geometry, or {@code null} when the path has no supported bezier source
+     */
     private BezierDefinition resolveBezier(Path path, double frame) {
         if (path.bezier() instanceof FixedBezier fixedBezier) {
             return fixedBezier.bezier();
@@ -425,6 +484,15 @@ public class ShapeGroupRenderer {
         return null;
     }
 
+    /**
+     * Builds a JavaFX {@link javafx.scene.shape.Path} from a Lottie bezier definition.
+     *
+     * <p>Vertices and tangents are converted into {@link MoveTo}, {@link LineTo}, and {@link CubicCurveTo}
+     * elements. Closed bezier paths append a closing segment and {@link ClosePath} when applicable.
+     *
+     * @param bezierDefinition resolved bezier geometry
+     * @return JavaFX path representation; may be empty when no valid vertices are present
+     */
     private javafx.scene.shape.Path createFxPath(BezierDefinition bezierDefinition) {
         javafx.scene.shape.Path fxPath = new javafx.scene.shape.Path();
         List<List<Double>> vertices = bezierDefinition.vertices();
@@ -494,6 +562,14 @@ public class ShapeGroupRenderer {
         return fxPath;
     }
 
+    /**
+     * Replays a JavaFX path shape into the canvas path API.
+     *
+     * @param gc       target graphics context
+     * @param shape    shape expected to be a non-empty JavaFX path
+     * @param fillRule fill rule applied to both JavaFX path and canvas context
+     * @return {@code true} when path elements were emitted to the canvas, otherwise {@code false}
+     */
     private boolean drawFxShapePath(GraphicsContext gc, javafx.scene.shape.Shape shape, javafx.scene.shape.FillRule fillRule) {
         if (!(shape instanceof javafx.scene.shape.Path path) || path.getElements().isEmpty()) {
             return false;
@@ -523,12 +599,12 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Renders a single shape using the appropriate renderer.
+     * Renders a single shape node using the renderer resolved by {@link ShapeRendererFactory}.
      *
-     * @param gc          graphics context
-     * @param shape       shape to render
-     * @param parentGroup parent group for context
-     * @param frame       animation frame
+     * @param gc          destination graphics context
+     * @param shape       shape/style node to render
+     * @param parentGroup group context passed to the resolved renderer
+     * @param frame       animation frame to sample
      */
     private void renderShape(GraphicsContext gc, BaseShape shape, Group parentGroup, double frame) {
         ShapeRenderer renderer = shapeRendererFactory.getRenderer(shape);
@@ -540,11 +616,13 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Checks if a group contains multiple overlapping shape elements.
-     * This is a heuristic check to determine if off-screen rendering is needed.
+     * Heuristic detection for groups that are likely to contain overlapping painted content.
      *
-     * @param group group to check
-     * @return true if the group likely contains overlapping shapes
+     * <p>This is used to decide whether animated group opacity should be applied via off-screen composition
+     * (combine first, then alpha) instead of per-shape alpha multiplication.
+     *
+     * @param group group to inspect
+     * @return {@code true} when the group likely has overlapping shapes with a fill
      */
     private boolean groupContainsOverlappingShapes(Group group) {
         // Count the number of shape elements (excluding modifiers)
@@ -567,15 +645,18 @@ public class ShapeGroupRenderer {
     }
 
     /**
-     * Renders a group to an off-screen buffer, applies opacity, and draws to the main context.
-     * This ensures that overlapping shapes combine before opacity is applied.
+     * Renders a group into an off-screen image, applies group opacity once, and composites back.
      *
-     * @param gc                graphics context
-     * @param group             group to render
-     * @param effectiveGroup    group with effective trim path
-     * @param frame             animation frame
-     * @param effectiveTrimPath effective trim path
-     * @param groupTransform    group transform (may contain opacity)
+     * <p>This path preserves correct visual blending for overlapping child shapes when group opacity is animated.
+     * The off-screen raster is bounded by an estimated transformed bounds box; if bounds estimation fails,
+     * rendering falls back to direct drawing on the destination context.
+     *
+     * @param gc                destination graphics context
+     * @param group             original group
+     * @param effectiveGroup    synthetic group carrying effective trim-path context
+     * @param frame             animation frame to sample
+     * @param effectiveTrimPath trim-path context propagated to descendants
+     * @param groupTransform    group transform block, including optional opacity channel
      */
     private void renderGroupWithOffscreenBuffer(GraphicsContext gc, Group group, Group effectiveGroup,
                                                 double frame, TrimPath effectiveTrimPath,
@@ -621,6 +702,15 @@ public class ShapeGroupRenderer {
                 group.name(), offscreenWidth, offscreenHeight, minX, minY);
     }
 
+    /**
+     * Renders non-transform, non-trim items in reverse Lottie draw order.
+     *
+     * @param gc                destination graphics context
+     * @param group             group being traversed
+     * @param effectiveGroup    synthetic group carrying effective trim-path context for shape renderers
+     * @param frame             animation frame to sample
+     * @param effectiveTrimPath trim-path context propagated to nested groups
+     */
     private void renderGroupItems(GraphicsContext gc, Group group, Group effectiveGroup, double frame, TrimPath effectiveTrimPath) {
         for (int i = group.shapes().size() - 1; i >= 0; i--) {
             BaseShape item = group.shapes().get(i);
@@ -641,12 +731,28 @@ public class ShapeGroupRenderer {
         }
     }
 
+    /**
+     * Estimates off-screen bounds after applying the group's sampled transform.
+     *
+     * @param group          group whose drawable descendants are measured
+     * @param frame          animation frame to sample
+     * @param groupTransform transform applied to the group's local content
+     * @return transformed bounds, expanded for stroke width and padding, or {@code null} when empty
+     */
     private Bounds estimateTransformedGroupBounds(Group group, double frame, Transform groupTransform) {
         Affine transform = new Affine();
         appendGroupTransform(transform, groupTransform, frame);
         return estimateGroupBounds(group, frame, transform);
     }
 
+    /**
+     * Recursively estimates union bounds for drawable group descendants.
+     *
+     * @param group                group subtree to inspect
+     * @param frame                animation frame to sample
+     * @param accumulatedTransform transform already accumulated from ancestor groups
+     * @return union of transformed shape bounds, expanded for stroke and padding, or {@code null} when empty
+     */
     private Bounds estimateGroupBounds(Group group, double frame, Affine accumulatedTransform) {
         Bounds union = null;
         for (BaseShape item : group.shapes()) {
@@ -669,6 +775,14 @@ public class ShapeGroupRenderer {
         return expandBounds(union, resolveStrokePadding(group, frame, accumulatedTransform) + OFFSCREEN_BOUNDS_PADDING);
     }
 
+    /**
+     * Estimates transformed bounds for a single shape.
+     *
+     * @param shape                source shape
+     * @param frame                animation frame to sample
+     * @param accumulatedTransform transform applied before bounds calculation
+     * @return transformed bounds, or {@code null} when the shape cannot be converted to JavaFX geometry
+     */
     private Bounds estimateShapeBounds(BaseShape shape, double frame, Affine accumulatedTransform) {
         javafx.scene.shape.Shape fxShape = toFxShape(shape, frame);
         if (fxShape == null) {
@@ -677,6 +791,12 @@ public class ShapeGroupRenderer {
         return accumulatedTransform.transform(fxShape.getLayoutBounds());
     }
 
+    /**
+     * Extracts the first transform item from a group.
+     *
+     * @param group group to inspect
+     * @return transform item, or {@code null} when absent
+     */
     private Transform extractGroupTransform(Group group) {
         for (BaseShape item : group.shapes()) {
             if (item instanceof Transform transform) {
@@ -686,6 +806,13 @@ public class ShapeGroupRenderer {
         return null;
     }
 
+    /**
+     * Appends sampled group transform components to an affine in renderer order.
+     *
+     * @param affine    affine transform to mutate
+     * @param transform transform data to append; {@code null} is ignored
+     * @param frame     animation frame to sample
+     */
     private void appendGroupTransform(Affine affine, Transform transform, double frame) {
         if (transform == null) {
             return;
@@ -713,6 +840,14 @@ public class ShapeGroupRenderer {
         }
     }
 
+    /**
+     * Computes extra bounds padding required by stroke widths under the current transform.
+     *
+     * @param group                group whose stroke styles are inspected
+     * @param frame                animation frame to sample
+     * @param accumulatedTransform transform used to scale stroke widths into destination space
+     * @return half of the maximum transformed stroke width, or {@code 0.0} when no stroked content exists
+     */
     private double resolveStrokePadding(Group group, double frame, Affine accumulatedTransform) {
         double maxStrokeWidth = 0.0;
         for (BaseShape item : group.shapes()) {
@@ -732,6 +867,13 @@ public class ShapeGroupRenderer {
         return (maxStrokeWidth * scale) / 2.0;
     }
 
+    /**
+     * Returns the axis-aligned union of two bounds objects.
+     *
+     * @param left  first bounds, may be {@code null}
+     * @param right second bounds, may be {@code null}
+     * @return combined bounds, or whichever argument is non-null
+     */
     private Bounds unionBounds(Bounds left, Bounds right) {
         if (left == null) {
             return right;
@@ -746,6 +888,13 @@ public class ShapeGroupRenderer {
         return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
 
+    /**
+     * Expands bounds equally in all directions.
+     *
+     * @param bounds  source bounds
+     * @param padding amount to add on each side
+     * @return expanded bounds, or {@code null} when {@code bounds} is {@code null}
+     */
     private Bounds expandBounds(Bounds bounds, double padding) {
         if (bounds == null) {
             return null;
@@ -775,6 +924,13 @@ public class ShapeGroupRenderer {
         }
     }
 
+    /**
+     * Adds a path's resolved geometry to the current canvas path.
+     *
+     * @param gc    destination graphics context with an active path
+     * @param path  source path definition
+     * @param frame animation frame for bezier interpolation
+     */
     private void addPathToCanvas(GraphicsContext gc, Path path, double frame) {
         BezierDefinition bezierDefinition = resolveBezier(path, frame);
         if (bezierDefinition == null) {
@@ -799,6 +955,18 @@ public class ShapeGroupRenderer {
         }
     }
 
+    /**
+     * Renders a merged JavaFX shape with the requested fill settings.
+     *
+     * <p>Path results are replayed directly into the canvas path API. Non-path boolean-op outputs are rendered
+     * via node snapshot as a compatibility fallback.
+     *
+     * @param gc        destination graphics context
+     * @param merged    merged JavaFX shape produced by boolean operations
+     * @param fillRule  fill rule used when the merged result is path-based
+     * @param fillColor paint used to fill the merged geometry
+     * @return {@code true} when rendering succeeds via either direct path replay or snapshot fallback
+     */
     private boolean renderMergedShape(GraphicsContext gc,
                                       javafx.scene.shape.Shape merged,
                                       javafx.scene.shape.FillRule fillRule,
@@ -815,6 +983,17 @@ public class ShapeGroupRenderer {
         return drawShapeViaSnapshot(gc, merged, fillRule, fillColor);
     }
 
+    /**
+     * Renders an arbitrary JavaFX shape by snapshotting it into an image and drawing that image.
+     *
+     * <p>This fallback is used when merged boolean results are not represented as a JavaFX {@link javafx.scene.shape.Path}.
+     *
+     * @param gc        destination graphics context
+     * @param shape     JavaFX shape to snapshot
+     * @param fillRule  fill rule applied when the shape is path-based
+     * @param fillColor fill color used for the snapshot
+     * @return {@code true} if a non-empty image was produced and drawn, otherwise {@code false}
+     */
     private boolean drawShapeViaSnapshot(GraphicsContext gc,
                                          javafx.scene.shape.Shape shape,
                                          javafx.scene.shape.FillRule fillRule,

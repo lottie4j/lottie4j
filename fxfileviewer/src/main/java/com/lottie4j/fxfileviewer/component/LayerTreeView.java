@@ -28,7 +28,6 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
     private static final Logger logger = LoggerFactory.getLogger(LayerTreeView.class);
 
     private final Animation animation;
-    private final LottiePlayer lottiePlayer;
     private final Map<Integer, BooleanProperty> layerVisibilityMap;
     private final Map<Layer, Stage> previewWindows = new HashMap<>();
     private double currentFrame = 0;
@@ -42,7 +41,6 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
      */
     public LayerTreeView(Animation animation, LottiePlayer lottiePlayer) {
         this.animation = animation;
-        this.lottiePlayer = lottiePlayer;
         this.layerVisibilityMap = new HashMap<>();
 
         buildTree();
@@ -60,11 +58,9 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
         if (animation.layers() != null) {
             // Build layer items in reverse order (Lottie renders bottom-to-top)
             List<Layer> layers = new ArrayList<>(animation.layers());
-            Collections.reverse(layers);
-
-            for (Layer layer : layers) {
+            for (Layer layer : layers.reversed()) {
                 BooleanProperty visible = new SimpleBooleanProperty(true);
-                Integer layerIndex = layer.indexLayer() != null ? layer.indexLayer().intValue() : layers.indexOf(layer);
+                var layerIndex = layer.indexLayer() != null ? layer.indexLayer().intValue() : layers.indexOf(layer);
                 layerVisibilityMap.put(layerIndex, visible);
 
                 LayerNode layerNode = new LayerNode(

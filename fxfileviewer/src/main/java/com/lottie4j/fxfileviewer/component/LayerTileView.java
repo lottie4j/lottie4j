@@ -41,7 +41,6 @@ public class LayerTileView extends ScrollPane {
     private final Animation animation;
     private final Map<Integer, LayerTile> layerTiles;
     private final Map<Integer, BooleanProperty> layerVisibilityMap;
-    private final DoubleProperty frameProperty;
     private Color backgroundColor = Color.WHITE;
     private double currentFrame = 0;
     private boolean liveUpdatesEnabled = false;
@@ -58,7 +57,6 @@ public class LayerTileView extends ScrollPane {
         this.animation = animation;
         this.layerTiles = new HashMap<>();
         this.layerVisibilityMap = new HashMap<>();
-        this.frameProperty = frameProperty;
 
         // Listen to frame changes and update all tiles (only if enabled)
         frameProperty.addListener((obs, oldVal, newVal) -> {
@@ -112,9 +110,7 @@ public class LayerTileView extends ScrollPane {
         if (animation.layers() != null) {
             // Show layers in reverse order (Lottie renders bottom-to-top)
             List<Layer> layers = new ArrayList<>(animation.layers());
-            Collections.reverse(layers);
-
-            for (Layer layer : layers) {
+            for (Layer layer : layers.reversed()) {
                 Integer layerIndex = layer.indexLayer() != null ? layer.indexLayer().intValue() : layers.indexOf(layer);
 
                 BooleanProperty visible = new SimpleBooleanProperty(true);
@@ -241,7 +237,6 @@ public class LayerTileView extends ScrollPane {
     private class LayerTile extends VBox {
         private final Layer layer;
         private final Integer layerIndex;
-        private final BooleanProperty visible;
         private final ImageView previewImage;
         private final Label frameLabel;
         private final CheckBox visibilityCheckBox;
@@ -256,7 +251,6 @@ public class LayerTileView extends ScrollPane {
         public LayerTile(Layer layer, Integer layerIndex, BooleanProperty visible) {
             this.layer = layer;
             this.layerIndex = layerIndex;
-            this.visible = visible;
 
             setAlignment(Pos.TOP_CENTER);
             setSpacing(5);

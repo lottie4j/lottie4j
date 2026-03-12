@@ -23,6 +23,7 @@ public class ImageRenderer {
      * Creates a new ImageRenderer.
      */
     public ImageRenderer() {
+        // Constructor for ImageRenderer
     }
 
     /**

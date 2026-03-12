@@ -253,20 +253,57 @@ public class PrecompRenderer {
                 }
             }
 
-            // Render with blur, passing transforms to be applied inside offscreen buffer
-            // Then composite back with precomp clip active
-            effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, precompWidth, precompHeight,
-                    (blurGc, blurLayer, blurFrame) -> {
-                        // Apply transforms inside the offscreen buffer
-                        applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompLayersByIndex);
-                        transformApplier.applyLayerTransform(blurGc, blurLayer, blurFrame);
-                        // Render content
-                        renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, animation, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
-                    });
+            EffectsRenderer.LayerRenderer precompBlurRenderer = (blurGc, blurLayer, blurFrame) -> {
+                applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompLayersByIndex);
+                transformApplier.applyLayerTransform(blurGc, blurLayer, blurFrame);
+                renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, animation,
+                        solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+            };
+
+            if (shouldUseStaticBlurLayerCache(layer, blurRadius, precompWidth, precompHeight, precompLayersByIndex)) {
+                effectsRenderer.renderStaticLayerWithGaussianBlurCache(
+                        gc,
+                        layer,
+                        frame,
+                        blurRadius,
+                        Math.max(1.0, precompWidth),
+                        Math.max(1.0, precompHeight),
+                        precompBlurRenderer
+                );
+            } else {
+                effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, precompWidth, precompHeight, precompBlurRenderer);
+            }
             return;
         }
 
         renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation, precompWidth, precompHeight, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+    }
+
+    private boolean shouldUseStaticBlurLayerCache(Layer layer,
+                                                  double blurRadius,
+                                                  double precompWidth,
+                                                  double precompHeight,
+                                                  Map<Integer, Layer> precompLayersByIndex) {
+        return precompWidth > 0
+                && precompHeight > 0
+                && effectsRenderer.canUseStaticBlurLayerCache(layer, blurRadius)
+                && !hasAnimatedParentTransformChain(layer, precompLayersByIndex);
+    }
+
+    private boolean hasAnimatedParentTransformChain(Layer layer, Map<Integer, Layer> precompLayersByIndex) {
+        Integer parentIndex = layer.indexParent();
+        int guard = 0;
+        while (parentIndex != null && guard++ < precompLayersByIndex.size()) {
+            Layer parent = precompLayersByIndex.get(parentIndex);
+            if (parent == null) {
+                return false;
+            }
+            if (effectsRenderer.containsAnimation(parent.transform())) {
+                return true;
+            }
+            parentIndex = parent.indexParent();
+        }
+        return false;
     }
 
     /**
@@ -278,8 +315,8 @@ public class PrecompRenderer {
      * @param precompLayersByIndex    layer lookup map
      * @param assetsById              asset lookup map
      * @param animation               root animation
-     * @param parentPrecompWidth      parent precomp width
-     * @param parentPrecompHeight     parent precomp height
+     * @param precompWidth            precomp width for clipping
+     * @param precompHeight           precomp height for clipping
      * @param layerActivityEvaluator  layer activity callback
      * @param solidColorLayerRenderer solid color renderer callback
      * @param shapeGroupRenderer      shape group renderer callback

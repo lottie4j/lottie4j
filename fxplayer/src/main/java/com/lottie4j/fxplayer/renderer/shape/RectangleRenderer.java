@@ -31,6 +31,7 @@ public class RectangleRenderer implements ShapeRenderer {
      * Creates a new RectangleRenderer.
      */
     public RectangleRenderer() {
+        // Constructor for RectangleRenderer
     }
 
     /**

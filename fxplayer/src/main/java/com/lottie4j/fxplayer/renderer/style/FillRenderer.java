@@ -5,9 +5,6 @@ import com.lottie4j.core.model.shape.style.Fill;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Renderer for applying solid fill colors to shapes.
  * Converts Lottie fill definitions into JavaFX fill operations with proper color and opacity handling.
@@ -18,6 +15,7 @@ public class FillRenderer {
      * Creates a new FillRenderer.
      */
     public FillRenderer() {
+        // Constructor for FillRenderer
     }
 
     /**

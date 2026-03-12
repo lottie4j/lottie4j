@@ -12,6 +12,7 @@ public class Launcher {
      * Creates a new Launcher.
      */
     public Launcher() {
+        // Constructor for Launcher
     }
 
     /**

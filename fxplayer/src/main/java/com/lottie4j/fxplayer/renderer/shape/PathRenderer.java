@@ -32,6 +32,7 @@ public class PathRenderer implements ShapeRenderer {
      * Creates a new PathRenderer.
      */
     public PathRenderer() {
+        // Constructor for PathRenderer
     }
 
     /**
