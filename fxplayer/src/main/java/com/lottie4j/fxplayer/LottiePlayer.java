@@ -158,6 +158,13 @@ public class LottiePlayer extends Canvas {
             return;
         }
 
+        skipDueToParentCache.clear();
+        parentChainCache.clear();
+        layerTrimPathCache.clear();
+
+        precompRenderer.clearRenderCaches();
+        precompRenderer.warmUpRenderCaches(assetsById);
+
         for (Layer layer : animation.layers()) {
             layerTrimPathCache.put(layer, resolveLayerTrimPath(layer));
             skipDueToParentCache.put(layer, computeSkipDueToParent(layer));
@@ -1086,6 +1093,4 @@ public class LottiePlayer extends Canvas {
         seekToFrame(getCurrentFrame());
     }
 }
-
-
 

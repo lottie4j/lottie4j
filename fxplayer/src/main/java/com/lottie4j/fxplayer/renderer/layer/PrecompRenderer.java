@@ -12,10 +12,7 @@ import javafx.scene.canvas.GraphicsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Renderer for precomposition layers in Lottie animations.
@@ -44,6 +41,7 @@ public class PrecompRenderer {
     private final ImageRenderer imageRenderer;
     private final EffectsRenderer effectsRenderer;
     private final MatteRenderer matteRenderer;
+    private final Map<String, PrecompRenderCache> precompRenderCacheByAssetId = new HashMap<>();
 
     /**
      * Creates a precomposition renderer with required collaborators.
@@ -155,12 +153,7 @@ public class PrecompRenderer {
         logger.debug("Rendering precomposition: {} with {} layers at localFrame={} (global={}), bounds={}x{} (inherited={}x{})",
                 layer.referenceId(), asset.layers().size(), localFrame, frame, precompWidth, precompHeight, inheritedWidth, inheritedHeight);
 
-        Map<Integer, Layer> precompLayersByIndex = new HashMap<>();
-        for (Layer precompLayer : asset.layers()) {
-            if (precompLayer.indexLayer() != null) {
-                precompLayersByIndex.put(precompLayer.indexLayer().intValue(), precompLayer);
-            }
-        }
+        PrecompRenderCache precompRenderCache = getOrBuildPrecompRenderCache(asset);
 
         gc.save();
 
@@ -198,7 +191,7 @@ public class PrecompRenderer {
                                 matteGc,
                                 matteLayer,
                                 matteFrame,
-                                precompLayersByIndex,
+                                precompRenderCache,
                                 assetsById,
                                 animation,
                                 precompWidth,
@@ -218,7 +211,7 @@ public class PrecompRenderer {
                 continue;
             }
 
-            if (shouldSkipDueToParentMatte(precompLayer, precompLayersByIndex)) {
+            if (shouldSkipDueToParentMatte(precompLayer, precompRenderCache)) {
                 logger.debug("Skipping precomp layer with skipped parent: {}", precompLayer.name());
                 continue;
             }
@@ -226,7 +219,7 @@ public class PrecompRenderer {
             renderPrecompLayer(gc,
                     precompLayer,
                     localFrame,
-                    precompLayersByIndex,
+                    precompRenderCache,
                     assetsById,
                     animation,
                     precompWidth,
@@ -247,7 +240,7 @@ public class PrecompRenderer {
      * @param gc                      graphics context
      * @param layer                   precomp child layer
      * @param frame                   local precomp frame
-     * @param precompLayersByIndex    layer lookup map
+     * @param precompRenderCache      cached layer metadata for this precomp asset
      * @param assetsById              asset lookup map
      * @param animation               root animation
      * @param precompWidth            precomp width for clipping
@@ -260,7 +253,7 @@ public class PrecompRenderer {
     private void renderPrecompLayer(GraphicsContext gc,
                                     Layer layer,
                                     double frame,
-                                    Map<Integer, Layer> precompLayersByIndex,
+                                    PrecompRenderCache precompRenderCache,
                                     Map<String, Asset> assetsById,
                                     Animation animation,
                                     double precompWidth,
@@ -285,13 +278,13 @@ public class PrecompRenderer {
             }
 
             EffectsRenderer.LayerRenderer precompBlurRenderer = (blurGc, blurLayer, blurFrame) -> {
-                applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompLayersByIndex);
+                applyPrecompParentTransforms(blurGc, blurLayer, blurFrame, precompRenderCache);
                 transformApplier.applyLayerTransform(blurGc, blurLayer, blurFrame);
                 renderPrecompLayerContentOnly(blurGc, blurLayer, blurFrame, animation,
-                        solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+                        solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate, precompRenderCache);
             };
 
-            if (shouldUseStaticBlurLayerCache(layer, blurRadius, precompWidth, precompHeight, precompLayersByIndex)) {
+            if (shouldUseStaticBlurLayerCache(layer, blurRadius, precompWidth, precompHeight, precompRenderCache)) {
                 effectsRenderer.renderStaticLayerWithGaussianBlurCache(
                         gc,
                         layer,
@@ -315,7 +308,7 @@ public class PrecompRenderer {
             return;
         }
 
-        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation,
+        renderPrecompLayerInternal(gc, layer, frame, precompRenderCache, assetsById, animation,
                 precompWidth, precompHeight, renderResolutionScale, layerActivityEvaluator,
                 solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
     }
@@ -324,27 +317,23 @@ public class PrecompRenderer {
                                                   double blurRadius,
                                                   double precompWidth,
                                                   double precompHeight,
-                                                  Map<Integer, Layer> precompLayersByIndex) {
+                                                  PrecompRenderCache precompRenderCache) {
         return precompWidth > 0
                 && precompHeight > 0
                 && effectsRenderer.canUseStaticBlurLayerCache(layer, blurRadius)
-                && !hasAnimatedParentTransformChain(layer, precompLayersByIndex);
+                && !hasAnimatedParentTransformChain(layer, precompRenderCache);
     }
 
-    private boolean hasAnimatedParentTransformChain(Layer layer, Map<Integer, Layer> precompLayersByIndex) {
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < precompLayersByIndex.size()) {
-            Layer parent = precompLayersByIndex.get(parentIndex);
-            if (parent == null) {
-                return false;
-            }
-            if (effectsRenderer.containsAnimation(parent.transform())) {
-                return true;
-            }
-            parentIndex = parent.indexParent();
-        }
-        return false;
+    private boolean hasAnimatedParentTransformChain(Layer layer, PrecompRenderCache precompRenderCache) {
+        return precompRenderCache.animatedParentTransformByLayer()
+                .computeIfAbsent(layer, current -> {
+                    for (Layer parent : precompRenderCache.parentChainByLayer().getOrDefault(current, List.of())) {
+                        if (effectsRenderer.containsAnimation(parent.transform())) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
     }
 
     /**
@@ -353,11 +342,11 @@ public class PrecompRenderer {
      * @param gc                      graphics context
      * @param layer                   precomp child layer
      * @param frame                   local precomp frame
-     * @param precompLayersByIndex    layer lookup map
+     * @param precompRenderCache      cached layer metadata for this precomp asset
      * @param assetsById              asset lookup map
      * @param animation               root animation
-     * @param precompWidth            precomp width for clipping
-     * @param precompHeight           precomp height for clipping
+     * @param parentPrecompWidth      inherited precomp width for nested precomps
+     * @param parentPrecompHeight     inherited precomp height for nested precomps
      * @param renderResolutionScale   render resolution scale for off-screen buffers
      * @param layerActivityEvaluator  layer activity callback
      * @param solidColorLayerRenderer solid color renderer callback
@@ -367,7 +356,7 @@ public class PrecompRenderer {
     private void renderPrecompLayerInternal(GraphicsContext gc,
                                             Layer layer,
                                             double frame,
-                                            Map<Integer, Layer> precompLayersByIndex,
+                                            PrecompRenderCache precompRenderCache,
                                             Map<String, Asset> assetsById,
                                             Animation animation,
                                             double parentPrecompWidth,
@@ -389,7 +378,7 @@ public class PrecompRenderer {
             }
         }
 
-        applyPrecompParentTransforms(gc, layer, frame, precompLayersByIndex);
+        applyPrecompParentTransforms(gc, layer, frame, precompRenderCache);
         transformApplier.applyLayerTransform(gc, layer, frame);
 
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
@@ -412,7 +401,7 @@ public class PrecompRenderer {
         } else if (layer.layerType() == LayerType.TEXT) {
             textRenderer.render(gc, layer, frame);
         } else if (layer.layerType() != LayerType.NULL) {
-            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate);
+            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate, precompRenderCache);
         } else {
             logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
         }
@@ -433,7 +422,8 @@ public class PrecompRenderer {
                                      Layer layer,
                                      double frame,
                                      ShapeGroupRenderer shapeGroupRenderer,
-                                     ShapeRendererDelegate shapeRendererDelegate) {
+                                     ShapeRendererDelegate shapeRendererDelegate,
+                                     PrecompRenderCache precompRenderCache) {
         if (layer.shapes() == null || layer.shapes().isEmpty()) {
             logger.debug("Layer has no shapes");
             return;
@@ -441,13 +431,7 @@ public class PrecompRenderer {
 
         logger.debug("Layer has {} shapes", layer.shapes().size());
 
-        TrimPath layerTrimPath = null;
-        for (BaseShape shape : layer.shapes()) {
-            if (shape instanceof TrimPath trim) {
-                layerTrimPath = trim;
-                logger.debug("Found layer-level TrimPath");
-            }
-        }
+        TrimPath layerTrimPath = precompRenderCache.layerTrimPathByLayer().get(layer);
 
         List<BaseShape> shapes = layer.shapes();
         for (int i = shapes.size() - 1; i >= 0; i--) {
@@ -488,7 +472,8 @@ public class PrecompRenderer {
                                                Animation animation,
                                                SolidColorLayerRenderer solidColorLayerRenderer,
                                                ShapeGroupRenderer shapeGroupRenderer,
-                                               ShapeRendererDelegate shapeRendererDelegate) {
+                                               ShapeRendererDelegate shapeRendererDelegate,
+                                               PrecompRenderCache precompRenderCache) {
         logger.debug("renderPrecompLayerContentOnly called for {} type={}", layer.name(), layer.layerType());
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             logger.warn("Nested precomp blur not supported for content-only rendering: {}", layer.name());
@@ -501,7 +486,7 @@ public class PrecompRenderer {
         } else if (layer.layerType() != LayerType.NULL) {
             logger.debug("Rendering shapes for layer {} - has {} shapes", layer.name(),
                     layer.shapes() != null ? layer.shapes().size() : 0);
-            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate);
+            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate, precompRenderCache);
         } else {
             logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
         }
@@ -510,27 +495,18 @@ public class PrecompRenderer {
     /**
      * Recursively applies parent transforms for a precomp child layer.
      *
-     * @param gc                   destination graphics context
-     * @param layer                child layer whose parent chain is applied
-     * @param frame                local precomp frame
-     * @param precompLayersByIndex parent lookup map for the current precomp
+     * @param gc                 destination graphics context
+     * @param layer              child layer whose parent chain is applied
+     * @param frame              local precomp frame
+     * @param precompRenderCache cached layer metadata for this precomp asset
      */
     private void applyPrecompParentTransforms(GraphicsContext gc,
                                               Layer layer,
                                               double frame,
-                                              Map<Integer, Layer> precompLayersByIndex) {
-        if (layer.indexParent() == null) {
-            return;
+                                              PrecompRenderCache precompRenderCache) {
+        for (Layer parent : precompRenderCache.parentChainByLayer().getOrDefault(layer, List.of())) {
+            transformApplier.applyLayerTransformWithoutOpacity(gc, parent, frame);
         }
-
-        Layer parent = precompLayersByIndex.get(layer.indexParent());
-        if (parent == null) {
-            logger.warn("Parent layer not found in precomp: {}", layer.indexParent());
-            return;
-        }
-
-        applyPrecompParentTransforms(gc, parent, frame, precompLayersByIndex);
-        transformApplier.applyLayerTransformWithoutOpacity(gc, parent, frame);
     }
 
     /**
@@ -625,21 +601,114 @@ public class PrecompRenderer {
                 && layerActivityEvaluator.isActive(layer, frame);
     }
 
-    private boolean shouldSkipDueToParentMatte(Layer layer, Map<Integer, Layer> precompLayersByIndex) {
-        if (layer.indexParent() == null) {
-            return false;
+    private boolean shouldSkipDueToParentMatte(Layer layer, PrecompRenderCache precompRenderCache) {
+        return precompRenderCache.skipDueToParentByLayer().getOrDefault(layer, false);
+    }
+
+    private PrecompRenderCache getOrBuildPrecompRenderCache(Asset asset) {
+        String cacheKey = asset.id() != null ? asset.id() : "__anonymous_precomp__";
+        return precompRenderCacheByAssetId.computeIfAbsent(cacheKey, key -> {
+            Map<Integer, Layer> layersByIndex = new HashMap<>();
+            Map<Layer, List<Layer>> parentChainByLayer = new IdentityHashMap<>();
+            Map<Layer, Boolean> skipDueToParentByLayer = new IdentityHashMap<>();
+            Map<Layer, TrimPath> layerTrimPathByLayer = new IdentityHashMap<>();
+            Map<Layer, Boolean> animatedParentTransformByLayer = new IdentityHashMap<>();
+
+            List<Layer> layers = asset.layers() != null ? asset.layers() : List.of();
+            for (Layer candidate : layers) {
+                if (candidate.indexLayer() != null) {
+                    layersByIndex.put(candidate.indexLayer().intValue(), candidate);
+                }
+            }
+
+            for (Layer candidate : layers) {
+                layerTrimPathByLayer.put(candidate, findLayerTrimPath(candidate));
+                List<Layer> parentChain = buildParentChain(candidate, layersByIndex);
+                parentChainByLayer.put(candidate, parentChain);
+                skipDueToParentByLayer.put(candidate, shouldSkipDueToParentMatte(parentChain));
+            }
+
+            return new PrecompRenderCache(
+                    layersByIndex,
+                    parentChainByLayer,
+                    skipDueToParentByLayer,
+                    layerTrimPathByLayer,
+                    animatedParentTransformByLayer
+            );
+        });
+    }
+
+    private List<Layer> buildParentChain(Layer layer, Map<Integer, Layer> layersByIndex) {
+        List<Layer> chain = new ArrayList<>();
+        Integer parentIndex = layer.indexParent();
+        int guard = 0;
+        while (parentIndex != null && guard++ < layersByIndex.size()) {
+            Layer parent = layersByIndex.get(parentIndex);
+            if (parent == null) {
+                break;
+            }
+            chain.add(parent);
+            parentIndex = parent.indexParent();
+        }
+        Collections.reverse(chain);
+        return chain;
+    }
+
+    private boolean shouldSkipDueToParentMatte(List<Layer> parentChain) {
+        for (Layer parent : parentChain) {
+            if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private TrimPath findLayerTrimPath(Layer layer) {
+        if (layer.shapes() == null || layer.shapes().isEmpty()) {
+            return null;
+        }
+        for (BaseShape shape : layer.shapes()) {
+            if (shape instanceof TrimPath trimPath) {
+                return trimPath;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Clears all cached precomp render metadata.
+     */
+    public void clearRenderCaches() {
+        precompRenderCacheByAssetId.clear();
+    }
+
+    /**
+     * Invalidates cached metadata for one precomp asset id.
+     *
+     * @param assetId precomp asset id
+     */
+    public void invalidateRenderCache(String assetId) {
+        if (assetId == null) {
+            return;
+        }
+        precompRenderCacheByAssetId.remove(assetId);
+    }
+
+    /**
+     * Pre-builds caches for all precomp assets with layers.
+     *
+     * @param assetsById asset map from animation model
+     */
+    public void warmUpRenderCaches(Map<String, Asset> assetsById) {
+        if (assetsById == null || assetsById.isEmpty()) {
+            return;
         }
 
-        Layer parent = precompLayersByIndex.get(layer.indexParent());
-        if (parent == null) {
-            return false;
+        for (Asset asset : assetsById.values()) {
+            if (asset != null && asset.layers() != null && !asset.layers().isEmpty()) {
+                getOrBuildPrecompRenderCache(asset);
+            }
         }
-
-        if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
-            return true;
-        }
-
-        return shouldSkipDueToParentMatte(parent, precompLayersByIndex);
     }
 
     /**
@@ -700,5 +769,13 @@ public class PrecompRenderer {
          * @param frame       frame to sample
          */
         void render(BaseShape shape, Group parentGroup, double frame);
+    }
+
+    private record PrecompRenderCache(
+            Map<Integer, Layer> layersByIndex,
+            Map<Layer, List<Layer>> parentChainByLayer,
+            Map<Layer, Boolean> skipDueToParentByLayer,
+            Map<Layer, TrimPath> layerTrimPathByLayer,
+            Map<Layer, Boolean> animatedParentTransformByLayer) {
     }
 }
