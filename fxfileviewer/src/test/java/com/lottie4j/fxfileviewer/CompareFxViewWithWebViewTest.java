@@ -74,19 +74,19 @@ class CompareFxViewWithWebViewTest {
      */
     static Stream<String> lottieJsonFiles() {
         return Stream.of(
-//                "json/angry_bird.json",
-//                "json/animated_background_patterns.json",
-//                "json/box-moving-changing-color.json",
-//                "json/interactive_mood_selector_ui.json",
-//                "json/json/isometric_data_analysis.json",
-//                "java_duke_fadein.json",
-//                "json/java_duke_flip.json",
-//                "json/java_duke_slidein.json",
-//                "json/loading.json",
-//                "json/lottie4j.json",
-//                "json/lottie_lego.json",
-//                "json/sandy_loading.json",
-//                "json/snake_ladder_loading_animation.json",
+                "json/angry_bird.json",
+                "json/animated_background_patterns.json",
+                "json/box-moving-changing-color.json",
+                "json/interactive_mood_selector_ui.json",
+                "json/json/isometric_data_analysis.json",
+                "java_duke_fadein.json",
+                "json/java_duke_flip.json",
+                "json/java_duke_slidein.json",
+                "json/loading.json",
+                "json/lottie4j.json",
+                "json/lottie_lego.json",
+                "json/sandy_loading.json",
+                "json/snake_ladder_loading_animation.json",
                 "json/success.json",
                 "json/timeline_animation.json",
                 "dot/lottie4j.lottie",
@@ -357,7 +357,6 @@ class CompareFxViewWithWebViewTest {
             throw e;
         }
     }
-
 
     /**
      * Computes similarity between two images using an SSIM-style grayscale metric.

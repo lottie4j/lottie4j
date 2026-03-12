@@ -447,6 +447,13 @@ public class LottiePlayer extends Canvas {
         }
     }
 
+    /**
+     * Draws a debug overlay showing frame, scale, and FPS information.
+     *
+     * @param gc    graphics context to draw on
+     * @param frame current frame number
+     * @param scale rendering scale factor
+     */
     private void drawDebugOverlay(GraphicsContext gc, double frame, double scale) {
         gc.save();
         gc.setFont(Font.font("Monospaced", 10));

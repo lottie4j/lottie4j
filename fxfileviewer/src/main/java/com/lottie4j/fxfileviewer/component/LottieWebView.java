@@ -16,6 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 
+/**
+ * A JavaFX component that renders Lottie animations using a WebView with the dotlottie-wc library.
+ * Provides controls for playing, pausing, seeking, and inspecting animation frames.
+ * Includes optional debug overlay for troubleshooting rendering issues.
+ */
 public class LottieWebView extends Pane {
     private static final Logger logger = LoggerFactory.getLogger(LottieWebView.class);
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
@@ -24,6 +29,10 @@ public class LottieWebView extends Pane {
     private final WebEngine webEngine;
     private final WebView webView;
 
+    /**
+     * Constructs a new LottieWebView with default size (500x500 pixels).
+     * Initializes the WebView and sets up JavaScript error handlers.
+     */
     public LottieWebView() {
         webView = new WebView();
         webView.setPrefSize(DEFAULT_SIZE, DEFAULT_SIZE);
@@ -35,10 +44,13 @@ public class LottieWebView extends Pane {
 
         webEngine = webView.getEngine();
 
-        webView.getEngine().setOnAlert(event -> logger.warn("JS Alert: {}", event.getData()));
-        webView.getEngine().setOnError(event -> logger.error("JS Error: {}", event.getMessage()));
     }
 
+    /**
+     * Gets the current frame number of the animation.
+     *
+     * @return the current frame number, or -1 if unavailable
+     */
     public int getCurrentFrame() {
         Object frameObj = executeScriptSync("window.getCurrentFrame && window.getCurrentFrame()", -1);
         if (frameObj instanceof Number number) {
@@ -47,11 +59,23 @@ public class LottieWebView extends Pane {
         return -1;
     }
 
+    /**
+     * Gets debug information from the WebView renderer.
+     *
+     * @return a string containing debug information, or empty string if unavailable
+     */
     public String getRenderDebug() {
         Object debugObj = executeScriptSync("window.getRenderDebug && window.getRenderDebug()", "");
         return debugObj != null ? String.valueOf(debugObj) : "";
     }
 
+    /**
+     * Waits until the animation is ready to be played.
+     *
+     * @param timeoutMs the maximum time to wait in milliseconds
+     * @return true if the animation became ready within the timeout, false otherwise
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
     public boolean waitUntilReady(long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
@@ -65,6 +89,14 @@ public class LottieWebView extends Pane {
         return false;
     }
 
+    /**
+     * Waits until the animation reaches a specific frame.
+     *
+     * @param expectedFrame the frame number to wait for
+     * @param timeoutMs the maximum time to wait in milliseconds
+     * @return true if the expected frame was reached within the timeout, false otherwise
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
     public boolean waitUntilFrame(int expectedFrame, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
@@ -76,6 +108,13 @@ public class LottieWebView extends Pane {
         return false;
     }
 
+    /**
+     * Executes a JavaScript command synchronously, handling both FX and non-FX threads.
+     *
+     * @param script the JavaScript code to execute
+     * @param fallback the value to return if execution fails
+     * @return the result of script execution, or fallback on error
+     */
     private Object executeScriptSync(String script, Object fallback) {
         if (Platform.isFxApplicationThread()) {
             try {
@@ -107,12 +146,22 @@ public class LottieWebView extends Pane {
         return result[0];
     }
 
+    /**
+     * Waits for the next JavaFX pulse cycle to complete.
+     *
+     * @throws InterruptedException if the thread is interrupted while waiting
+     */
     private void waitForFxPulse() throws InterruptedException {
         CountDownLatch pulse = new CountDownLatch(1);
         Platform.runLater(pulse::countDown);
         pulse.await();
     }
 
+    /**
+     * Seeks the animation to a specific frame.
+     *
+     * @param frame the frame number to seek to
+     */
     public void setFrame(int frame) {
         try {
             webEngine.executeScript("window.seekToFrame(" + frame + ")");
@@ -122,6 +171,12 @@ public class LottieWebView extends Pane {
         }
     }
 
+    /**
+     * Sets the size of the WebView component.
+     *
+     * @param width the width in pixels
+     * @param height the height in pixels
+     */
     public void setSize(int width, int height) {
         setPrefSize(width, height);
         setMaxSize(width, height);
@@ -131,6 +186,9 @@ public class LottieWebView extends Pane {
         webView.setMinSize(width, height);
     }
 
+    /**
+     * Starts playing the animation in a continuous loop.
+     */
     public void play() {
         try {
             webEngine.executeScript("window.playAnimation()");
@@ -139,6 +197,9 @@ public class LottieWebView extends Pane {
         }
     }
 
+    /**
+     * Plays the animation once from start to finish without looping.
+     */
     public void playOnce() {
         try {
             webEngine.executeScript("window.playAnimationOnce()");
@@ -147,6 +208,9 @@ public class LottieWebView extends Pane {
         }
     }
 
+    /**
+     * Pauses the animation at the current frame.
+     */
     public void pause() {
         try {
             webEngine.executeScript("window.pauseAnimation()");
@@ -168,7 +232,12 @@ public class LottieWebView extends Pane {
     }
 
     /**
-     * Loads animation and optionally shows in-WebView debug overlay.
+     * Loads a Lottie animation into the WebView and optionally shows an in-WebView debug overlay.
+     *
+     * @param animation the Lottie animation to load
+     * @param width the width of the player in pixels
+     * @param height the height of the player in pixels
+     * @param showDebugInfo if true, displays a debug overlay with rendering information
      */
     public void loadLottie(Animation animation, int width, int height, boolean showDebugInfo) {
         try {
@@ -613,6 +682,11 @@ public class LottieWebView extends Pane {
         }
     }
 
+    /**
+     * Sets the background color of the WebView animation container.
+     *
+     * @param backgroundColor the color to set as the background
+     */
     public void setBackgroundColor(Color backgroundColor) {
         try {
             var colorHex = String.format("#%02X%02X%02X",
@@ -625,6 +699,11 @@ public class LottieWebView extends Pane {
         }
     }
 
+    /**
+     * Shows or hides the debug overlay in the WebView.
+     *
+     * @param visible true to show the debug overlay, false to hide it
+     */
     public void setDebugInfoVisible(boolean visible) {
         try {
             webEngine.executeScript("window.setDebugOverlayVisible && window.setDebugOverlayVisible(" + visible + ")");

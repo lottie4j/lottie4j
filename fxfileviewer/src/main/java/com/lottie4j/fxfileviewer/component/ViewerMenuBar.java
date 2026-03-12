@@ -81,6 +81,11 @@ public class ViewerMenuBar extends MenuBar {
         }
     }
 
+    /**
+     * Returns whether the debug info menu item is currently selected.
+     *
+     * @return true if debug info is selected, false otherwise
+     */
     public boolean isDebugInfoSelected() {
         return debugInfoMenuItem != null && debugInfoMenuItem.isSelected();
     }
