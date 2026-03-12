@@ -97,13 +97,28 @@ class CompareFxViewWithWebViewTest {
     }
 
     /**
-     * Loads one Lottie file, compares FX vs JS renderer outputs, and asserts average similarity.
+     * Loads one Lottie file, compares FX vs JS renderer outputs at full size, and asserts average similarity.
      *
      * @param fileName resource name of the Lottie JSON animation
      */
     @ParameterizedTest
     @MethodSource("lottieJsonFiles")
-    void testLoadLottieFile(String fileName) throws Exception {
+    void compareFxAndJsRenderingFullSize(String fileName) throws Exception {
+        compareFxAndJsRendering(fileName, 1.0);
+    }
+
+    /**
+     * Loads one Lottie file, compares FX vs JS renderer outputs resized to half, and asserts average similarity.
+     *
+     * @param fileName resource name of the Lottie JSON animation
+     */
+    @ParameterizedTest
+    @MethodSource("lottieJsonFiles")
+    void compareFxAndJsRenderingHalfSize(String fileName) throws Exception {
+        compareFxAndJsRendering(fileName, 0.5);
+    }
+
+    private void compareFxAndJsRendering(String fileName, double scale) {
         logger.info("Testing: {}", fileName);
 
         var resource = getClass().getResource("/" + fileName);

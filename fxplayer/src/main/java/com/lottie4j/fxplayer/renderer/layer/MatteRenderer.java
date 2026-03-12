@@ -65,19 +65,30 @@ public class MatteRenderer {
      */
     public void renderLayerWithMatte(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame,
                                      int animationWidth, int animationHeight, LayerRenderer layerRenderer) {
+        renderLayerWithMatte(gc, matteUser, matteSource, frame, animationWidth, animationHeight, 1.0, layerRenderer);
+    }
+
+    /**
+     * Renders a layer with pixel-accurate matte composition at a configurable off-screen resolution scale.
+     *
+     * @param gc                    graphics context
+     * @param matteUser             layer that uses the matte
+     * @param matteSource           layer that provides the matte
+     * @param frame                 animation frame
+     * @param animationWidth        composition width in local coordinates
+     * @param animationHeight       composition height in local coordinates
+     * @param renderResolutionScale off-screen raster scale factor in range {@code (0, 1]}
+     * @param layerRenderer         callback to render layer content
+     */
+    public void renderLayerWithMatte(GraphicsContext gc, Layer matteUser, Layer matteSource, double frame,
+                                     int animationWidth, int animationHeight, double renderResolutionScale, LayerRenderer layerRenderer) {
         long startTime = System.nanoTime();
 
-        // Get current canvas dimensions
-        // OPTIMIZATION: Use smaller canvas for better performance
-        // In a production implementation, we should calculate the bounding box
-        // For now, use half size which still maintains quality
-        double width = animationWidth;
-        double height = animationHeight;
-
-        // Use full canvas size for now (optimize later once working)
-        double matteWidth = width;
-        double matteHeight = height;
-        double scale = 1.0;
+        double width = Math.max(1, animationWidth);
+        double height = Math.max(1, animationHeight);
+        double scale = Math.clamp(renderResolutionScale, 0.1, 1.0);
+        double matteWidth = Math.max(1, Math.round(width * scale));
+        double matteHeight = Math.max(1, Math.round(height * scale));
 
         // Create off-screen canvases for matte and content
         Canvas matteCanvas = new Canvas(matteWidth, matteHeight);
@@ -85,21 +96,18 @@ public class MatteRenderer {
         GraphicsContext matteGc = matteCanvas.getGraphicsContext2D();
         GraphicsContext contentGc = contentCanvas.getGraphicsContext2D();
 
-        // Don't fill with anything - let canvas be transparent by default
-        // The shapes will render with their own fills/strokes
-
         // Scale the rendering
         matteGc.scale(scale, scale);
         contentGc.scale(scale, scale);
 
         // Render the matte source to the matte canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte source layer: {} (shapes: {}), parent: {}",
-                matteSource.name(), (matteSource.shapes() != null ? matteSource.shapes().size() : 0), matteSource.indexParent());
+        logger.debug("Rendering matte source layer: {} (shapes: {}), parent: {}, scale={}",
+                matteSource.name(), (matteSource.shapes() != null ? matteSource.shapes().size() : 0), matteSource.indexParent(), scale);
         layerRenderer.render(matteGc, matteSource, frame);
 
         // Render the content layer to the content canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte user layer: {} (shapes: {}), parent: {}",
-                matteUser.name(), (matteUser.shapes() != null ? matteUser.shapes().size() : 0), matteUser.indexParent());
+        logger.debug("Rendering matte user layer: {} (shapes: {}), parent: {}, scale={}",
+                matteUser.name(), (matteUser.shapes() != null ? matteUser.shapes().size() : 0), matteUser.indexParent(), scale);
         layerRenderer.render(contentGc, matteUser, frame);
 
         // Get the matte mode
@@ -123,13 +131,11 @@ public class MatteRenderer {
         // Sample at different positions
         Color matteCenter = matteReader.getColor((int) matteImage.getWidth() / 2, (int) matteImage.getHeight() / 2);
         Color contentCenter = contentReader.getColor((int) contentImage.getWidth() / 2, (int) contentImage.getHeight() / 2);
-        Color matte270 = matteReader.getColor(270, 270);
-        Color content270 = contentReader.getColor(270, 270);
 
-        logger.debug("  Matte center [" + ((int) matteImage.getWidth() / 2) + "," + ((int) matteImage.getHeight() / 2) + "]: " + matteCenter);
-        logger.debug("  Content center [" + ((int) contentImage.getWidth() / 2) + "," + ((int) contentImage.getHeight() / 2) + "]: " + contentCenter);
-        logger.debug("  Matte at [270,270]: {}", matte270);
-        logger.debug("  Content at [270,270]: {}", content270);
+        logger.debug("  Matte center [{},{}]: {}",
+                ((int) matteImage.getWidth() / 2), ((int) matteImage.getHeight() / 2), matteCenter);
+        logger.debug("  Content center [{},{}]: {}",
+                ((int) contentImage.getWidth() / 2), ((int) contentImage.getHeight() / 2), contentCenter);
 
         // Apply matte composition
         WritableImage result = applyMatte(contentImage, matteImage, matteMode);
@@ -142,12 +148,14 @@ public class MatteRenderer {
 
         // Draw the result to the main canvas, scaling back up if needed
         // The SRC_OVER blend mode (default) will properly composite transparent pixels
-        gc.drawImage(result, 0, 0, width, height);
-
+        gc.drawImage(result,
+                0, 0, matteWidth, matteHeight,
+                0, 0, width, height);
         gc.restore();
 
         long endTime = System.nanoTime();
-        logger.debug("Matte rendering took: {}ms", ((endTime - startTime) / 1_000_000));
+        logger.debug("Matte rendering took: {}ms (scale={}, size={}x{})",
+                ((endTime - startTime) / 1_000_000), scale, matteWidth, matteHeight);
     }
 
     /**

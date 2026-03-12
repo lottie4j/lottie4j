@@ -364,10 +364,11 @@ public class LottiePlayer extends Canvas {
         double scale = Math.min(scaleX, scaleY);
         double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
         double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
-        logger.debug("Animation/Canvas size: {}x{}/{}x{}, Scale: {}, Offset: {}/{}",
+        double renderResolutionScale = resolveRenderResolutionScale(gc);
+        logger.debug("Animation/Canvas size: {}x{}/{}x{}, Scale: {}, Offset: {}/{}, renderResolutionScale={}",
                 getAnimationWidth(), getAnimationHeight(),
                 gc.getCanvas().getWidth(), gc.getCanvas().getHeight(),
-                scale, offsetX, offsetY);
+                scale, offsetX, offsetY, renderResolutionScale);
 
         gc.save();
         gc.translate(offsetX, offsetY);
@@ -404,8 +405,14 @@ public class LottiePlayer extends Canvas {
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
                             logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
-                            matteRenderer.renderLayerWithMatte(gc, layer, matteSource, frame,
-                                    getAnimationWidth(), getAnimationHeight(), this::renderLayer);
+                            matteRenderer.renderLayerWithMatte(gc,
+                                    layer,
+                                    matteSource,
+                                    frame,
+                                    getAnimationWidth(),
+                                    getAnimationHeight(),
+                                    renderResolutionScale,
+                                    this::renderLayer);
                             continue;
                         }
                     }
@@ -425,7 +432,7 @@ public class LottiePlayer extends Canvas {
                 }
 
                 logger.debug("Rendering layer: {}", layer.name());
-                renderLayer(gc, layer, frame);
+                renderLayer(gc, layer, frame, renderResolutionScale);
             }
         }
 
@@ -526,7 +533,15 @@ public class LottiePlayer extends Canvas {
      * @param frame animation frame
      */
     private void renderLayer(GraphicsContext gc, Layer layer, double frame) {
-        // Check for Gaussian Blur effect and render with blur if needed
+        renderLayer(gc, layer, frame, resolveRenderResolutionScale(gc));
+    }
+
+    /**
+     * Renders a layer with resolution-aware off-screen passes.
+     */
+    private void renderLayer(GraphicsContext gc, Layer layer, double frame, double renderResolutionScale) {
+        double effectiveResolutionScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
+
         double blurRadius = effectsRenderer.getGaussianBlurRadius(layer, frame);
         if (blurRadius > 0.0) {
             if (shouldUseStaticBlurLayerCache(layer, blurRadius)) {
@@ -537,10 +552,20 @@ public class LottiePlayer extends Canvas {
                         blurRadius,
                         Math.max(1, getAnimationWidth()),
                         Math.max(1, getAnimationHeight()),
+                        effectiveResolutionScale,
                         this::renderLayerInternal
                 );
             } else {
-                effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, this::renderLayerInternal);
+                effectsRenderer.renderLayerWithGaussianBlur(
+                        gc,
+                        layer,
+                        frame,
+                        blurRadius,
+                        Math.max(1, getAnimationWidth()),
+                        Math.max(1, getAnimationHeight()),
+                        effectiveResolutionScale,
+                        this::renderLayerInternal
+                );
             }
             return;
         }
@@ -687,8 +712,9 @@ public class LottiePlayer extends Canvas {
                 frame,
                 assetsById,
                 animation,
+                resolveRenderResolutionScale(gc),
                 this::isLayerActiveAtFrame,
-                (solid_gc, solid_layer) -> solidColorRenderer.render(solid_gc, solid_layer, getAnimationWidth(), getAnimationHeight()),
+                (solidGc, solidLayer) -> solidColorRenderer.render(solidGc, solidLayer, getAnimationWidth(), getAnimationHeight()),
                 (shapeGc, shape, f, trimPath) -> shapeGroupRenderer.renderShapeTypeGroup(shapeGc, shape, f, trimPath),
                 this::renderShapeTypeShape
         );
@@ -891,42 +917,46 @@ public class LottiePlayer extends Canvas {
      * @param layerOpacity opacity to apply to the final composite
      */
     private void renderLayerWithOffscreenBuffer(GraphicsContext gc, Layer layer, double frame, double layerOpacity) {
-        // Estimate bounds for the off-screen canvas based on animation size
-        int offscreenWidth = getAnimationWidth();
-        int offscreenHeight = getAnimationHeight();
+        double renderResolutionScale = resolveRenderResolutionScale(gc);
 
-        logger.debug("Rendering layer {} to off-screen buffer ({}x{})", layer.name(), offscreenWidth, offscreenHeight);
+        int offscreenWidth = Math.max(1, (int) Math.round(getAnimationWidth() * renderResolutionScale));
+        int offscreenHeight = Math.max(1, (int) Math.round(getAnimationHeight() * renderResolutionScale));
 
-        // Render layer to off-screen image WITH all transforms but WITHOUT opacity
+        logger.debug("Rendering layer {} to off-screen buffer ({}x{}, scale={})",
+                layer.name(), offscreenWidth, offscreenHeight, renderResolutionScale);
+
         javafx.scene.image.WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
-            // Save graphics state
             offscreenGc.save();
+            offscreenGc.scale(renderResolutionScale, renderResolutionScale);
 
-            // Apply parent transforms inside the off-screen buffer
             applyParentTransforms(offscreenGc, layer, frame);
-
-            // Apply layer transforms WITHOUT opacity to the off-screen context
             applyLayerTransformWithoutOpacity(offscreenGc, layer, frame);
-
-            // Render layer content (shapes, images, etc.)
             renderLayerContent(offscreenGc, layer, frame);
 
-            // Restore graphics state
             offscreenGc.restore();
         });
 
-        // Draw the off-screen buffer to main canvas at (0,0) with opacity applied
-        // All transforms were already applied inside the buffer
         double currentAlpha = gc.getGlobalAlpha();
         gc.setGlobalAlpha(currentAlpha * layerOpacity);
-        gc.drawImage(offscreenImage, 0, 0);
+        gc.drawImage(offscreenImage,
+                0, 0, offscreenWidth, offscreenHeight,
+                0, 0, getAnimationWidth(), getAnimationHeight());
         gc.setGlobalAlpha(currentAlpha);
 
         logger.debug("Finished off-screen rendering for layer: {}", layer.name());
     }
 
     /**
-     * Renders the content of a layer (shapes, images, etc.) without transforms or opacity.
+     * Resolves the off-screen render resolution scale from current canvas-to-composition fit.
+     */
+    private double resolveRenderResolutionScale(GraphicsContext graphicsContext) {
+        double sx = graphicsContext.getCanvas().getWidth() / Math.max(1.0, getAnimationWidth());
+        double sy = graphicsContext.getCanvas().getHeight() / Math.max(1.0, getAnimationHeight());
+        return Math.clamp(Math.min(sx, sy), 0.1, 1.0);
+    }
+
+    /**
+     * Renders the content of a layer (shapes, images, etc.) without applying transforms or opacity.
      * Used by off-screen rendering to composite content first, then apply opacity.
      *
      * @param gc    graphics context to render to
@@ -991,6 +1021,8 @@ public class LottiePlayer extends Canvas {
             } else {
                 logger.debug("Layer has no shapes");
             }
+        } else {
+            logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
         }
     }
 

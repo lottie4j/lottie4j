@@ -87,8 +87,34 @@ public class PrecompRenderer {
                 frame,
                 assetsById,
                 animation,
+                1.0,
+                layerActivityEvaluator,
+                solidColorLayerRenderer,
+                shapeGroupRenderer,
+                shapeRendererDelegate);
+    }
+
+    /**
+     * Renders a precomposition layer with a configurable off-screen resolution scale.
+     */
+    public void renderPrecompositionLayer(GraphicsContext gc,
+                                          Layer layer,
+                                          double frame,
+                                          Map<String, Asset> assetsById,
+                                          Animation animation,
+                                          double renderResolutionScale,
+                                          LayerActivityEvaluator layerActivityEvaluator,
+                                          SolidColorLayerRenderer solidColorLayerRenderer,
+                                          ShapeGroupRenderer shapeGroupRenderer,
+                                          ShapeRendererDelegate shapeRendererDelegate) {
+        renderPrecompositionLayer(gc,
+                layer,
+                frame,
+                assetsById,
+                animation,
                 -1,
                 -1,
+                Math.clamp(renderResolutionScale, 0.1, 1.0),
                 layerActivityEvaluator,
                 solidColorLayerRenderer,
                 shapeGroupRenderer,
@@ -102,6 +128,7 @@ public class PrecompRenderer {
                                            Animation animation,
                                            double inheritedWidth,
                                            double inheritedHeight,
+                                           double renderResolutionScale,
                                            LayerActivityEvaluator layerActivityEvaluator,
                                            SolidColorLayerRenderer solidColorLayerRenderer,
                                            ShapeGroupRenderer shapeGroupRenderer,
@@ -166,6 +193,7 @@ public class PrecompRenderer {
                         localFrame,
                         (int) Math.max(1, precompWidth),
                         (int) Math.max(1, precompHeight),
+                        renderResolutionScale,
                         (matteGc, matteLayer, matteFrame) -> renderPrecompLayer(
                                 matteGc,
                                 matteLayer,
@@ -175,6 +203,7 @@ public class PrecompRenderer {
                                 animation,
                                 precompWidth,
                                 precompHeight,
+                                renderResolutionScale,
                                 layerActivityEvaluator,
                                 solidColorLayerRenderer,
                                 shapeGroupRenderer,
@@ -202,6 +231,7 @@ public class PrecompRenderer {
                     animation,
                     precompWidth,
                     precompHeight,
+                    renderResolutionScale,
                     layerActivityEvaluator,
                     solidColorLayerRenderer,
                     shapeGroupRenderer,
@@ -235,6 +265,7 @@ public class PrecompRenderer {
                                     Animation animation,
                                     double precompWidth,
                                     double precompHeight,
+                                    double renderResolutionScale,
                                     LayerActivityEvaluator layerActivityEvaluator,
                                     SolidColorLayerRenderer solidColorLayerRenderer,
                                     ShapeGroupRenderer shapeGroupRenderer,
@@ -268,15 +299,25 @@ public class PrecompRenderer {
                         blurRadius,
                         Math.max(1.0, precompWidth),
                         Math.max(1.0, precompHeight),
+                        renderResolutionScale,
                         precompBlurRenderer
                 );
             } else {
-                effectsRenderer.renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, precompWidth, precompHeight, precompBlurRenderer);
+                effectsRenderer.renderLayerWithGaussianBlur(gc,
+                        layer,
+                        frame,
+                        blurRadius,
+                        precompWidth,
+                        precompHeight,
+                        renderResolutionScale,
+                        precompBlurRenderer);
             }
             return;
         }
 
-        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation, precompWidth, precompHeight, layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+        renderPrecompLayerInternal(gc, layer, frame, precompLayersByIndex, assetsById, animation,
+                precompWidth, precompHeight, renderResolutionScale, layerActivityEvaluator,
+                solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
     }
 
     private boolean shouldUseStaticBlurLayerCache(Layer layer,
@@ -317,6 +358,7 @@ public class PrecompRenderer {
      * @param animation               root animation
      * @param precompWidth            precomp width for clipping
      * @param precompHeight           precomp height for clipping
+     * @param renderResolutionScale   render resolution scale for off-screen buffers
      * @param layerActivityEvaluator  layer activity callback
      * @param solidColorLayerRenderer solid color renderer callback
      * @param shapeGroupRenderer      shape group renderer callback
@@ -330,6 +372,7 @@ public class PrecompRenderer {
                                             Animation animation,
                                             double parentPrecompWidth,
                                             double parentPrecompHeight,
+                                            double renderResolutionScale,
                                             LayerActivityEvaluator layerActivityEvaluator,
                                             SolidColorLayerRenderer solidColorLayerRenderer,
                                             ShapeGroupRenderer shapeGroupRenderer,
@@ -357,6 +400,7 @@ public class PrecompRenderer {
                     animation,
                     parentPrecompWidth,
                     parentPrecompHeight,
+                    renderResolutionScale,
                     layerActivityEvaluator,
                     solidColorLayerRenderer,
                     shapeGroupRenderer,

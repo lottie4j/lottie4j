@@ -153,7 +153,7 @@ public class EffectsRenderer {
      * @param layerRenderer callback that draws the layer content into {@code gc}
      */
     public void renderLayerWithGaussianBlur(GraphicsContext gc, Layer layer, double frame, double blurRadius, LayerRenderer layerRenderer) {
-        renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, -1, -1, layerRenderer);
+        renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, -1, -1, 1.0, layerRenderer);
     }
 
     /**
@@ -182,22 +182,45 @@ public class EffectsRenderer {
                                             double boundsWidth,
                                             double boundsHeight,
                                             LayerRenderer layerRenderer) {
-        logger.debug("renderLayerWithGaussianBlur called for layer {}: blurRadius={}, boundsWidth={}, boundsHeight={}",
-                layer.name(), blurRadius, boundsWidth, boundsHeight);
+        renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, 1.0, layerRenderer);
+    }
+
+    /**
+     * Renders a layer with Gaussian blur and optional bounds clipping at a configurable off-screen resolution scale.
+     *
+     * @param gc                    destination graphics context
+     * @param layer                 layer to render
+     * @param frame                 animation frame
+     * @param blurRadius            blur radius in composition-space pixels
+     * @param boundsWidth           clipping width in composition-space coordinates
+     * @param boundsHeight          clipping height in composition-space coordinates
+     * @param renderResolutionScale off-screen raster scale factor in range {@code (0, 1]}
+     * @param layerRenderer         callback to render layer content
+     */
+    public void renderLayerWithGaussianBlur(GraphicsContext gc,
+                                            Layer layer,
+                                            double frame,
+                                            double blurRadius,
+                                            double boundsWidth,
+                                            double boundsHeight,
+                                            double renderResolutionScale,
+                                            LayerRenderer layerRenderer) {
+        double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
+        logger.debug("renderLayerWithGaussianBlur called for layer {}: blurRadius={}, boundsWidth={}, boundsHeight={}, renderResolutionScale={}",
+                layer.name(), blurRadius, boundsWidth, boundsHeight, effectiveScale);
 
         if (boundsWidth > 0 && boundsHeight > 0) {
-            // Render with explicit bounds clipping - applies transforms in offscreen, clips when drawing back
-            renderWithBoundedBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, layerRenderer);
+            renderWithBoundedBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, effectiveScale, layerRenderer);
             return;
         }
 
-        // Fallback: no bounds, just apply blur directly
         gc.save();
-        applyBlurEffect(gc, blurRadius);
+        double scaledBlur = blurRadius * effectiveScale;
+        applyBlurEffect(gc, scaledBlur);
         layerRenderer.render(gc, layer, frame);
         gc.setEffect(null);
         gc.restore();
-        logger.debug("Applied direct blur (no bounds) for layer {}: radius={}", layer.name(), blurRadius);
+        logger.debug("Applied direct blur (no bounds) for layer {}: radius={} (scaled={})", layer.name(), blurRadius, scaledBlur);
     }
 
     /**
@@ -222,34 +245,37 @@ public class EffectsRenderer {
                                        double blurRadius,
                                        double boundsWidth,
                                        double boundsHeight,
+                                       double renderResolutionScale,
                                        LayerRenderer layerRenderer) {
-        // Create offscreen buffer with padding for blur spread
-        double padding = Math.ceil(blurRadius * 2);
-        double offscreenWidth = boundsWidth + padding * 2;
-        double offscreenHeight = boundsHeight + padding * 2;
-        logger.debug("Creating offscreen buffer: {}x{} with padding={}", offscreenWidth, offscreenHeight, padding);
+        double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
+        double scaledBlurRadius = blurRadius * effectiveScale;
 
-        // Render blurred content into expanded offscreen buffer to allow blur to spread
+        double padding = Math.ceil(scaledBlurRadius * 2);
+        double renderWidth = Math.max(1.0, Math.ceil(boundsWidth * effectiveScale));
+        double renderHeight = Math.max(1.0, Math.ceil(boundsHeight * effectiveScale));
+        double offscreenWidth = renderWidth + padding * 2;
+        double offscreenHeight = renderHeight + padding * 2;
+        logger.debug("Creating offscreen buffer: {}x{} (render={}x{}, padding={}, scale={})",
+                offscreenWidth, offscreenHeight, renderWidth, renderHeight, padding, effectiveScale);
+
         WritableImage blurredImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
             offscreenGc.save();
-            // Translate to account for padding
-            offscreenGc.translate(padding, padding);
-            applyBlurEffect(offscreenGc, blurRadius);
+            offscreenGc.scale(effectiveScale, effectiveScale);
+            offscreenGc.translate(padding / effectiveScale, padding / effectiveScale);
+            applyBlurEffect(offscreenGc, scaledBlurRadius);
             layerRenderer.render(offscreenGc, layer, frame);
             offscreenGc.setEffect(null);
             offscreenGc.restore();
         });
 
-        // Draw only the central (unpadded) region back to destination bounds.
-        // This enforces cropping even when gc.clip interactions are inconsistent.
         gc.save();
         gc.drawImage(blurredImage,
-                padding, padding, boundsWidth, boundsHeight,
+                padding, padding, renderWidth, renderHeight,
                 0, 0, boundsWidth, boundsHeight);
         gc.restore();
 
-        logger.debug("Applied bounded blur crop for layer {}: radius={} src=({}, {}, {}, {}) dst=(0, 0, {}, {})",
-                layer.name(), blurRadius, padding, padding, boundsWidth, boundsHeight, boundsWidth, boundsHeight);
+        logger.debug("Applied bounded blur crop for layer {}: radius={} (scaled={}) src=({}, {}, {}, {}) dst=(0, 0, {}, {})",
+                layer.name(), blurRadius, scaledBlurRadius, padding, padding, renderWidth, renderHeight, boundsWidth, boundsHeight);
     }
 
     /**
@@ -329,13 +355,38 @@ public class EffectsRenderer {
                                                        double boundsWidth,
                                                        double boundsHeight,
                                                        LayerRenderer layerRenderer) {
-        int imageWidth = Math.max(1, (int) Math.ceil(boundsWidth));
-        int imageHeight = Math.max(1, (int) Math.ceil(boundsHeight));
+        renderStaticLayerWithGaussianBlurCache(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, 1.0, layerRenderer);
+    }
+
+    /**
+     * Renders and caches a blurred static layer using a configurable off-screen resolution scale.
+     *
+     * @param gc                    destination graphics context
+     * @param layer                 layer to render
+     * @param frame                 frame sampled for initial cache creation
+     * @param blurRadius            blur radius in composition-space pixels
+     * @param boundsWidth           destination width in composition-space coordinates
+     * @param boundsHeight          destination height in composition-space coordinates
+     * @param renderResolutionScale off-screen raster scale factor in range {@code (0, 1]}
+     * @param layerRenderer         callback to render layer content
+     */
+    public void renderStaticLayerWithGaussianBlurCache(GraphicsContext gc,
+                                                       Layer layer,
+                                                       double frame,
+                                                       double blurRadius,
+                                                       double boundsWidth,
+                                                       double boundsHeight,
+                                                       double renderResolutionScale,
+                                                       LayerRenderer layerRenderer) {
+        double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
+        int imageWidth = Math.max(1, (int) Math.ceil(boundsWidth * effectiveScale));
+        int imageHeight = Math.max(1, (int) Math.ceil(boundsHeight * effectiveScale));
+        double scaledBlurRadius = blurRadius * effectiveScale;
         long pixelCount = (long) imageWidth * imageHeight;
         if (boundsWidth <= 0 || boundsHeight <= 0 || pixelCount > STATIC_BLUR_CACHE_MAX_PIXEL_COUNT) {
-            logger.debug("Skipping static blur cache for layer {} - bounds={}x{}, pixels={}",
-                    layer.name(), boundsWidth, boundsHeight, pixelCount);
-            renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, layerRenderer);
+            logger.debug("Skipping static blur cache for layer {} - bounds={}x{}, pixels={}, scale={}",
+                    layer.name(), boundsWidth, boundsHeight, pixelCount, effectiveScale);
+            renderLayerWithGaussianBlur(gc, layer, frame, blurRadius, boundsWidth, boundsHeight, effectiveScale, layerRenderer);
             return;
         }
 
@@ -343,12 +394,14 @@ public class EffectsRenderer {
                 System.identityHashCode(layer),
                 imageWidth,
                 imageHeight,
-                Double.doubleToLongBits(blurRadius)
+                Double.doubleToLongBits(scaledBlurRadius)
         );
 
         WritableImage cachedImage = staticLayerBlurCache.computeIfAbsent(cacheKey,
-                unused -> createStaticBlurCacheImage(layer, frame, blurRadius, imageWidth, imageHeight, layerRenderer));
-        gc.drawImage(cachedImage, 0, 0);
+                unused -> createStaticBlurCacheImage(layer, frame, scaledBlurRadius, imageWidth, imageHeight, effectiveScale, layerRenderer));
+        gc.drawImage(cachedImage,
+                0, 0, imageWidth, imageHeight,
+                0, 0, boundsWidth, boundsHeight);
     }
 
     /**
@@ -370,11 +423,13 @@ public class EffectsRenderer {
                                                      double blurRadius,
                                                      int imageWidth,
                                                      int imageHeight,
+                                                     double renderResolutionScale,
                                                      LayerRenderer layerRenderer) {
-        logger.debug("Creating static blur cache image for layer {}: {}x{}, radius={}",
-                layer.name(), imageWidth, imageHeight, blurRadius);
+        logger.debug("Creating static blur cache image for layer {}: {}x{}, radius={}, scale={}",
+                layer.name(), imageWidth, imageHeight, blurRadius, renderResolutionScale);
         return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
             offscreenGc.save();
+            offscreenGc.scale(renderResolutionScale, renderResolutionScale);
             applyBlurEffect(offscreenGc, blurRadius);
             layerRenderer.render(offscreenGc, layer, frame);
             offscreenGc.setEffect(null);
