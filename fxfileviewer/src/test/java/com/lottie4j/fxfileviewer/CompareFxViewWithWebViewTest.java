@@ -47,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 class CompareFxViewWithWebViewTest {
-
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
     private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
@@ -288,7 +287,7 @@ class CompareFxViewWithWebViewTest {
                             frameCount.incrementAndGet();
 
                             Platform.runLater(() -> {
-                                similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %% @ %d%%", currentFrame, roundedSimilarity, (int) (scale * 100)));
+                                similarityLabel.setText(String.format("Frame %d @ %d%% | Similarity: %.2f %%", currentFrame, (int) (scale * 100), roundedSimilarity));
                                 if (roundedSimilarity >= SIMILARITY_THRESHOLD) {
                                     similarityLabel.setBackground(new Background(new BackgroundFill(
                                             Color.web("#99FF99", 0.9),
