@@ -103,7 +103,7 @@ class CompareFxViewWithWebViewTest {
     void testLoadLottieFile(String fileName) throws Exception {
         logger.info("Testing: {}", fileName);
 
-        var resource = getClass().getResource("/" + fileName);
+        var resource = getClass().getResource("/json/" + fileName);
         assertNotNull(resource, "Resource not found: " + fileName);
 
         File file = new File(resource.getFile());

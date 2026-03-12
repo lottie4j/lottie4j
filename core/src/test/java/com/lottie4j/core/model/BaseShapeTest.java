@@ -35,16 +35,16 @@ class BaseShapeTest {
 
     private static Stream<Arguments> provideShapeFiles() {
         return Stream.of(
-                Arguments.of("/lottie/shape/ellipse.json", Ellipse.class, ShapeType.ELLIPSE),
-                Arguments.of("/lottie/shape/fill.json", Fill.class, ShapeType.FILL),
-                Arguments.of("/lottie/shape/gradient_fill.json", GradientFill.class, ShapeType.GRADIENT_FILL),
-                Arguments.of("/lottie/shape/polystar.json", Polystar.class, ShapeType.POLYSTAR),
-                Arguments.of("/lottie/shape/pucker.json", Pucker.class, ShapeType.PUCKER),
-                Arguments.of("/lottie/shape/rectangle.json", Rectangle.class, ShapeType.RECTANGLE),
-                Arguments.of("/lottie/shape/repeater.json", Repeater.class, ShapeType.REPEATER),
-                Arguments.of("/lottie/shape/rounded_corners.json", RoundedCorners.class, ShapeType.ROUNDED_CORNERS),
-                Arguments.of("/lottie/shape/stroke_dashes.json", Stroke.class, ShapeType.STROKE),
-                Arguments.of("/lottie/shape/trim_path.json", TrimPath.class, ShapeType.TRIM)
+                Arguments.of("/shape/ellipse.json", Ellipse.class, ShapeType.ELLIPSE),
+                Arguments.of("/shape/fill.json", Fill.class, ShapeType.FILL),
+                Arguments.of("/shape/gradient_fill.json", GradientFill.class, ShapeType.GRADIENT_FILL),
+                Arguments.of("/shape/polystar.json", Polystar.class, ShapeType.POLYSTAR),
+                Arguments.of("/shape/pucker.json", Pucker.class, ShapeType.PUCKER),
+                Arguments.of("/shape/rectangle.json", Rectangle.class, ShapeType.RECTANGLE),
+                Arguments.of("/shape/repeater.json", Repeater.class, ShapeType.REPEATER),
+                Arguments.of("/shape/rounded_corners.json", RoundedCorners.class, ShapeType.ROUNDED_CORNERS),
+                Arguments.of("/shape/stroke_dashes.json", Stroke.class, ShapeType.STROKE),
+                Arguments.of("/shape/trim_path.json", TrimPath.class, ShapeType.TRIM)
         );
     }
 

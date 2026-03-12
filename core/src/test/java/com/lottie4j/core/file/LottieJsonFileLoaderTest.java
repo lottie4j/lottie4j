@@ -19,44 +19,42 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LottieFileLoaderTest {
+class LottieJsonFileLoaderTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(
-                Arguments.of("/lottie/lottie_file/java_duke_empty_layers.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1_no_shapes.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only_path.json", Path.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape_only.json", BaseShape.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1_one_shape.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_1.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_2.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_3.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_4.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_layer_5.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/timeline_single_shape_reduced.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/timeline_animation_assets_only.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/timeline_animation.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/timeline_single_shape.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/timeline.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/lf20_gOmta2.json", Animation.class),
-                //Arguments.of("/lottie/lottie_file/loading.json", Animation.class),
-                Arguments.of("/lottie/lottie_file/java_duke_single_layer_no_shapes.json", Layer.class),
-                Arguments.of("/lottie/lottie_file/java_duke_single_layer.json", Layer.class),
-                Arguments.of("/lottie/lottie_file/java_duke.json", Animation.class)
+                Arguments.of("/json/java_duke.json", Animation.class),
+                Arguments.of("/json/java_duke_empty_layers.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_1_no_shapes.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_1_one_shape.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_1_one_shape_only.json", BaseShape.class),
+                Arguments.of("/json/java_duke_layer_1_one_shape_only_path.json", Path.class),
+                Arguments.of("/json/java_duke_layer_1.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_2.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_3.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_4.json", Animation.class),
+                Arguments.of("/json/java_duke_layer_5.json", Animation.class),
+                Arguments.of("/json/java_duke_single_layer.json", Layer.class),
+                Arguments.of("/json/java_duke_single_layer_no_shapes.json", Layer.class),
+                Arguments.of("/json/timeline_single_shape_reduced.json", Animation.class)
         );
     }
 
     @ParameterizedTest
     @MethodSource("provideLottieFiles")
     void testFileToObjectToJson(String file, Class clazz) throws IOException {
-        File f = new File(this.getClass().getResource(file).getFile());
+        var testFile = this.getClass().getResource(file);
+
+        if (testFile == null) {
+            fail("File not found: " + file);
+        }
+
+        File f = new File(testFile.getFile());
         String jsonFromFile = LottieFileLoader.loadAsString(f);
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
         String jsonFromObject = mapper.writeValueAsString(objectFromJson);
-        // mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectFromJson);
 
         System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
         System.out.println("Generated:\n" + jsonFromObject);
@@ -69,7 +67,7 @@ class LottieFileLoaderTest {
 
     @Test
     void testLoadSingleLayerFileNoShapes() throws IOException {
-        File f = new File(this.getClass().getResource("/lottie/lottie_file/java_duke_single_layer_no_shapes.json").getFile());
+        File f = new File(this.getClass().getResource("/json/java_duke_single_layer_no_shapes.json").getFile());
         var jsonFromFile = LottieFileLoader.loadAsString(f);
         var l = mapper.readValue(jsonFromFile, Layer.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(l);
@@ -86,7 +84,7 @@ class LottieFileLoaderTest {
 
     @Test
     void testLoadSingleLayerFile() throws IOException {
-        File f = new File(this.getClass().getResource("/lottie/lottie_file/java_duke_single_layer.json").getFile());
+        File f = new File(this.getClass().getResource("/json/java_duke_single_layer.json").getFile());
         var jsonFromFile = LottieFileLoader.loadAsString(f);
         var l = mapper.readValue(jsonFromFile, Layer.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(l);
@@ -103,7 +101,7 @@ class LottieFileLoaderTest {
 
     @Test
     void testLoadSmallFile() throws IOException {
-        File f = new File(this.getClass().getResource("/lottie/lottie_file/java_duke.json").getFile());
+        File f = new File(this.getClass().getResource("/json/java_duke.json").getFile());
         var jsonFromFile = LottieFileLoader.loadAsString(f);
         var a = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(a);
@@ -127,7 +125,7 @@ class LottieFileLoaderTest {
     @Test
     @Disabled("To be completed")
     void testLoadBigFile() throws IOException {
-        File f = new File(this.getClass().getResource("/lottie/lottie_file/lf20_gOmta2.json").getFile());
+        File f = new File(this.getClass().getResource("/json/lf20_gOmta2.json").getFile());
         var jsonFromFile = LottieFileLoader.loadAsString(f);
         var a = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(a);

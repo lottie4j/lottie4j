@@ -21,7 +21,13 @@ class AnimationLoaderTest {
 
     @Test
     void testFileToObjectToJson() throws IOException {
-        File f = new File(this.getClass().getResource("/lottie/lottie_file/timeline_animation.json").getFile());
+        var testFile = this.getClass().getResource("/json/timeline_animation.json");
+
+        if (testFile == null) {
+            fail("File not found: " + testFile);
+        }
+
+        File f = new File(testFile.getFile());
         String jsonFromFile = LottieFileLoader.loadAsString(f);
         var animation = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writeValueAsString(animation);
