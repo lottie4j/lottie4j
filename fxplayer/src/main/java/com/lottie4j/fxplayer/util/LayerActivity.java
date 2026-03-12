@@ -22,6 +22,8 @@ public final class LayerActivity {
      * @return {@code true} when frame is inside the layer in/out range
      */
     public static boolean isActiveAtFrame(Layer layer, double frame) {
-        return frame >= layer.inPoint() && frame <= layer.outPoint();
+        double inPoint = layer.inPoint() != null ? layer.inPoint() : 0.0;
+        double outPointExclusive = layer.outPoint() != null ? layer.outPoint() : Double.POSITIVE_INFINITY;
+        return frame >= inPoint && frame < outPointExclusive;
     }
 }

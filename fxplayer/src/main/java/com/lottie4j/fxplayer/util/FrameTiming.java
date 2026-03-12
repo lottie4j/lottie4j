@@ -26,13 +26,33 @@ public final class FrameTiming {
     }
 
     /**
-     * Returns animation out-point with a safe default.
+     * Returns animation out-point (exclusive) with a safe default.
      *
      * @param animation animation model
-     * @return last frame index used for playback
+     * @return exclusive end frame index used for playback bounds
      */
     public static int getOutPoint(Animation animation) {
-        return animation.outPoint() != null ? animation.outPoint() : 60;
+        int inPoint = getInPoint(animation);
+        int defaultOutPoint = inPoint + 60;
+        int outPoint = animation.outPoint() != null ? animation.outPoint() : defaultOutPoint;
+        // Ensure exclusive out-point stays ahead of in-point by at least one frame.
+        return Math.max(inPoint + 1, outPoint);
+    }
+
+    /**
+     * Alias for explicit readability at call sites that rely on exclusive semantics.
+     */
+    public static int getOutPointExclusive(Animation animation) {
+        return getOutPoint(animation);
+    }
+
+    /**
+     * Returns the last frame that should be sampled/rendered (inclusive).
+     */
+    public static int getLastRenderableFrame(Animation animation) {
+        int inPoint = getInPoint(animation);
+        int outExclusive = getOutPointExclusive(animation);
+        return Math.max(inPoint, outExclusive - 1);
     }
 
     /**

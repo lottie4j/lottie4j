@@ -226,12 +226,19 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
-     * Gets the ending frame index for playback.
+     * Gets the ending frame boundary for playback (exclusive).
      *
-     * @return animation out-point frame
+     * @return animation out-point frame boundary
      */
-    private int getOutPoint() {
-        return FrameTiming.getOutPoint(animation);
+    private int getOutPointExclusive() {
+        return FrameTiming.getOutPointExclusive(animation);
+    }
+
+    /**
+     * Gets the last renderable frame (inclusive).
+     */
+    private int getLastRenderableFrame() {
+        return FrameTiming.getLastRenderableFrame(animation);
     }
 
     /**
@@ -282,7 +289,7 @@ public class LottiePlayer extends Canvas {
             @Override
             public void handle(long now) {
                 double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
-                double totalFrames = getOutPoint() - getInPoint();
+                double totalFrames = getOutPointExclusive() - getInPoint();
                 double animationDuration = totalFrames / getFramesPerSecond();
 
                 if (elapsedSeconds >= animationDuration) {
@@ -292,6 +299,7 @@ public class LottiePlayer extends Canvas {
                 }
 
                 double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
+                newFrame = Math.min(getLastRenderableFrame(), newFrame);
                 currentFrameProperty.set(newFrame);
                 render(newFrame, visibleLayerIndices);
             }
@@ -329,13 +337,13 @@ public class LottiePlayer extends Canvas {
             @Override
             public void handle(long now) {
                 double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
-                double totalFrames = getOutPoint() - getInPoint();
+                double totalFrames = getOutPointExclusive() - getInPoint();
                 double animationDuration = totalFrames / getFramesPerSecond();
 
                 if (elapsedSeconds >= animationDuration) {
                     // Stop when animation completes
                     stop();
-                    seekToFrame(getOutPoint());
+                    seekToFrame(getLastRenderableFrame());
                     if (onFinished != null) {
                         onFinished.accept(null);
                     }
@@ -343,6 +351,7 @@ public class LottiePlayer extends Canvas {
                 }
 
                 double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
+                newFrame = Math.min(getLastRenderableFrame(), newFrame);
                 currentFrameProperty.set(newFrame);
                 render(newFrame, visibleLayerIndices);
             }
@@ -369,7 +378,7 @@ public class LottiePlayer extends Canvas {
      * @param frame frame number to seek to (will be clamped to valid range)
      */
     public void seekToFrame(double frame) {
-        double clampedFrame = Math.max(getInPoint(), Math.min(getOutPoint(), frame));
+        double clampedFrame = Math.max(getInPoint(), Math.min(getLastRenderableFrame(), frame));
         currentFrameProperty.set(clampedFrame);
         render(clampedFrame, visibleLayerIndices);
     }
