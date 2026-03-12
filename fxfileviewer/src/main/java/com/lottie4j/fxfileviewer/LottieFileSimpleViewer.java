@@ -27,12 +27,7 @@ public class LottieFileSimpleViewer extends Application {
     private BorderPane root;
     private LottiePlayer lottiePlayer;
     private ViewerMenuBar viewerMenuBar;
-
-    /**
-     * Creates a new LottieFileSimpleViewer.
-     */
-    public LottieFileSimpleViewer() {
-    }
+    private double currentScalePercent = 100.0;
 
     /**
      * Initializes the JavaFX application stage and UI components.
@@ -55,7 +50,12 @@ public class LottieFileSimpleViewer extends Application {
                         lottiePlayer.setDebugInfoVisible(debugVisible);
                     }
                 },
-                true
+                true,
+                scalePercent -> {
+                    currentScalePercent = scalePercent;
+                    applyScaleToPlayer();
+                },
+                currentScalePercent
         );
         root.setTop(viewerMenuBar);
 
@@ -87,10 +87,21 @@ public class LottieFileSimpleViewer extends Application {
         try {
             lottiePlayer = new LottiePlayer(LottieFileLoader.load(file));
             lottiePlayer.setDebugInfoVisible(viewerMenuBar != null && viewerMenuBar.isDebugInfoSelected());
+            applyScaleToPlayer();
             root.setCenter(lottiePlayer);
             lottiePlayer.play();
         } catch (LottieFileException e) {
             AlertHelper.showError("Can't load animation:\n\n" + e.getMessage());
         }
+    }
+
+    /**
+     * Applies the currently selected scale percent to the active player.
+     */
+    private void applyScaleToPlayer() {
+        if (lottiePlayer == null) {
+            return;
+        }
+        lottiePlayer.resizeRenderPercent(currentScalePercent);
     }
 }

@@ -52,6 +52,8 @@ public class LottiePlayer extends Canvas {
     private final SolidColorRenderer solidColorRenderer = new SolidColorRenderer();
     private final EffectsRenderer effectsRenderer = new EffectsRenderer();
     private final MatteRenderer matteRenderer = new MatteRenderer();
+    private final int baseRenderWidth;
+    private final int baseRenderHeight;
     private AnimationTimer animationTimer;
     private long startTime;
     private boolean isPlaying = false;
@@ -105,10 +107,12 @@ public class LottiePlayer extends Canvas {
     public LottiePlayer(Animation animation, int width, int height, boolean debug) {
         this.animation = animation;
         this.debug = debug;
+        this.baseRenderWidth = Math.max(1, width);
+        this.baseRenderHeight = Math.max(1, height);
 
         // Set canvas size to specified dimensions
-        setWidth(width);
-        setHeight(height);
+        setWidth(this.baseRenderWidth);
+        setHeight(this.baseRenderHeight);
         logger.debug("Canvas size set to: {}x{}", getWidth(), getHeight());
 
         this.gc = getGraphicsContext2D();
@@ -841,6 +845,40 @@ public class LottiePlayer extends Canvas {
         if (!isPlaying) {
             render(currentFrameProperty.get(), visibleLayerIndices);
         }
+    }
+
+    /**
+     * Resizes the render canvas in pixels and re-renders the current frame.
+     *
+     * <p>This changes the actual render workload (canvas pixel count), unlike node scaling transforms.
+     *
+     * @param width  target canvas width in pixels
+     * @param height target canvas height in pixels
+     */
+    public void resizeRender(int width, int height) {
+        int clampedWidth = Math.max(1, width);
+        int clampedHeight = Math.max(1, height);
+
+        if ((int) getWidth() == clampedWidth && (int) getHeight() == clampedHeight) {
+            return;
+        }
+
+        setWidth(clampedWidth);
+        setHeight(clampedHeight);
+        render(currentFrameProperty.get(), visibleLayerIndices);
+    }
+
+    /**
+     * Resizes the render canvas by a percentage of the initial render size.
+     *
+     * @param percent scale percentage in range [10, 100]
+     */
+    public void resizeRenderPercent(double percent) {
+        double clampedPercent = Math.clamp(percent, 10.0, 100.0);
+        double scaleFactor = clampedPercent / 100.0;
+        int targetWidth = (int) Math.round(baseRenderWidth * scaleFactor);
+        int targetHeight = (int) Math.round(baseRenderHeight * scaleFactor);
+        resizeRender(targetWidth, targetHeight);
     }
 
     /**

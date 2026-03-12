@@ -17,6 +17,7 @@ import java.awt.*;
 import java.io.File;
 import java.net.URI;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 
 import static com.lottie4j.fxfileviewer.util.AlertHelper.showError;
 
@@ -52,6 +53,25 @@ public class ViewerMenuBar extends MenuBar {
                          Consumer<File> onFileSelected,
                          Consumer<Boolean> onDebugInfoChanged,
                          boolean debugInfoSelected) {
+        this(stage, onFileSelected, onDebugInfoChanged, debugInfoSelected, null, 100.0);
+    }
+
+    /**
+     * Creates a menu bar with optional debug and scaling controls in the View menu.
+     *
+     * @param stage                 the primary stage for displaying file chooser dialogs
+     * @param onFileSelected        callback invoked when a Lottie file is selected
+     * @param onDebugInfoChanged    callback invoked when debug info visibility changes; null disables the toggle menu
+     * @param debugInfoSelected     initial debug toggle state
+     * @param onScalePercentChanged callback invoked when the scale slider changes; null disables the slider
+     * @param initialScalePercent   initial scale percentage for the slider, clamped to [10, 100]
+     */
+    public ViewerMenuBar(Stage stage,
+                         Consumer<File> onFileSelected,
+                         Consumer<Boolean> onDebugInfoChanged,
+                         boolean debugInfoSelected,
+                         DoubleConsumer onScalePercentChanged,
+                         double initialScalePercent) {
         this.onFileSelected = onFileSelected;
 
         var fileMenu = new Menu("File");
@@ -67,6 +87,35 @@ public class ViewerMenuBar extends MenuBar {
             viewMenu.getItems().add(debugInfoMenuItem);
         } else {
             debugInfoMenuItem.setDisable(true);
+        }
+
+        if (onScalePercentChanged != null) {
+            double clampedInitialScale = Math.clamp(initialScalePercent, 10.0, 100.0);
+            var scaleLabel = new Label("Scale");
+            var scaleSlider = new Slider(10.0, 100.0, clampedInitialScale);
+            scaleSlider.setPrefWidth(180);
+            scaleSlider.setShowTickLabels(true);
+            scaleSlider.setShowTickMarks(true);
+            scaleSlider.setMajorTickUnit(30.0);
+            scaleSlider.setMinorTickCount(2);
+            scaleSlider.setBlockIncrement(5.0);
+
+            var scaleValueLabel = new Label(String.format("%.0f%%", clampedInitialScale));
+            scaleSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+                double scalePercent = Math.clamp(newVal.doubleValue(), 10.0, 100.0);
+                scaleValueLabel.setText(String.format("%.0f%%", scalePercent));
+                onScalePercentChanged.accept(scalePercent);
+            });
+
+            HBox scaleControl = new HBox(8, scaleLabel, scaleSlider, scaleValueLabel);
+            scaleControl.setAlignment(Pos.CENTER_LEFT);
+
+            CustomMenuItem scaleMenuItem = new CustomMenuItem(scaleControl);
+            scaleMenuItem.setHideOnClick(false);
+            viewMenu.getItems().add(scaleMenuItem);
+
+            // Keep the callback in sync with the initial slider state.
+            onScalePercentChanged.accept(clampedInitialScale);
         }
 
         var helpMenu = new Menu("Help");
