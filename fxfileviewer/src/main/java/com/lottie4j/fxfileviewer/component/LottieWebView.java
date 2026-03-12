@@ -593,6 +593,14 @@ public class LottieWebView extends Pane {
                                 document.body.style.backgroundColor = color;
                             };
                     
+                            window.setDebugOverlayVisible = function(visible) {
+                                showDebugInfo = !!visible;
+                                if (debugOverlay) {
+                                    debugOverlay.style.display = showDebugInfo ? 'block' : 'none';
+                                }
+                                renderOverlay('debug overlay ' + (showDebugInfo ? 'enabled' : 'disabled'));
+                            };
+                    
                             renderOverlay('bootstrapping...');
                         </script>
                     </body>
@@ -614,6 +622,14 @@ public class LottieWebView extends Pane {
             webEngine.executeScript("window.setBackgroundColor('" + colorHex + "')");
         } catch (Exception e) {
             logger.warn("Failed to update JS background color: {}", e.getMessage());
+        }
+    }
+
+    public void setDebugInfoVisible(boolean visible) {
+        try {
+            webEngine.executeScript("window.setDebugOverlayVisible && window.setDebugOverlayVisible(" + visible + ")");
+        } catch (Exception e) {
+            logger.warn("Failed to toggle JS debug overlay: {}", e.getMessage());
         }
     }
 }

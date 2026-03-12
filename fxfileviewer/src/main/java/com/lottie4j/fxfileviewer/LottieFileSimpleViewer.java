@@ -25,6 +25,8 @@ import java.io.File;
 public class LottieFileSimpleViewer extends Application {
     private static final Logger logger = LoggerFactory.getLogger(LottieFileSimpleViewer.class);
     private BorderPane root;
+    private LottiePlayer lottiePlayer;
+    private ViewerMenuBar viewerMenuBar;
 
     /**
      * Creates a new LottieFileSimpleViewer.
@@ -44,7 +46,18 @@ public class LottieFileSimpleViewer extends Application {
 
         // Create main layout
         root = new BorderPane();
-        root.setTop(new ViewerMenuBar(primaryStage, this::loadAnimation));
+
+        viewerMenuBar = new ViewerMenuBar(
+                primaryStage,
+                this::loadAnimation,
+                debugVisible -> {
+                    if (lottiePlayer != null) {
+                        lottiePlayer.setDebugInfoVisible(debugVisible);
+                    }
+                },
+                false
+        );
+        root.setTop(viewerMenuBar);
 
         // Set up scene
         var scene = new Scene(root, 1600, 1200);
@@ -72,9 +85,10 @@ public class LottieFileSimpleViewer extends Application {
      */
     private void loadAnimation(File file) {
         try {
-            var animation = new LottiePlayer(LottieFileLoader.load(file));
-            root.setCenter(animation);
-            animation.play();
+            lottiePlayer = new LottiePlayer(LottieFileLoader.load(file));
+            lottiePlayer.setDebugInfoVisible(viewerMenuBar != null && viewerMenuBar.isDebugInfoSelected());
+            root.setCenter(lottiePlayer);
+            lottiePlayer.play();
         } catch (LottieFileException e) {
             AlertHelper.showError("Can't load animation:\n\n" + e.getMessage());
         }

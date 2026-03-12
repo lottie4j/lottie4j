@@ -28,14 +28,30 @@ public class ViewerMenuBar extends MenuBar {
     private static final Logger logger = LoggerFactory.getLogger(ViewerMenuBar.class);
 
     private final Consumer<File> onFileSelected;
+    private final CheckMenuItem debugInfoMenuItem;
 
     /**
      * Creates a menu bar for the viewer application.
      *
-     * @param stage the primary stage for displaying file chooser dialogs
+     * @param stage          the primary stage for displaying file chooser dialogs
      * @param onFileSelected callback invoked when a Lottie file is selected
      */
     public ViewerMenuBar(Stage stage, Consumer<File> onFileSelected) {
+        this(stage, onFileSelected, null, false);
+    }
+
+    /**
+     * Creates a menu bar with an optional debug info toggle in the View menu.
+     *
+     * @param stage              the primary stage for displaying file chooser dialogs
+     * @param onFileSelected     callback invoked when a Lottie file is selected
+     * @param onDebugInfoChanged callback invoked when debug info visibility changes; null disables the toggle menu
+     * @param debugInfoSelected  initial debug toggle state
+     */
+    public ViewerMenuBar(Stage stage,
+                         Consumer<File> onFileSelected,
+                         Consumer<Boolean> onDebugInfoChanged,
+                         boolean debugInfoSelected) {
         this.onFileSelected = onFileSelected;
 
         var fileMenu = new Menu("File");
@@ -43,12 +59,30 @@ public class ViewerMenuBar extends MenuBar {
         openItem.setOnAction(e -> openFile(stage));
         fileMenu.getItems().add(openItem);
 
+        var viewMenu = new Menu("View");
+        debugInfoMenuItem = new CheckMenuItem("Debug Info");
+        debugInfoMenuItem.setSelected(debugInfoSelected);
+        if (onDebugInfoChanged != null) {
+            debugInfoMenuItem.setOnAction(e -> onDebugInfoChanged.accept(debugInfoMenuItem.isSelected()));
+            viewMenu.getItems().add(debugInfoMenuItem);
+        } else {
+            debugInfoMenuItem.setDisable(true);
+        }
+
         var helpMenu = new Menu("Help");
         MenuItem aboutItem = new MenuItem("About");
         aboutItem.setOnAction(e -> showAbout());
         helpMenu.getItems().add(aboutItem);
 
-        getMenus().addAll(fileMenu, helpMenu);
+        if (viewMenu.getItems().isEmpty()) {
+            getMenus().addAll(fileMenu, helpMenu);
+        } else {
+            getMenus().addAll(fileMenu, viewMenu, helpMenu);
+        }
+    }
+
+    public boolean isDebugInfoSelected() {
+        return debugInfoMenuItem != null && debugInfoMenuItem.isSelected();
     }
 
     /**

@@ -21,6 +21,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,7 @@ import java.util.function.Consumer;
 public class LottiePlayer extends Canvas {
 
     private static final Logger logger = LoggerFactory.getLogger(LottiePlayer.class);
-
+    private static final double DEBUG_FPS_SMOOTHING = 0.2;
     private final Animation animation;
     private final GraphicsContext gc;
     private final DoubleProperty currentFrameProperty = new SimpleDoubleProperty(0);
@@ -57,6 +58,8 @@ public class LottiePlayer extends Canvas {
     private boolean debug = false;
     private Color backgroundColor = Color.WHITE;
     private Set<Integer> visibleLayerIndices = null;  // null means all layers visible
+    private long lastDebugRenderNanos = 0L;
+    private double measuredPlaybackFps = 0.0;
 
     /**
      * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
@@ -188,6 +191,7 @@ public class LottiePlayer extends Canvas {
 
         logger.info("Starting animation");
         isPlaying = true;
+        lastDebugRenderNanos = 0L;
 
         // Calculate the time offset based on current frame position
         double currentFrame = currentFrameProperty.get();
@@ -236,6 +240,7 @@ public class LottiePlayer extends Canvas {
 
         logger.info("Starting animation (play once from start)");
         isPlaying = true;
+        lastDebugRenderNanos = 0L;
 
         // Start from the beginning
         seekToFrame(getInPoint());
@@ -276,6 +281,7 @@ public class LottiePlayer extends Canvas {
         }
         logger.info("Animation stopped");
         isPlaying = false;
+        lastDebugRenderNanos = 0L;
     }
 
     /**
@@ -336,12 +342,6 @@ public class LottiePlayer extends Canvas {
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
         gc.setFill(backgroundColor);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-
-        if (debug) {
-            gc.setStroke(Color.RED);
-            gc.setLineWidth(2);
-            gc.strokeRect(1, 1, gc.getCanvas().getWidth() - 2, gc.getCanvas().getHeight() - 2);
-        }
 
         if (animation == null) {
             logger.warn("No animation to render");
@@ -430,10 +430,47 @@ public class LottiePlayer extends Canvas {
         gc.restore();
 
         if (debug) {
-            gc.setFill(Color.BLACK);
-            gc.fillText("Frame: " + String.format("%.1f", frame), 10, gc.getCanvas().getHeight() - 30);
-            gc.fillText("Scale: " + String.format("%.2f", scale), 10, gc.getCanvas().getHeight() - 10);
+            long nowNanos = System.nanoTime();
+            if (lastDebugRenderNanos > 0L) {
+                double seconds = (nowNanos - lastDebugRenderNanos) / 1_000_000_000.0;
+                if (seconds > 0.0) {
+                    double instantaneousFps = 1.0 / seconds;
+                    if (measuredPlaybackFps == 0.0) {
+                        measuredPlaybackFps = instantaneousFps;
+                    } else {
+                        measuredPlaybackFps = measuredPlaybackFps * (1.0 - DEBUG_FPS_SMOOTHING)
+                                + instantaneousFps * DEBUG_FPS_SMOOTHING;
+                    }
+                }
+            }
+            lastDebugRenderNanos = nowNanos;
+
+            drawDebugOverlay(gc, frame, scale);
         }
+    }
+
+    private void drawDebugOverlay(GraphicsContext gc, double frame, double scale) {
+        gc.save();
+        gc.setFont(Font.font("Monospaced", 10));
+
+        double x = 6;
+        double y = 6;
+        double width = 250;
+        double height = 64;
+
+        gc.setFill(Color.rgb(255, 255, 200, 0.92));
+        gc.fillRoundRect(x, y, width, height, 6, 6);
+        gc.setStroke(Color.rgb(0, 0, 0, 0.25));
+        gc.setLineWidth(1);
+        gc.strokeRoundRect(x, y, width, height, 6, 6);
+
+        gc.setFill(Color.rgb(17, 17, 17));
+        gc.fillText("frame: " + String.format("%.1f", frame), x + 6, y + 16);
+        gc.fillText("scale: " + String.format("%.2f", scale), x + 6, y + 30);
+        gc.fillText("fps: " + String.format("%.1f", measuredPlaybackFps), x + 6, y + 44);
+        gc.fillText("target fps: " + getFramesPerSecond(), x + 6, y + 58);
+
+        gc.restore();
     }
 
     /**
@@ -881,5 +918,14 @@ public class LottiePlayer extends Canvas {
         }
     }
 
+    /**
+     * Set whether to show debug information during rendering.
+     *
+     * @param debug true to show debug info, false to hide
+     */
+    public void setDebugInfoVisible(boolean debug) {
+        this.debug = debug;
+        seekToFrame(getCurrentFrame());
+    }
 }
 

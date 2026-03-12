@@ -67,6 +67,7 @@ public class LottieFileDebugViewer extends Application {
     private File currentAnimationFile;
     private Button screenshotButton;
     private Button screenshotAllButton;
+    private CheckBox debugInfoCheckBox;
     private LayerTreeView layerTreeView;
     private LayerTileView layerTileView;
 
@@ -253,7 +254,21 @@ public class LottieFileDebugViewer extends Application {
         screenshotAllButton.setDisable(true);
         screenshotAllButton.setOnAction(e -> takeAllScreenshots());
 
-        controlPanel.getChildren().addAll(playbackControls, colorPicker, screenshotButton, screenshotAllButton, fpsLabel, frameControls);
+        debugInfoCheckBox = new CheckBox("Debug Info");
+        debugInfoCheckBox.setOnAction(e -> {
+            lottiePlayer.setDebugInfoVisible(debugInfoCheckBox.isSelected());
+            webView.setDebugInfoVisible(debugInfoCheckBox.isSelected());
+        });
+
+        controlPanel.getChildren().addAll(
+                playbackControls,
+                colorPicker,
+                debugInfoCheckBox,
+                screenshotButton,
+                screenshotAllButton,
+                fpsLabel,
+                frameControls
+        );
         return controlPanel;
     }
 
@@ -380,7 +395,7 @@ public class LottieFileDebugViewer extends Application {
             webView.setSize(width, height);
 
             // Load animation into JavaScript player
-            webView.loadLottie(animation, width, height, true);
+            webView.loadLottie(animation, width, height, debugInfoCheckBox.isSelected());
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
