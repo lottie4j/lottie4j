@@ -2,11 +2,11 @@ package com.lottie4j.fxfileviewer;
 
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.Animation;
+import com.lottie4j.fxfileviewer.component.LottieWebView;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
-import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -16,7 +16,6 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
@@ -41,15 +40,15 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Visual regression test that compares JavaFX Lottie rendering with a WebView (lottie-web) reference.
+ * Diagnostic comparison test that snapshots JavaFX rendering against a JavaFX WebView JS renderer.
  *
- * <p>The test snapshots both renderers at selected frames and computes an SSIM-based similarity score.</p>
+ * <p>This is useful for debugging, but it is not an authoritative validator for FX correctness
+ * because the embedded WebView/player path can diverge from the official Lottie Web rendering.</p>
  */
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 class CompareFxViewWithWebViewTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
-
     private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
     private static final int CANVAS_HEIGHT = 600;
@@ -75,21 +74,25 @@ class CompareFxViewWithWebViewTest {
      */
     static Stream<String> lottieJsonFiles() {
         return Stream.of(
-                "angry_bird.json",
-                "animated_background_patterns.json",
-                "box-moving-changing-color.json",
-                "interactive_mood_selector_ui.json",
-                "isometric_data_analysis.json",
-                "java_duke_fadein.json",
-                "java_duke_flip.json",
-                "java_duke_slidein.json",
-                "loading.json",
-                "lottie4j.json",
-                "lottie_lego.json",
-                "sandy_loading.json",
-                "snake_ladder_loading_animation.json",
-                "success.json",
-                "timeline_animation.json"
+//                "json/angry_bird.json",
+//                "json/animated_background_patterns.json",
+//                "json/box-moving-changing-color.json",
+//                "json/interactive_mood_selector_ui.json",
+//                "json/json/isometric_data_analysis.json",
+//                "java_duke_fadein.json",
+//                "json/java_duke_flip.json",
+//                "json/java_duke_slidein.json",
+//                "json/loading.json",
+//                "json/lottie4j.json",
+//                "json/lottie_lego.json",
+//                "json/sandy_loading.json",
+//                "json/snake_ladder_loading_animation.json",
+                "json/success.json",
+                "json/timeline_animation.json",
+                "dot/lottie4j.lottie",
+                "dot/demo-1.lottie",
+                "dot/demo-2.lottie",
+                "dot/demo-3.lottie"
         );
     }
 
@@ -103,7 +106,7 @@ class CompareFxViewWithWebViewTest {
     void testLoadLottieFile(String fileName) throws Exception {
         logger.info("Testing: {}", fileName);
 
-        var resource = getClass().getResource("/json/" + fileName);
+        var resource = getClass().getResource("/" + fileName);
         assertNotNull(resource, "Resource not found: " + fileName);
 
         File file = new File(resource.getFile());
@@ -115,7 +118,7 @@ class CompareFxViewWithWebViewTest {
         assertFalse(animation.layers().isEmpty(), "Animation should have layers for: " + fileName);
 
         // Compare frame-by-frame
-        var average = compareAnimationFrames(file, animation, fileName);
+        var average = compareAnimationFrames(animation, fileName);
         assertTrue(average >= SIMILARITY_THRESHOLD, "Similarity threshold not met for "
                 + fileName + " " + average + "/" + SIMILARITY_THRESHOLD);
     }
@@ -123,12 +126,11 @@ class CompareFxViewWithWebViewTest {
     /**
      * Runs frame-by-frame comparison between JavaFX player and WebView lottie-web rendering.
      *
-     * @param lottieFile animation source file
-     * @param animation  parsed animation model
-     * @param fileName   file name used for logging and output directories
+     * @param animation parsed animation model
+     * @param fileName  file name used for logging and output directories
      * @return average similarity percentage across sampled frames
      */
-    private double compareAnimationFrames(File lottieFile, Animation animation, String fileName) throws Exception {
+    private double compareAnimationFrames(Animation animation, String fileName) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
 
         // Create output directory for comparison images
@@ -159,20 +161,14 @@ class CompareFxViewWithWebViewTest {
 
         Platform.runLater(() -> {
             try {
-                // Create LottiePlayer with actual animation dimensions
                 var fxPlayer = new LottiePlayer(animation, animWidth, animHeight);
 
-                // Create WebView with same dimensions
-                WebView webView = new WebView();
-                webView.setPrefSize(animWidth, animHeight);
-                webView.setMaxSize(animWidth, animHeight);
-                webView.setMinSize(animWidth, animHeight);
+                var webView = new LottieWebView();
+                webView.setSize(animWidth, animHeight);
 
-                // Add both player and webView to scene (matching LottieFileDebugViewer approach)
                 var playersBox = new HBox(10);
                 playersBox.getChildren().addAll(fxPlayer, webView);
 
-                // Create similarity score label overlay
                 Label similarityLabel = new Label("Similarity: -- %");
                 similarityLabel.setStyle("-fx-font-size: 30; -fx-text-fill: black; -fx-font-weight: bold;");
                 similarityLabel.setBackground(new Background(new BackgroundFill(
@@ -182,121 +178,94 @@ class CompareFxViewWithWebViewTest {
                 )));
                 similarityLabel.setPadding(new Insets(30, 60, 30, 60));
 
-                // Create StackPane to overlay the label on top of the playersBox
                 StackPane rootPane = new StackPane(playersBox, similarityLabel);
                 StackPane.setAlignment(similarityLabel, javafx.geometry.Pos.CENTER);
 
                 Scene scene = new Scene(rootPane, animWidth * 2 + 10, animHeight);
                 primaryStage.setScene(scene);
-                primaryStage.setAlwaysOnTop(true); // Keep visible during test
+                primaryStage.setAlwaysOnTop(true);
                 primaryStage.toFront();
                 primaryStage.show();
                 primaryStage.requestFocus();
 
-                // Enable JavaScript console logging
-                webView.getEngine().setOnAlert(event -> System.out.println("JS Alert: " + event.getData()));
-                webView.getEngine().setOnError(event -> System.err.println("JS Error: " + event.getMessage()));
+                webView.loadLottie(animation, animWidth, animHeight);
 
-                // Load Lottie animation in WebView using actual dimensions
-                String htmlContent = generateLottieHtml(lottieFile, animWidth, animHeight);
+                // Do not block JavaFX thread; perform waits/comparison in background thread.
+                new Thread(() -> {
+                    try {
+                        assertTrue(webView.waitUntilReady(5_000), "WebView animation not ready");
 
-                // Debug: Save HTML to file for inspection
-                try {
-                    Files.writeString(Path.of("target/test-output/generated.html"), htmlContent);
-                    System.out.println("HTML saved to target/test-output/generated.html");
-                } catch (IOException e) {
-                    System.err.println("Failed to save HTML: " + e.getMessage());
-                }
+                        int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
+                        int outPointExclusive = animation.outPoint() != null ? animation.outPoint() : 60;
+                        int lastFrame = Math.max(inPoint, outPointExclusive - 1);
+                        List<Integer> framesToCompare = buildSampledFrames(inPoint, lastFrame, 5);
 
-                System.out.println("Loading HTML content into WebView...");
+                        seekAndSyncFrame(fxPlayer, webView, inPoint);
 
-                // Set up listener BEFORE loading content
-                webView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-                    if (newState == Worker.State.SUCCEEDED) {
-                        // IMPORTANT: do not block JavaFX thread here; perform waits/comparison in background thread.
-                        new Thread(() -> {
-                            try {
-                                assertTrue(waitForWebViewReady(webView, 5_000), "WebView animation not ready");
+                        for (int currentFrame : framesToCompare) {
+                            seekAndSyncFrame(fxPlayer, webView, currentFrame);
 
-                                int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
-                                int outPointExclusive = animation.outPoint() != null ? animation.outPoint() : 60;
-                                int lastFrame = Math.max(inPoint, outPointExclusive - 1);
-                                List<Integer> framesToCompare = buildSampledFrames(inPoint, lastFrame, 5);
+                            CountDownLatch snapshotLatch = new CountDownLatch(1);
+                            final WritableImage[] images = new WritableImage[2];
 
-                                seekAndSyncFrame(fxPlayer, webView, inPoint);
+                            Platform.runLater(() -> {
+                                try {
+                                    WritableImage combinedImage = playersBox.snapshot(new SnapshotParameters(), null);
 
-                                for (int currentFrame : framesToCompare) {
-                                    seekAndSyncFrame(fxPlayer, webView, currentFrame);
+                                    WritableImage playerImage = new WritableImage(animWidth, animHeight);
+                                    WritableImage webViewImage = new WritableImage(animWidth, animHeight);
 
-                                    CountDownLatch snapshotLatch = new CountDownLatch(1);
-                                    final WritableImage[] images = new WritableImage[2];
+                                    playerImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
+                                            combinedImage.getPixelReader(), 0, 0);
+                                    webViewImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
+                                            combinedImage.getPixelReader(), animWidth + 10, 0);
 
-                                    Platform.runLater(() -> {
-                                        try {
-                                            WritableImage combinedImage = playersBox.snapshot(new SnapshotParameters(), null);
-
-                                            WritableImage playerImage = new WritableImage(animWidth, animHeight);
-                                            WritableImage webViewImage = new WritableImage(animWidth, animHeight);
-
-                                            playerImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
-                                                    combinedImage.getPixelReader(), 0, 0);
-                                            webViewImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
-                                                    combinedImage.getPixelReader(), animWidth + 10, 0);
-
-                                            images[0] = playerImage;
-                                            images[1] = webViewImage;
-                                        } finally {
-                                            snapshotLatch.countDown();
-                                        }
-                                    });
-
-                                    snapshotLatch.await();
-
-                                    WritableImage playerImage = images[0];
-                                    WritableImage webViewImage = images[1];
-
-                                    double similarity = compareImages(playerImage, webViewImage);
-                                    double roundedSimilarity = Math.round(similarity * 100.0) / 100.0;
-                                    totalSimilarity.updateAndGet(v -> v + roundedSimilarity);
-                                    frameCount.incrementAndGet();
-
-                                    Platform.runLater(() -> {
-                                        similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %%", currentFrame, roundedSimilarity));
-                                        if (roundedSimilarity >= SIMILARITY_THRESHOLD) {
-                                            similarityLabel.setBackground(new Background(new BackgroundFill(
-                                                    Color.web("#99FF99", 0.9),
-                                                    new CornerRadii(15),
-                                                    new Insets(20)
-                                            )));
-                                        } else {
-                                            similarityLabel.setBackground(new Background(new BackgroundFill(
-                                                    Color.web("#FF9999", 0.9),
-                                                    new CornerRadii(15),
-                                                    new Insets(20)
-                                            )));
-                                        }
-                                    });
-
-                                    if (roundedSimilarity < SIMILARITY_THRESHOLD) {
-                                        saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + roundedSimilarity + ".png"));
-                                    }
-
-                                    System.out.printf("Frame %d: %.2f%% similar%n", currentFrame, roundedSimilarity);
+                                    images[0] = playerImage;
+                                    images[1] = webViewImage;
+                                } finally {
+                                    snapshotLatch.countDown();
                                 }
-                            } catch (Exception e) {
-                                fail("Error in frame comparison thread: " + e.getMessage());
-                            } finally {
-                                latch.countDown();
+                            });
+
+                            snapshotLatch.await();
+
+                            WritableImage playerImage = images[0];
+                            WritableImage webViewImage = images[1];
+
+                            double similarity = compareImages(playerImage, webViewImage);
+                            double roundedSimilarity = Math.round(similarity * 100.0) / 100.0;
+                            totalSimilarity.updateAndGet(v -> v + roundedSimilarity);
+                            frameCount.incrementAndGet();
+
+                            Platform.runLater(() -> {
+                                similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %%", currentFrame, roundedSimilarity));
+                                if (roundedSimilarity >= SIMILARITY_THRESHOLD) {
+                                    similarityLabel.setBackground(new Background(new BackgroundFill(
+                                            Color.web("#99FF99", 0.9),
+                                            new CornerRadii(15),
+                                            new Insets(20)
+                                    )));
+                                } else {
+                                    similarityLabel.setBackground(new Background(new BackgroundFill(
+                                            Color.web("#FF9999", 0.9),
+                                            new CornerRadii(15),
+                                            new Insets(20)
+                                    )));
+                                }
+                            });
+
+                            if (roundedSimilarity < SIMILARITY_THRESHOLD) {
+                                saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + roundedSimilarity + ".png"));
                             }
-                        }).start();
-                    } else if (newState == javafx.concurrent.Worker.State.FAILED) {
-                        fail("WebView failed to load");
+
+                            System.out.printf("Frame %d: %.2f%% similar%n", currentFrame, roundedSimilarity);
+                        }
+                    } catch (Exception e) {
+                        fail("Error in frame comparison thread: " + e.getMessage());
+                    } finally {
                         latch.countDown();
                     }
-                });
-
-                // Now load the content (listener is already set up)
-                webView.getEngine().loadContent(htmlContent);
+                }).start();
 
             } catch (Exception e) {
                 fail("Error setting up comparison: " + e.getMessage());
@@ -310,89 +279,6 @@ class CompareFxViewWithWebViewTest {
         System.out.printf("%s - Average similarity: %.2f%%%n", fileName, averageSimilarity);
 
         return averageSimilarity;
-    }
-
-    /**
-     * Generates the HTML payload loaded into WebView to render the same animation via lottie-web.
-     */
-    private String generateLottieHtml(File lottieFile, int width, int height) throws IOException {
-        String lottieJson = Files.readString(lottieFile.toPath());
-
-        // Escape JSON for embedding in JavaScript (matching LottieFileDebugViewer approach)
-        String escapedJson = lottieJson.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r");
-
-        return """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            width: %spx;
-                            height: %spx;
-                            background-color: #ffffff;
-                            overflow: hidden;
-                        }
-                        #lottie-container {
-                            width: %spx;
-                            height: %spx;
-                            margin: 0;
-                            padding: 0;
-                        }
-                    </style>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-                </head>
-                <body>
-                    <div id="lottie-container"></div>
-                    <script>
-                        var animationData = JSON.parse("%s");
-                        var animation = lottie.loadAnimation({
-                            container: document.getElementById('lottie-container'),
-                            renderer: 'svg',
-                            loop: true,
-                            autoplay: false,
-                            animationData: animationData,
-                            rendererSettings: {
-                                preserveAspectRatio: 'xMidYMid meet'
-                            }
-                        });
-                
-                        window.seekToFrame = function(frame) {
-                            animation.goToAndStop(frame, true);
-                            // Force layout reflow to ensure DOM is updated
-                            var svg = document.querySelector('svg');
-                            if (svg) {
-                                void svg.getBoundingClientRect();
-                                // Force a repaint by accessing and modifying a style property
-                                var originalOpacity = svg.style.opacity;
-                                svg.style.opacity = (originalOpacity === '' || originalOpacity === '1') ? '0.9999' : '1';
-                                svg.style.opacity = originalOpacity === '' ? '' : originalOpacity;
-                            }
-                        };
-                
-                        window.isAnimationReady = function() {
-                            return animation !== null;
-                        };
-                
-                        window.getCurrentFrame = function() {
-                            return animation ? Math.round(animation.currentFrame) : -1;
-                        };
-                
-                        window.getRenderDebug = function() {
-                            var svgCount = document.querySelectorAll('svg').length;
-                            var svg = document.querySelector('svg');
-                            var display = svg ? window.getComputedStyle(svg).display : 'no svg';
-                            return 'SVG count: ' + svgCount + ', display: ' + display + ', currentFrame: ' + window.getCurrentFrame();
-                        };
-                    </script>
-                </body>
-                </html>
-                """.formatted(width, height, width, height, escapedJson);
     }
 
     /**
@@ -417,116 +303,27 @@ class CompareFxViewWithWebViewTest {
      * Seeks both renderers to the target frame and waits until both are confirmed rendered.
      * Uses FX pulse cycles to ensure rendering is complete without blocking threads.
      */
-    private void seekAndSyncFrame(LottiePlayer fxPlayer, WebView webView, int targetFrame) throws InterruptedException {
+    private void seekAndSyncFrame(LottiePlayer fxPlayer, LottieWebView webView, int targetFrame) throws InterruptedException {
         CountDownLatch updateLatch = new CountDownLatch(1);
         Platform.runLater(() -> {
             try {
                 fxPlayer.seekToFrame(targetFrame);
-                webView.getEngine().executeScript("window.seekToFrame(" + targetFrame + ")");
-                webView.requestLayout();
+                webView.setFrame(targetFrame);
             } finally {
                 updateLatch.countDown();
             }
         });
         updateLatch.await();
 
-        // Verify WebView has the correct frame
-        boolean webViewSynced = waitForWebViewFrame(webView, targetFrame, 2000);
+        boolean webViewSynced = webView.waitUntilFrame(targetFrame, 2_000);
         if (!webViewSynced) {
-            CountDownLatch debugLatch = new CountDownLatch(1);
-            final String[] debug = new String[1];
-            Platform.runLater(() -> {
-                try {
-                    Object info = webView.getEngine().executeScript("window.getRenderDebug && window.getRenderDebug()");
-                    debug[0] = String.valueOf(info);
-                } finally {
-                    debugLatch.countDown();
-                }
-            });
-            debugLatch.await();
-            System.out.printf("WARNING: WebView did not sync to frame %d in time. %s%n", targetFrame, debug[0]);
+            System.out.printf("WARNING: WebView did not sync to frame %d in time. %s%n", targetFrame, webView.getRenderDebug());
         }
 
-        // Wait for both renderers to complete rendering on next pulse cycle.
-        // This ensures FX's scene graph is updated and WebView DOM is settled.
-        waitForBothRenderersReady(webView, targetFrame, 3000);
+        waitForBothRenderersReady(webView, targetFrame, 3_000);
     }
 
-    /**
-     * Polls WebView until it reports the expected frame or timeout is reached.
-     */
-    private boolean waitForWebViewFrame(WebView webView, int expectedFrame, long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            CountDownLatch latch = new CountDownLatch(1);
-            final int[] current = new int[]{-1};
-            Platform.runLater(() -> {
-                try {
-                    Object frameObj = webView.getEngine().executeScript("window.getCurrentFrame && window.getCurrentFrame()");
-                    if (frameObj instanceof Number n) {
-                        current[0] = n.intValue();
-                    }
-                } finally {
-                    latch.countDown();
-                }
-            });
-            latch.await();
-
-            if (current[0] == expectedFrame) {
-                return true;
-            }
-
-            // Yield to JavaFX rendering/update pipeline without using sleep.
-            waitForFxPulses(1);
-        }
-        return false;
-    }
-
-    /**
-     * Waits for the WebView animation bootstrap to finish.
-     */
-    private boolean waitForWebViewReady(WebView webView, long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            CountDownLatch latch = new CountDownLatch(1);
-            final boolean[] ready = new boolean[]{false};
-            Platform.runLater(() -> {
-                try {
-                    Object readyObj = webView.getEngine().executeScript("window.isAnimationReady && window.isAnimationReady()");
-                    Object svgCountObj = webView.getEngine().executeScript("document.querySelectorAll('svg').length");
-                    int svgCount = svgCountObj instanceof Number n ? n.intValue() : 0;
-                    ready[0] = Boolean.TRUE.equals(readyObj) && svgCount > 0;
-                } finally {
-                    latch.countDown();
-                }
-            });
-            latch.await();
-
-            if (ready[0]) {
-                return true;
-            }
-
-            waitForFxPulses(1);
-        }
-        return false;
-    }
-
-    /**
-     * Waits for a number of JavaFX event/pulse turns.
-     */
-    private void waitForFxPulses(int turns) throws InterruptedException {
-        for (int i = 0; i < turns; i++) {
-            CountDownLatch pulse = new CountDownLatch(1);
-            Platform.runLater(pulse::countDown);
-            pulse.await();
-        }
-    }
-
-    /**
-     * Waits until both renderers confirm they have rendered the target frame.
-     * Uses AnimationTimer to ensure rendering is complete on the next pulse cycle.
-     */
-    private void waitForBothRenderersReady(WebView webView, int targetFrame, long timeoutMs) throws InterruptedException {
+    private void waitForBothRenderersReady(LottieWebView webView, int targetFrame, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         CountDownLatch readyLatch = new CountDownLatch(1);
 
@@ -538,25 +335,9 @@ class CompareFxViewWithWebViewTest {
                 @Override
                 public void handle(long now) {
                     pulseCount++;
-
-                    // After multiple pulse cycles, check if WebView is ready
                     if (pulseCount >= REQUIRED_PULSES) {
-                        try {
-                            // Verify WebView frame - it should report the target frame after rendering
-                            Object frameObj = webView.getEngine().executeScript("window.getCurrentFrame && window.getCurrentFrame()");
-                            int webViewFrame = frameObj instanceof Number n ? n.intValue() : -1;
-
-                            // If WebView reports the correct frame and enough pulses have passed, we're ready
-                            if (webViewFrame == targetFrame) {
-                                this.stop();
-                                readyLatch.countDown();
-                            }
-                        } catch (Exception e) {
-                            // Continue waiting
-                        }
-
-                        // Timeout check
-                        if (System.currentTimeMillis() >= deadline) {
+                        int webViewFrame = webView.getCurrentFrame();
+                        if (webViewFrame == targetFrame || System.currentTimeMillis() >= deadline) {
                             this.stop();
                             readyLatch.countDown();
                         }

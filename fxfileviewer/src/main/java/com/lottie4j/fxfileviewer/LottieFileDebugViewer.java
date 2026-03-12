@@ -5,10 +5,7 @@ import com.lottie4j.core.exception.LottieFileException;
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
-import com.lottie4j.fxfileviewer.component.LayerTileView;
-import com.lottie4j.fxfileviewer.component.LayerTreeView;
-import com.lottie4j.fxfileviewer.component.LottieTreeView;
-import com.lottie4j.fxfileviewer.component.ViewerMenuBar;
+import com.lottie4j.fxfileviewer.component.*;
 import com.lottie4j.fxfileviewer.util.AlertHelper;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
@@ -27,8 +24,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,8 +62,7 @@ public class LottieFileDebugViewer extends Application {
     private Label fpsLabel;
     private HBox playersBox;
     private LottiePlayer lottiePlayer;
-    private WebEngine webEngine;
-    private WebView webView;
+    private LottieWebView webView;
     private Color backgroundColor = Color.WHITE;
     private File currentAnimationFile;
     private Button screenshotButton;
@@ -100,10 +94,7 @@ public class LottieFileDebugViewer extends Application {
         gc = canvas.getGraphicsContext2D();
 
         // Create WebView for JavaScript Lottie player
-        webView = new WebView();
-        webEngine = webView.getEngine();
-        webView.setPrefSize(500, 500);
-        webView.setMaxSize(500, 500);
+        webView = new LottieWebView();
 
         // Create HBox to hold both players side by side
         playersBox = new HBox(10);
@@ -236,12 +227,7 @@ public class LottieFileDebugViewer extends Application {
                     layerTreeView.setCurrentFrame(currentFrame);
                 }
 
-                // Sync JS player frame
-                try {
-                    webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
-                } catch (Exception e) {
-                    logger.warn("Failed to seek JS animation: {}", e.getMessage());
-                }
+                webView.setFrame(currentFrame);
             }
         });
 
@@ -391,12 +377,10 @@ public class LottieFileDebugViewer extends Application {
             javaFXPlayerBox.setPrefSize(width, height);
 
             // Update WebView size to match animation
-            webView.setPrefSize(width, height);
-            webView.setMaxSize(width, height);
-            webView.setMinSize(width, height);
+            webView.setSize(width, height);
 
             // Load animation into JavaScript player
-            loadLottieInWebView(animation, width, height);
+            webView.loadLottie(animation, width, height);
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
@@ -429,11 +413,7 @@ public class LottieFileDebugViewer extends Application {
             pauseButton.setDisable(false);
 
             // Then immediately start JS player
-            try {
-                webEngine.executeScript("window.playAnimation()");
-            } catch (Exception e) {
-                logger.warn("Failed to start JS animation: " + e.getMessage());
-            }
+            webView.play();
         }
     }
 
@@ -454,12 +434,8 @@ public class LottieFileDebugViewer extends Application {
             playOnceButton.setDisable(true);
             pauseButton.setDisable(false);
 
-            // Start JS player once (note: lottie-web doesn't have built-in play once, so we pause at end)
-            try {
-                webEngine.executeScript("window.playAnimationOnce()");
-            } catch (Exception e) {
-                logger.warn("Failed to start JS animation once: " + e.getMessage());
-            }
+            // Start JS player once
+            webView.playOnce();
         }
     }
 
@@ -475,11 +451,7 @@ public class LottieFileDebugViewer extends Application {
             pauseButton.setDisable(true);
 
             // Pause JS player as well
-            try {
-                webEngine.executeScript("window.pauseAnimation()");
-            } catch (Exception e) {
-                logger.warn("Failed to pause JS animation: " + e.getMessage());
-            }
+            webView.pause();
         }
     }
 
@@ -505,100 +477,6 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 
-    /**
-     * Loads a Lottie animation into the WebView using the lottie-web JavaScript library.
-     * Generates HTML with embedded animation data and control functions.
-     *
-     * @param parsedAnimation parsed animation model used by the JavaFX player
-     * @param width           the width of the player in pixels
-     * @param height          the height of the player in pixels
-     */
-    private void loadLottieInWebView(Animation parsedAnimation, int width, int height) {
-        try {
-            // Serialize the parsed model so JSON and dotLottie inputs use the same normalized data in WebView.
-            var lottieJson = OBJECT_MAPPER.writeValueAsString(parsedAnimation);
-
-            // Escape JSON for embedding in JavaScript
-            var escapedJson = lottieJson.replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r");
-
-            // Create HTML with lottie-web player
-            var html = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            body {
-                                margin: 0;
-                                padding: 0;
-                                width: %spx;
-                                height: %spx;
-                                background-color: #ffffff;
-                                overflow: hidden;
-                            }
-                            #lottie-container {
-                                width: %spx;
-                                height: %spx;
-                                margin: 0;
-                                padding: 0;
-                            }
-                        </style>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-                    </head>
-                    <body>
-                        <div id="lottie-container"></div>
-                        <script>
-                            var animationData = JSON.parse("%s");
-                            var animation = lottie.loadAnimation({
-                                container: document.getElementById('lottie-container'),
-                                renderer: 'svg',
-                                loop: true,
-                                autoplay: false,
-                                animationData: animationData,
-                                rendererSettings: {
-                                    preserveAspectRatio: 'xMidYMid meet'
-                                }
-                            });
-                    
-                            // Expose control functions to JavaFX
-                            window.playAnimation = function() {
-                                animation.loop = true;
-                                animation.play();
-                            };
-                    
-                            window.playAnimationOnce = function() {
-                                animation.loop = false;
-                                animation.goToAndPlay(0, true);
-                            };
-                    
-                            window.pauseAnimation = function() {
-                                animation.pause();
-                            };
-                    
-                            window.stopAnimation = function() {
-                                animation.stop();
-                            };
-                    
-                            window.seekToFrame = function(frame) {
-                                animation.goToAndStop(frame, true);
-                            };
-                    
-                            window.setBackgroundColor = function(color) {
-                                document.body.style.backgroundColor = color;
-                            };
-                        </script>
-                    </body>
-                    </html>
-                    """.formatted(width, height, width, height, escapedJson);
-
-            webEngine.loadContent(html);
-        } catch (IOException e) {
-            logger.error("Failed to load Lottie file in WebView: {}", e.getMessage());
-        }
-    }
 
     /**
      * Updates the background color for all player views and components.
@@ -621,15 +499,7 @@ public class LottieFileDebugViewer extends Application {
         }
 
         // Update JS player background
-        try {
-            var colorHex = String.format("#%02X%02X%02X",
-                    (int) (backgroundColor.getRed() * 255),
-                    (int) (backgroundColor.getGreen() * 255),
-                    (int) (backgroundColor.getBlue() * 255));
-            webEngine.executeScript("window.setBackgroundColor('" + colorHex + "')");
-        } catch (Exception e) {
-            logger.warn("Failed to update JS background color: {}", e.getMessage());
-        }
+        webView.setBackgroundColor(backgroundColor);
     }
 
     /**
@@ -683,11 +553,7 @@ public class LottieFileDebugViewer extends Application {
                             updateFrameLabel();
 
                             // Sync JS player
-                            try {
-                                webEngine.executeScript("window.seekToFrame(" + currentFrame + ")");
-                            } catch (Exception e) {
-                                logger.warn("Failed to seek JS animation to frame {}: {}", currentFrame, e.getMessage());
-                            }
+                            webView.setFrame(currentFrame);
                         } finally {
                             latch.countDown();
                         }
