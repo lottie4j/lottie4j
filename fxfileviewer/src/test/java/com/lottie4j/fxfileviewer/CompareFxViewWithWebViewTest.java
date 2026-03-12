@@ -118,8 +118,26 @@ class CompareFxViewWithWebViewTest {
         compareFxAndJsRendering(fileName, 0.5);
     }
 
-    private void compareFxAndJsRendering(String fileName, double scale) {
-        logger.info("Testing: {}", fileName);
+    /**
+     * Compares JavaFX and JavaScript rendering outputs for a Lottie animation file at a specified scale.
+     * Loads the animation from the given file name, validates its structure, and performs frame-by-frame
+     * comparison between the JavaFX renderer and WebView lottie-web renderer. The comparison is performed
+     * at the specified scale factor and the average similarity across all sampled frames must meet the
+     * defined similarity threshold.
+     *
+     * @param fileName the resource name of the Lottie JSON animation file to load and compare
+     * @param scale    the scaling factor to apply to the animation dimensions, must be in range [0.1, 1.0]
+     * @throws IllegalArgumentException if scale is outside the valid range [0.1, 1.0]
+     * @throws AssertionError           if the resource is not found, file does not exist, animation fails to load,
+     *                                  animation structure is invalid, or similarity threshold is not met
+     * @throws Exception                if an error occurs during file loading, animation parsing, or frame comparison
+     */
+    private void compareFxAndJsRendering(String fileName, double scale) throws Exception {
+        if (scale < 0.1 || scale > 1.0) {
+            throw new IllegalArgumentException("Scale must be in range [0.1, 1.0], got: " + scale);
+        }
+
+        logger.info("Testing: {} at scale {}", fileName, scale);
 
         var resource = getClass().getResource("/" + fileName);
         assertNotNull(resource, "Resource not found: " + fileName);
@@ -132,24 +150,25 @@ class CompareFxViewWithWebViewTest {
         assertNotNull(animation.layers(), "Animation layers should not be null for: " + fileName);
         assertFalse(animation.layers().isEmpty(), "Animation should have layers for: " + fileName);
 
-        // Compare frame-by-frame
-        var average = compareAnimationFrames(animation, fileName);
+        // Compare frame-by-frame at the specified scale
+        var average = compareAnimationFrames(animation, fileName, scale);
         assertTrue(average >= SIMILARITY_THRESHOLD, "Similarity threshold not met for "
-                + fileName + " " + average + "/" + SIMILARITY_THRESHOLD);
+                + fileName + " at scale " + scale + ": " + average + "/" + SIMILARITY_THRESHOLD);
     }
 
     /**
-     * Runs frame-by-frame comparison between JavaFX player and WebView lottie-web rendering.
+     * Runs frame-by-frame comparison between JavaFX player and WebView lottie-web rendering at the specified scale.
      *
      * @param animation parsed animation model
      * @param fileName  file name used for logging and output directories
+     * @param scale     scale factor in range [0.1, 1.0] to resize both renderers
      * @return average similarity percentage across sampled frames
      */
-    private double compareAnimationFrames(Animation animation, String fileName) throws Exception {
+    private double compareAnimationFrames(Animation animation, String fileName, double scale) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
 
         // Create output directory for comparison images
-        Path outputDir = Path.of("target/test-output", fileName.replace(".json", ""));
+        Path outputDir = Path.of("target/test-output", fileName.replace(".json", "").replace(".lottie", "") + "_scale_" + scale);
 
         // Delete existing files if directory exists
         if (Files.exists(outputDir)) {
@@ -167,24 +186,29 @@ class CompareFxViewWithWebViewTest {
 
         Files.createDirectories(outputDir);
 
-        // Use actual animation dimensions (matching LottieFileDebugViewer approach)
+        // Use actual animation dimensions, scaled by the provided factor
         int animWidth = animation.width() != null ? animation.width() : CANVAS_WIDTH;
         int animHeight = animation.height() != null ? animation.height() : CANVAS_HEIGHT;
+
+        int scaledWidth = Math.max(1, (int) Math.round(animWidth * scale));
+        int scaledHeight = Math.max(1, (int) Math.round(animHeight * scale));
 
         AtomicReference<Double> totalSimilarity = new AtomicReference<>((double) 0);
         AtomicInteger frameCount = new AtomicInteger(0);
 
         Platform.runLater(() -> {
             try {
+                // Create FX player and resize to scaled dimensions
                 var fxPlayer = new LottiePlayer(animation, animWidth, animHeight);
+                fxPlayer.resizeRenderPercent(scale * 100.0);
 
                 var webView = new LottieWebView();
-                webView.setSize(animWidth, animHeight);
+                webView.setSize(scaledWidth, scaledHeight);
 
                 var playersBox = new HBox(10);
                 playersBox.getChildren().addAll(fxPlayer, webView);
 
-                Label similarityLabel = new Label("Similarity: -- %");
+                Label similarityLabel = new Label("Similarity: -- % @ " + (int) (scale * 100) + "%");
                 similarityLabel.setStyle("-fx-font-size: 30; -fx-text-fill: black; -fx-font-weight: bold;");
                 similarityLabel.setBackground(new Background(new BackgroundFill(
                         Color.web("#FFFF99", 0.9),
@@ -196,14 +220,14 @@ class CompareFxViewWithWebViewTest {
                 StackPane rootPane = new StackPane(playersBox, similarityLabel);
                 StackPane.setAlignment(similarityLabel, javafx.geometry.Pos.CENTER);
 
-                Scene scene = new Scene(rootPane, animWidth * 2 + 10, animHeight);
+                Scene scene = new Scene(rootPane, scaledWidth * 2 + 10, scaledHeight);
                 primaryStage.setScene(scene);
                 primaryStage.setAlwaysOnTop(true);
                 primaryStage.toFront();
                 primaryStage.show();
                 primaryStage.requestFocus();
 
-                webView.loadLottie(animation, animWidth, animHeight);
+                webView.loadLottie(animation, scaledWidth, scaledHeight);
 
                 // Do not block JavaFX thread; perform waits/comparison in background thread.
                 new Thread(() -> {
@@ -227,13 +251,13 @@ class CompareFxViewWithWebViewTest {
                                 try {
                                     WritableImage combinedImage = playersBox.snapshot(new SnapshotParameters(), null);
 
-                                    WritableImage playerImage = new WritableImage(animWidth, animHeight);
-                                    WritableImage webViewImage = new WritableImage(animWidth, animHeight);
+                                    WritableImage playerImage = new WritableImage(scaledWidth, scaledHeight);
+                                    WritableImage webViewImage = new WritableImage(scaledWidth, scaledHeight);
 
-                                    playerImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
+                                    playerImage.getPixelWriter().setPixels(0, 0, scaledWidth, scaledHeight,
                                             combinedImage.getPixelReader(), 0, 0);
-                                    webViewImage.getPixelWriter().setPixels(0, 0, animWidth, animHeight,
-                                            combinedImage.getPixelReader(), animWidth + 10, 0);
+                                    webViewImage.getPixelWriter().setPixels(0, 0, scaledWidth, scaledHeight,
+                                            combinedImage.getPixelReader(), scaledWidth + 10, 0);
 
                                     images[0] = playerImage;
                                     images[1] = webViewImage;
@@ -253,7 +277,7 @@ class CompareFxViewWithWebViewTest {
                             frameCount.incrementAndGet();
 
                             Platform.runLater(() -> {
-                                similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %%", currentFrame, roundedSimilarity));
+                                similarityLabel.setText(String.format("Frame %d | Similarity: %.2f %% @ %d%%", currentFrame, roundedSimilarity, (int) (scale * 100)));
                                 if (roundedSimilarity >= SIMILARITY_THRESHOLD) {
                                     similarityLabel.setBackground(new Background(new BackgroundFill(
                                             Color.web("#99FF99", 0.9),
@@ -273,7 +297,7 @@ class CompareFxViewWithWebViewTest {
                                 saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + roundedSimilarity + ".png"));
                             }
 
-                            System.out.printf("Frame %d: %.2f%% similar%n", currentFrame, roundedSimilarity);
+                            System.out.printf("Frame %d @ %d%%: %.2f%% similar%n", currentFrame, (int) (scale * 100), roundedSimilarity);
                         }
                     } catch (Exception e) {
                         fail("Error in frame comparison thread: " + e.getMessage());
@@ -291,7 +315,7 @@ class CompareFxViewWithWebViewTest {
         assertTrue(latch.await(60, TimeUnit.SECONDS), "Frame comparison timed out");
 
         double averageSimilarity = totalSimilarity.get() / frameCount.get();
-        System.out.printf("%s - Average similarity: %.2f%%%n", fileName, averageSimilarity);
+        System.out.printf("%s @ %d%% - Average similarity: %.2f%%%n", fileName, (int) (scale * 100), averageSimilarity);
 
         return averageSimilarity;
     }
