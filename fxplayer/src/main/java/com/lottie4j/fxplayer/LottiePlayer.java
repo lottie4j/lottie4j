@@ -332,9 +332,6 @@ public class LottiePlayer extends Canvas {
      * @param visibleLayerIndices Set of layer indices to render, null to render all layers
      */
     public void renderFrame(GraphicsContext gc, double frame, Set<Integer> visibleLayerIndices) {
-        logger.debug("=== RENDER START ===");
-        logger.debug("Canvas dimensions: {}x{}", getWidth(), getHeight());
-        logger.debug("Rendering frame: {}", frame);
         if (visibleLayerIndices != null) {
             logger.debug("Visible layers: {}", visibleLayerIndices);
         }
@@ -363,9 +360,10 @@ public class LottiePlayer extends Canvas {
         double scale = Math.min(scaleX, scaleY);
         double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
         double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
-        logger.debug("Animation size: {}x{}", getAnimationWidth(), getAnimationHeight());
-        logger.debug("Canvas size: {}x{}", gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-        logger.debug("Scale: {}, Offset: {}, {}", scale, offsetX, offsetY);
+        logger.debug("Animation/Canvas size: {}x{}/{}x{}, Scale: {}, Offset: {}/{}",
+                getAnimationWidth(), getAnimationHeight(),
+                gc.getCanvas().getWidth(), gc.getCanvas().getHeight(),
+                scale, offsetX, offsetY);
 
         gc.save();
         gc.translate(offsetX, offsetY);
@@ -456,7 +454,7 @@ public class LottiePlayer extends Canvas {
         double x = 6;
         double y = 6;
         double width = 250;
-        double height = 64;
+        double height = 80;
 
         gc.setFill(Color.rgb(255, 255, 200, 0.92));
         gc.fillRoundRect(x, y, width, height, 6, 6);
@@ -469,7 +467,7 @@ public class LottiePlayer extends Canvas {
         gc.fillText("scale: " + String.format("%.2f", scale), x + 6, y + 30);
         gc.fillText("fps: " + String.format("%.1f", measuredPlaybackFps), x + 6, y + 44);
         gc.fillText("target fps: " + getFramesPerSecond(), x + 6, y + 58);
-
+        gc.fillText("w/h: " + this.getWidth() + "/" + this.getHeight(), x + 6, y + 72);
         gc.restore();
     }
 

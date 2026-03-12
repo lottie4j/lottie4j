@@ -55,7 +55,7 @@ public class LottieFileSimpleViewer extends Application {
                         lottiePlayer.setDebugInfoVisible(debugVisible);
                     }
                 },
-                false
+                true
         );
         root.setTop(viewerMenuBar);
 
