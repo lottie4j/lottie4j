@@ -6,6 +6,7 @@ module com.lottie4j.core {
     requires org.slf4j;
 
     exports com.lottie4j.core.model.bezier;
+    exports com.lottie4j.core.model.dot;
     exports com.lottie4j.core.definition;
     exports com.lottie4j.core.exception;
     exports com.lottie4j.core.file;

@@ -1,5 +1,6 @@
 package com.lottie4j.fxfileviewer;
 
+import com.lottie4j.core.exception.LottieFileException;
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.fxfileviewer.component.ViewerMenuBar;
 import com.lottie4j.fxfileviewer.util.AlertHelper;
@@ -12,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * JavaFX Lottie Simple Animation Viewer
@@ -75,8 +75,8 @@ public class LottieFileSimpleViewer extends Application {
             var animation = new LottiePlayer(LottieFileLoader.load(file));
             root.setCenter(animation);
             animation.play();
-        } catch (IOException e) {
-            AlertHelper.showError("Can't load animation: " + e.getMessage());
+        } catch (LottieFileException e) {
+            AlertHelper.showError("Can't load animation:\n\n" + e.getMessage());
         }
     }
 }

@@ -15,6 +15,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,7 +53,7 @@ class LottieJsonFileLoaderTest {
         }
 
         File f = new File(testFile.getFile());
-        String jsonFromFile = LottieFileLoader.loadAsString(f);
+        String jsonFromFile = Files.readString(f.toPath());
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
         String jsonFromObject = mapper.writeValueAsString(objectFromJson);
 
@@ -68,7 +69,7 @@ class LottieJsonFileLoaderTest {
     @Test
     void testLoadSingleLayerFileNoShapes() throws IOException {
         File f = new File(this.getClass().getResource("/json/java_duke_single_layer_no_shapes.json").getFile());
-        var jsonFromFile = LottieFileLoader.loadAsString(f);
+        var jsonFromFile = Files.readString(f.toPath());
         var l = mapper.readValue(jsonFromFile, Layer.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(l);
 
@@ -85,7 +86,7 @@ class LottieJsonFileLoaderTest {
     @Test
     void testLoadSingleLayerFile() throws IOException {
         File f = new File(this.getClass().getResource("/json/java_duke_single_layer.json").getFile());
-        var jsonFromFile = LottieFileLoader.loadAsString(f);
+        var jsonFromFile = Files.readString(f.toPath());
         var l = mapper.readValue(jsonFromFile, Layer.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(l);
 
@@ -102,7 +103,7 @@ class LottieJsonFileLoaderTest {
     @Test
     void testLoadSmallFile() throws IOException {
         File f = new File(this.getClass().getResource("/json/java_duke.json").getFile());
-        var jsonFromFile = LottieFileLoader.loadAsString(f);
+        var jsonFromFile = Files.readString(f.toPath());
         var a = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(a);
 
@@ -126,7 +127,7 @@ class LottieJsonFileLoaderTest {
     @Disabled("To be completed")
     void testLoadBigFile() throws IOException {
         File f = new File(this.getClass().getResource("/json/lf20_gOmta2.json").getFile());
-        var jsonFromFile = LottieFileLoader.loadAsString(f);
+        var jsonFromFile = Files.readString(f.toPath());
         var a = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(a);
 

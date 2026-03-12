@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +29,7 @@ class AnimationLoaderTest {
         }
 
         File f = new File(testFile.getFile());
-        String jsonFromFile = LottieFileLoader.loadAsString(f);
+        String jsonFromFile = Files.readString(f.toPath());
         var animation = mapper.readValue(jsonFromFile, Animation.class);
         String jsonFromObject = mapper.writeValueAsString(animation);
 

@@ -1,6 +1,9 @@
 package com.lottie4j.fxfileviewer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lottie4j.core.exception.LottieFileException;
 import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.component.LayerTileView;
 import com.lottie4j.fxfileviewer.component.LayerTreeView;
@@ -47,6 +50,7 @@ import java.util.concurrent.CountDownLatch;
  */
 public class LottieFileDebugViewer extends Application {
     private static final Logger logger = LoggerFactory.getLogger(LottieFileDebugViewer.class);
+    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
     private Canvas canvas;
     private GraphicsContext gc;
@@ -392,7 +396,7 @@ public class LottieFileDebugViewer extends Application {
             webView.setMinSize(width, height);
 
             // Load animation into JavaScript player
-            loadLottieInWebView(file, width, height);
+            loadLottieInWebView(animation, width, height);
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
@@ -406,7 +410,7 @@ public class LottieFileDebugViewer extends Application {
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = getInPoint();
-        } catch (IOException e) {
+        } catch (LottieFileException e) {
             logger.error("Failed to load animation: {}", e.getMessage());
             AlertHelper.showError("Failed to load animation: " + e.getMessage());
         }
@@ -505,14 +509,14 @@ public class LottieFileDebugViewer extends Application {
      * Loads a Lottie animation into the WebView using the lottie-web JavaScript library.
      * Generates HTML with embedded animation data and control functions.
      *
-     * @param lottieFile the Lottie JSON file to load
-     * @param width the width of the player in pixels
-     * @param height the height of the player in pixels
+     * @param parsedAnimation parsed animation model used by the JavaFX player
+     * @param width           the width of the player in pixels
+     * @param height          the height of the player in pixels
      */
-    private void loadLottieInWebView(File lottieFile, int width, int height) {
+    private void loadLottieInWebView(Animation parsedAnimation, int width, int height) {
         try {
-            // Read the Lottie JSON file
-            var lottieJson = Files.readString(lottieFile.toPath());
+            // Serialize the parsed model so JSON and dotLottie inputs use the same normalized data in WebView.
+            var lottieJson = OBJECT_MAPPER.writeValueAsString(parsedAnimation);
 
             // Escape JSON for embedding in JavaScript
             var escapedJson = lottieJson.replace("\\", "\\\\")
@@ -762,7 +766,7 @@ public class LottieFileDebugViewer extends Application {
      * Saves a WritableImage to a PNG file using custom PNG encoder.
      *
      * @param image the image to save
-     * @param file the destination file
+     * @param file  the destination file
      * @throws IOException if writing the file fails
      */
     private void saveWritableImage(WritableImage image, File file) throws IOException {
@@ -780,3 +784,4 @@ public class LottieFileDebugViewer extends Application {
         }
     }
 }
+

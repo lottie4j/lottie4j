@@ -2,7 +2,6 @@ package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.definition.ShapeType;
-import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.modifier.Pucker;
@@ -24,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,7 +52,7 @@ class BaseShapeTest {
     @MethodSource("provideShapeFiles")
     void shapeFile(String file, Class clazz, ShapeType type) throws IOException {
         File f = new File(this.getClass().getResource(file).getFile());
-        String jsonFromFile = LottieFileLoader.loadAsString(f);
+        String jsonFromFile = Files.readString(f.toPath());
         BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
 
         String jsonFromObject = mapper.writeValueAsString(baseShape);
