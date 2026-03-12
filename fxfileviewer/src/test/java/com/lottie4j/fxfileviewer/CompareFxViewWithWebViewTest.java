@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CompareFxViewWithWebViewTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
-    private static final double SIMILARITY_THRESHOLD = 95; // Lowered from 98 to account for rendering engine differences
+    private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
     private static final int CANVAS_HEIGHT = 600;
     private static Stage primaryStage;
