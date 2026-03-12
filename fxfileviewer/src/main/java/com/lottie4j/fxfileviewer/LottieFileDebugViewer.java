@@ -380,7 +380,7 @@ public class LottieFileDebugViewer extends Application {
             webView.setSize(width, height);
 
             // Load animation into JavaScript player
-            webView.loadLottie(animation, width, height);
+            webView.loadLottie(animation, width, height, true);
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
