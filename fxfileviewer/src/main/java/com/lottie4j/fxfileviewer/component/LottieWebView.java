@@ -12,31 +12,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 
 public class LottieWebView extends Pane {
     private static final Logger logger = LoggerFactory.getLogger(LottieWebView.class);
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
+    private static final int DEFAULT_SIZE = 500;
 
     private final WebEngine webEngine;
     private final WebView webView;
 
     public LottieWebView() {
         webView = new WebView();
-        webEngine = webView.getEngine();
-        webView.setPrefSize(500, 500);
-        webView.setMaxSize(500, 500);
+        webView.setPrefSize(DEFAULT_SIZE, DEFAULT_SIZE);
+        webView.setMaxSize(DEFAULT_SIZE, DEFAULT_SIZE);
 
         getChildren().add(webView);
-        setPrefSize(500, 500);
-        setMaxSize(500, 500);
+        setPrefSize(DEFAULT_SIZE, DEFAULT_SIZE);
+        setMaxSize(DEFAULT_SIZE, DEFAULT_SIZE);
+
+        webEngine = webView.getEngine();
 
         webView.getEngine().setOnAlert(event -> logger.warn("JS Alert: {}", event.getData()));
         webView.getEngine().setOnError(event -> logger.error("JS Error: {}", event.getMessage()));
-    }
-
-    public WebEngine getEngine() {
-        return webEngine;
     }
 
     public int getCurrentFrame() {
@@ -61,6 +61,7 @@ public class LottieWebView extends Pane {
             }
             waitForFxPulse();
         }
+        logger.warn("WebView animation did not become ready in {}ms. {}", timeoutMs, getRenderDebug());
         return false;
     }
 
@@ -165,107 +166,434 @@ public class LottieWebView extends Pane {
     public void loadLottie(Animation animation, int width, int height) {
         try {
             setSize(width, height);
-            // Serialize the parsed model so JSON and dotLottie inputs use the same normalized data in WebView.
             var lottieJson = OBJECT_MAPPER.writeValueAsString(animation);
+            var encodedJson = Base64.getEncoder().encodeToString(lottieJson.getBytes(StandardCharsets.UTF_8));
 
-            // Escape JSON for embedding in JavaScript
-            var escapedJson = lottieJson.replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r");
-
-            // Create HTML with lottie-web player
             var html = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            body {
-                                margin: 0;
-                                padding: 0;
-                                width: %spx;
-                                height: %spx;
-                                background-color: #ffffff;
-                                overflow: hidden;
-                            }
-                            #lottie-container {
-                                width: %spx;
-                                height: %spx;
-                                margin: 0;
-                                padding: 0;
-                            }
-                        </style>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-                    </head>
-                    <body>
-                        <div id="lottie-container"></div>
-                        <script>
-                            var animationReady = false;
-                            var animationData = JSON.parse("%s");
-                            var animation = lottie.loadAnimation({
-                                container: document.getElementById('lottie-container'),
-                                renderer: 'svg',
-                                loop: true,
-                                autoplay: false,
-                                animationData: animationData,
-                                rendererSettings: {
-                                    preserveAspectRatio: 'xMidYMid meet'
-                                }
-                            });
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                            <meta charset="UTF-8">
+                                            <style>
+                                                body {
+                                                    margin: 0;
+                                                    padding: 0;
+                                                    width: %spx;
+                                                    height: %spx;
+                                                    background-color: #ffffff;
+                                                    overflow: hidden;
+                                                    position: relative;
+                                                }
+                                                #lottie-container {
+                                                    width: %spx;
+                                                    height: %spx;
+                                                    margin: 0;
+                                                    padding: 0;
+                                                    display: block;
+                                                }
+                                                #debug-overlay {
+                                                    position: absolute;
+                                                    top: 6px;
+                                                    left: 6px;
+                                                    z-index: 9999;
+                                                    max-width: calc(100%% - 12px);
+                                                    max-height: calc(100%% - 12px);
+                                                    overflow: hidden;
+                                                    white-space: pre-wrap;
+                                                    word-break: break-word;
+                                                    font-family: Menlo, Monaco, monospace;
+                                                    font-size: 10px;
+                                                    line-height: 1.25;
+                                                    color: #111111;
+                                                    background: rgba(255, 255, 200, 0.92);
+                                                    border: 1px solid rgba(0, 0, 0, 0.25);
+                                                    border-radius: 4px;
+                                                    padding: 6px;
+                                                    pointer-events: auto;
+                                                    cursor: copy;
+                                                    user-select: text;
+                                                }
+                                            </style>
+                                            <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.7.1/dist/dotlottie-wc.js" type="module"></script>
+                                        </head>
+                                        <body>
+                                            <dotlottie-wc id="lottie-container"></dotlottie-wc>
+                                            <div id="debug-overlay">Initializing WebView renderer...</div>
+                                            <script>
+                                                // Earliest possible marker: proves JS executes even if later init fails.
+                                                (function() {
+                                                    var ov = document.getElementById('debug-overlay');
+                                                    if (ov) ov.textContent = 'JS started';
+                                                })();
+                                            </script>
+                                            <script>
+                                                var animationReady = false;
+                                                var currentFrame = 0;
+                                                var encodedAnimationData = "%s";
+                                                var player = document.getElementById('lottie-container');
+                                                var debugOverlay = document.getElementById('debug-overlay');
+                                                var diagLogs = [];
                     
-                            animation.addEventListener('DOMLoaded', function() {
-                                animationReady = true;
-                            });
+                                                function decodeBase64Json(base64) {
+                                                    var binary = atob(base64);
+                                                    var bytes = new Uint8Array(binary.length);
+                                                    for (var i = 0; i < binary.length; i++) {
+                                                        bytes[i] = binary.charCodeAt(i);
+                                                    }
+                                                    return new TextDecoder('utf-8').decode(bytes);
+                                                }
                     
-                            window.playAnimation = function() {
-                                animation.loop = true;
-                                animation.play();
-                            };
+                                                function renderOverlay(extraLine) {
+                                                    if (!debugOverlay) {
+                                                        return;
+                                                    }
+                                                    var lines = [
+                                                        'renderer: dotlottie-wc@0.7.1',
+                                                        'ready: ' + animationReady,
+                                                        'frame: ' + window.getCurrentFrame(),
+                                                        'tag: ' + (player ? player.tagName : 'none'),
+                                                        '(click this panel to copy full debug text)'
+                                                    ];
+                                                    if (extraLine) {
+                                                        lines.push(extraLine);
+                                                    }
+                                                    var recent = diagLogs.slice(-5);
+                                                    if (recent.length > 0) {
+                                                        lines.push('--- logs ---');
+                                                        lines = lines.concat(recent);
+                                                    }
+                                                    debugOverlay.textContent = lines.join('\\n');
+                                                }
                     
-                            window.playAnimationOnce = function() {
-                                animation.loop = false;
-                                animation.goToAndPlay(0, true);
-                            };
+                                                function buildDebugText() {
+                                                    var inspection = window.getPlayerApiInspection ? window.getPlayerApiInspection() : { methods: [] };
+                    +                               var svgCount = document.querySelectorAll('svg').length;
+                                                    var lines = [
+                                                        'dotlottie count: ' + document.querySelectorAll('dotlottie-wc').length,
+                    +                                   'fallbackActive: ' + !!window.__bodymovinFallbackInstalled,
+                    +                                   'svgCount: ' + svgCount,
+                                                        'ready: ' + animationReady,
+                                                        'currentFrame: ' + window.getCurrentFrame(),
+                                                        'methods: ' + (inspection.methods || []).join(','),
+                                                        'logs: ' + diagLogs.join(' | ')
+                                                    ];
+                                                    return lines.join('\\n');
+                                                }
                     
-                            window.pauseAnimation = function() {
-                                animation.pause();
-                            };
+                                                function copyDebugToClipboard(text) {
+                                                    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                                                        return navigator.clipboard.writeText(text);
+                                                    }
+                                                    return new Promise(function(resolve, reject) {
+                                                        try {
+                                                            var area = document.createElement('textarea');
+                                                            area.value = text;
+                                                            area.style.position = 'fixed';
+                                                            area.style.opacity = '0';
+                                                            document.body.appendChild(area);
+                                                            area.focus();
+                                                            area.select();
+                                                            var ok = document.execCommand('copy');
+                                                            document.body.removeChild(area);
+                                                            if (ok) {
+                                                                resolve();
+                                                            } else {
+                                                                reject(new Error('execCommand copy failed'));
+                                                            }
+                                                        } catch (e) {
+                                                            reject(e);
+                                                        }
+                                                    });
+                                                }
                     
-                            window.stopAnimation = function() {
-                                animation.stop();
-                            };
+                                                if (debugOverlay) {
+                                                    debugOverlay.addEventListener('click', function() {
+                                                        var text = buildDebugText();
+                                                        copyDebugToClipboard(text)
+                                                            .then(function() {
+                                                                renderOverlay('copied debug text to clipboard');
+                                                            })
+                                                            .catch(function(err) {
+                                                                renderOverlay('copy failed: ' + String(err));
+                                                            });
+                                                    });
+                                                }
                     
-                            window.seekToFrame = function(frame) {
-                                animation.goToAndStop(frame, true);
-                                var svg = document.querySelector('svg');
-                                if (svg) {
-                                    void svg.getBoundingClientRect();
-                                }
-                            };
+                                                function diag(msg) {
+                                                    var line = '[lottie-webview] ' + msg;
+                                                    diagLogs.push(line);
+                                                    if (diagLogs.length > 60) {
+                                                        diagLogs.shift();
+                                                    }
+                                                    renderOverlay(msg);
+                                                }
                     
-                            window.isAnimationReady = function() {
-                                return animationReady;
-                            };
+                                                window.onerror = function(message, source, lineNo, colNo) {
+                                                    diag('window.onerror: ' + message + ' @ ' + source + ':' + lineNo + ':' + colNo);
+                                                };
                     
-                            window.getCurrentFrame = function() {
-                                return animation ? Math.round(animation.currentFrame) : -1;
-                            };
+                                                window.onunhandledrejection = function(event) {
+                                                    diag('unhandledrejection: ' + String(event && event.reason));
+                                                };
                     
-                            window.getRenderDebug = function() {
-                                var svgCount = document.querySelectorAll('svg').length;
-                                var svg = document.querySelector('svg');
-                                var display = svg ? window.getComputedStyle(svg).display : 'no svg';
-                                return 'SVG count: ' + svgCount + ', display: ' + display + ', currentFrame: ' + window.getCurrentFrame();
-                            };
+                                                function callFirst(target, names, args) {
+                                                    for (var i = 0; i < names.length; i++) {
+                                                        var fn = target[names[i]];
+                                                        if (typeof fn === 'function') {
+                                                            try {
+                                                                var value = fn.apply(target, args || []);
+                                                                diag('call ok: ' + names[i]);
+                                                                return { ok: true, value: value, name: names[i] };
+                                                            } catch (e) {
+                                                                diag('call ' + names[i] + ' failed: ' + String(e));
+                                                                return { ok: false, error: String(e), name: names[i] };
+                                                            }
+                                                        }
+                                                    }
+                                                    return { ok: false, error: 'no matching method', name: null };
+                                                }
                     
-                            window.setBackgroundColor = function(color) {
-                                document.body.style.backgroundColor = color;
-                            };
-                        </script>
-                    </body>
-                    </html>
-                    """.formatted(width, height, width, height, escapedJson);
+                                                function setLoopEnabled(enabled) {
+                                                    var methodResult = callFirst(player, ['setLoop', 'setLooping'], [!!enabled]);
+                                                    if (!methodResult.ok) {
+                                                        player.loop = !!enabled;
+                                                        diag('set loop via property: ' + (!!enabled));
+                                                    }
+                                                }
+                    
+                                                function setFrameValue(frame) {
+                                                    var target = Math.round(frame);
+                                                    currentFrame = target;
+                                                    var result = callFirst(player, ['setFrame', 'seek', 'goToAndStop', 'setCurrentFrame'], [target]);
+                                                    if (!result.ok) {
+                                                        var ratio = 0;
+                                                        if (typeof player.totalFrames === 'number' && player.totalFrames > 1) {
+                                                            ratio = target / (player.totalFrames - 1);
+                                                            if (ratio < 0) ratio = 0;
+                                                            if (ratio > 1) ratio = 1;
+                                                        }
+                                                        callFirst(player, ['setSeeker'], [ratio]);
+                                                    }
+                                                    renderOverlay();
+                                                }
+                    
+                                                function buildSrcFromJson(data) {
+                                                    try {
+                                                        var json = JSON.stringify(data);
+                                                        var base64 = btoa(unescape(encodeURIComponent(json)));
+                                                        return 'data:application/json;base64,' + base64;
+                                                    } catch (e) {
+                                                        var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                                                        return URL.createObjectURL(blob);
+                                                    }
+                                                }
+                    
+                                                function installBodymovinFallback(animationData) {
+                                                    if (window.__bodymovinFallbackInstalled) {
+                                                        return;
+                                                    }
+                                                    window.__bodymovinFallbackInstalled = true;
+                                                    diag('Installing bodymovin fallback');
+                    
+                                                    var fallbackScript = document.createElement('script');
+                                                    fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js';
+                                                    fallbackScript.onload = function() {
+                    -                                   var host = document.getElementById('lottie-container');
+                    -                                   host.innerHTML = '';
+                    -                                   host.style.display = 'block';
+                    -                                   var fallbackContainer = document.createElement('div');
+                    -                                   fallbackContainer.style.width = '100%%';
+                    -                                   fallbackContainer.style.height = '100%%';
+                    -                                   host.appendChild(fallbackContainer);
+                    +                                   var host = document.getElementById('lottie-container');
+                    +                                   host.style.display = 'none';
+                    +
+                    +                                   var fallbackHost = document.getElementById('bodymovin-fallback-host');
+                    +                                   if (!fallbackHost) {
+                    +                                       fallbackHost = document.createElement('div');
+                    +                                       fallbackHost.id = 'bodymovin-fallback-host';
+                    +                                       fallbackHost.style.position = 'absolute';
+                    +                                       fallbackHost.style.top = '0';
+                    +                                       fallbackHost.style.left = '0';
+                    +                                       fallbackHost.style.width = '100%%';
+                    +                                       fallbackHost.style.height = '100%%';
+                    +                                       fallbackHost.style.zIndex = '1';
+                    +                                       document.body.appendChild(fallbackHost);
+                    +                                   }
+                    +                                   fallbackHost.innerHTML = '';
+                    +
+                    +                                   var fallbackContainer = document.createElement('div');
+                    +                                   fallbackContainer.style.width = '100%%';
+                    +                                   fallbackContainer.style.height = '100%%';
+                    +                                   fallbackHost.appendChild(fallbackContainer);
+                    
+                                                        var animation = window.lottie.loadAnimation({
+                                                            container: fallbackContainer,
+                                                            renderer: 'svg',
+                                                            loop: true,
+                                                            autoplay: false,
+                                                            animationData: animationData,
+                                                            rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }
+                                                        });
+                    
+                                                        animation.addEventListener('DOMLoaded', function() {
+                                                            animationReady = true;
+                    -                                       diag('bodymovin fallback DOMLoaded');
+                    +                                       var svg = fallbackContainer.querySelector('svg');
+                    +                                       var rect = fallbackContainer.getBoundingClientRect();
+                    +                                       diag('bodymovin fallback DOMLoaded; svg=' + (svg ? 'yes' : 'no') + '; bounds=' + Math.round(rect.width) + 'x' + Math.round(rect.height));
+                                                            renderOverlay();
+                                                        });
+                    
+                                                        window.playAnimation = function() {
+                                                            animation.loop = true;
+                                                            animation.play();
+                                                        };
+                                                        window.playAnimationOnce = function() {
+                                                            animation.loop = false;
+                                                            animation.goToAndPlay(0, true);
+                                                        };
+                                                        window.pauseAnimation = function() { animation.pause(); };
+                                                        window.stopAnimation = function() { animation.stop(); currentFrame = 0; renderOverlay(); };
+                                                        window.seekToFrame = function(frame) {
+                                                            currentFrame = Math.round(frame);
+                                                            animation.goToAndStop(currentFrame, true);
+                                                            renderOverlay();
+                                                        };
+                                                        window.getCurrentFrame = function() {
+                                                            return Math.round(animation.currentFrame || currentFrame || 0);
+                                                        };
+                                                        renderOverlay('fallback: bodymovin active');
+                                                    };
+                                                    fallbackScript.onerror = function() {
+                                                        diag('bodymovin fallback script failed to load');
+                                                    };
+                                                    document.head.appendChild(fallbackScript);
+                                                }
+                    
+                                                try {
+                                                    var animationData = JSON.parse(decodeBase64Json(encodedAnimationData));
+                    
+                                                    function attachReadyEvents() {
+                                                        ['ready', 'load', 'loaded', 'complete'].forEach(function(eventName) {
+                                                            player.addEventListener(eventName, function() {
+                                                                animationReady = true;
+                                                                diag('event:' + eventName);
+                                                                renderOverlay();
+                                                            });
+                                                        });
+                                                    }
+                    
+                                                    function attachFrameEvents() {
+                                                        ['frame', 'render', 'enterFrame'].forEach(function(eventName) {
+                                                            player.addEventListener(eventName, function(event) {
+                                                                var value = null;
+                                                                if (event && typeof event.currentFrame === 'number') {
+                                                                    value = event.currentFrame;
+                                                                } else if (event && event.detail && typeof event.detail.currentFrame === 'number') {
+                                                                    value = event.detail.currentFrame;
+                                                                } else if (typeof player.currentFrame === 'number') {
+                                                                    value = player.currentFrame;
+                                                                }
+                                                                if (typeof value === 'number') {
+                                                                    currentFrame = Math.round(value);
+                                                                    renderOverlay();
+                                                                }
+                                                            });
+                                                        });
+                                                    }
+                    
+                                                    attachReadyEvents();
+                                                    attachFrameEvents();
+                    
+                                                    customElements.whenDefined('dotlottie-wc').then(function() {
+                                                        var srcUrl = buildSrcFromJson(animationData);
+                                                        player.setAttribute('src', srcUrl);
+                                                        diag('dotlottie-wc defined, src assigned');
+                                                        renderOverlay();
+                                                    }).catch(function(e) {
+                                                        diag('customElements.whenDefined failed: ' + String(e));
+                                                        installBodymovinFallback(animationData);
+                                                    });
+                    
+                                                    setTimeout(function() {
+                                                        if (!animationReady) {
+                                                            diag('dotlottie-wc not ready after watchdog timeout');
+                                                            installBodymovinFallback(animationData);
+                                                        }
+                                                    }, 2500);
+                                                } catch (e) {
+                                                    diag('bootstrap failed: ' + String(e));
+                                                }
+                    
+                                                window.playAnimation = function() {
+                                                    setLoopEnabled(true);
+                                                    callFirst(player, ['play'], []);
+                                                    renderOverlay();
+                                                };
+                    
+                                                window.playAnimationOnce = function() {
+                                                    setLoopEnabled(false);
+                                                    setFrameValue(0);
+                                                    callFirst(player, ['play'], []);
+                                                    renderOverlay();
+                                                };
+                    
+                                                window.pauseAnimation = function() {
+                                                    callFirst(player, ['pause'], []);
+                                                    renderOverlay();
+                                                };
+                    
+                                                window.stopAnimation = function() {
+                                                    callFirst(player, ['stop'], []);
+                                                    currentFrame = 0;
+                                                    renderOverlay();
+                                                };
+                    
+                                                window.seekToFrame = function(frame) {
+                                                    setFrameValue(frame);
+                                                    callFirst(player, ['pause'], []);
+                                                    renderOverlay();
+                                                };
+                    
+                                                window.isAnimationReady = function() {
+                                                    return animationReady;
+                                                };
+                    
+                                                window.getCurrentFrame = function() {
+                                                    if (typeof player.currentFrame === 'number') {
+                                                        return Math.round(player.currentFrame);
+                                                    }
+                                                    return currentFrame;
+                                                };
+                    
+                                                window.getPlayerApiInspection = function() {
+                                                    var proto = Object.getPrototypeOf(player) || {};
+                                                    var methods = Object.getOwnPropertyNames(proto).filter(function(name) {
+                                                        return typeof player[name] === 'function';
+                                                    }).sort();
+                                                    return {
+                                                        tagName: player.tagName,
+                                                        methods: methods,
+                                                        hasCurrentFrame: typeof player.currentFrame === 'number',
+                                                        hasTotalFrames: typeof player.totalFrames === 'number',
+                                                        ready: animationReady
+                                                    };
+                                                };
+                    
+                                                window.getRenderDebug = function() {
+                                                    return buildDebugText().split('\\n').join(', ');
+                                                };
+                    
+                                                window.setBackgroundColor = function(color) {
+                                                    document.body.style.backgroundColor = color;
+                                                };
+                    
+                                                renderOverlay('bootstrapping...');
+                                            </script>
+                                        </body>
+                                        </html>
+                    """.formatted(width, height, width, height, encodedJson);
 
             webEngine.loadContent(html);
         } catch (IOException e) {

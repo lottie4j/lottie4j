@@ -14,7 +14,7 @@ module com.lottie4j.fxfileviewer {
     requires java.desktop;
 
     exports com.lottie4j.fxfileviewer to javafx.scene, javafx.graphics, javafx.application;
-    exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene;
+    exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene, com.fasterxml.jackson.databind;
 
     opens com.lottie4j.fxfileviewer to org.junit.platform.commons;
 }
