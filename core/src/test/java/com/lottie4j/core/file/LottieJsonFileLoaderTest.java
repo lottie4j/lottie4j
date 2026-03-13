@@ -1,6 +1,9 @@
 package com.lottie4j.core.file;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.core.model.Layer;
@@ -11,11 +14,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.skyscreamer.jsonassert.JSONAssert;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,6 +28,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class LottieJsonFileLoaderTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
+    private static final Comparator<JsonNode> JSON_NODE_COMPARATOR = (left, right) -> {
+        if (left == null || right == null) {
+            return left == right ? 0 : 1;
+        }
+
+        if (left.isNumber() && right.isNumber()) {
+            return left.decimalValue().compareTo(right.decimalValue());
+        }
+
+        return left.equals(right) ? 0 : 1;
+    };
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(
@@ -39,8 +55,52 @@ class LottieJsonFileLoaderTest {
                 Arguments.of("/json/java_duke_layer_5.json", Animation.class),
                 Arguments.of("/json/java_duke_single_layer.json", Layer.class),
                 Arguments.of("/json/java_duke_single_layer_no_shapes.json", Layer.class),
-                Arguments.of("/json/timeline_single_shape_reduced.json", Animation.class)
+                Arguments.of("/json/timeline_single_shape_reduced.json", Animation.class),
+                Arguments.of("/dot/demo-3-animation.json", Animation.class)
         );
+    }
+
+    private static void assertJsonSemanticallyEqual(String expectedJson, String actualJson) throws IOException {
+        JsonNode expected = normalizeOptionalFields(mapper.readTree(expectedJson));
+        JsonNode actual = normalizeOptionalFields(mapper.readTree(actualJson));
+
+        assertTrue(expected.equals(JSON_NODE_COMPARATOR, actual), () ->
+                "JSON mismatch after normalization.\nExpected: " + expected + "\nActual: " + actual);
+    }
+
+    private static JsonNode normalizeOptionalFields(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        if (node.isObject()) {
+            ObjectNode normalized = node.deepCopy();
+            List<String> fieldNames = new ArrayList<>();
+            normalized.fieldNames().forEachRemaining(fieldNames::add);
+            for (String fieldName : fieldNames) {
+                normalized.set(fieldName, normalizeOptionalFields(normalized.get(fieldName)));
+            }
+
+            JsonNode markersNode = normalized.get("markers");
+            if (markersNode != null && markersNode.isArray() && markersNode.isEmpty()) {
+                normalized.remove("markers");
+            }
+
+            // Some model classes expose helper/debug views under `list`; ignore them for round-trip JSON checks.
+            normalized.remove("list");
+
+            return normalized;
+        }
+
+        if (node.isArray()) {
+            ArrayNode normalized = mapper.createArrayNode();
+            for (JsonNode child : node) {
+                normalized.add(normalizeOptionalFields(child));
+            }
+            return normalized;
+        }
+
+        return node;
     }
 
     @ParameterizedTest
@@ -57,12 +117,12 @@ class LottieJsonFileLoaderTest {
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
         String jsonFromObject = mapper.writeValueAsString(objectFromJson);
 
-        System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        System.out.println("Generated:\n" + jsonFromObject);
+        //System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
+        //System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
                 () -> assertTrue(clazz.isInstance(objectFromJson)),
-                () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
+                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
     }
 
@@ -76,7 +136,7 @@ class LottieJsonFileLoaderTest {
         assertAll(
                 () -> assertNotNull(l),
                 () -> assertEquals(3, l.transform().anchor().keyframes().size()),
-                () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
+                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
 
         System.out.println("Original:\n" + jsonFromFile);
@@ -93,7 +153,7 @@ class LottieJsonFileLoaderTest {
         assertAll(
                 () -> assertNotNull(l),
                 () -> assertEquals(3, l.transform().anchor().keyframes().size()),
-                () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
+                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
 
         System.out.println("Original:\n" + jsonFromFile);
@@ -116,7 +176,7 @@ class LottieJsonFileLoaderTest {
                 () -> assertEquals(400, a.height()),
                 () -> assertEquals(5, a.layers().size()),
                 () -> assertEquals("Java_Duke_waving", a.layers().get(0).name()),
-                () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
+                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
 
         System.out.println("Original:\n" + jsonFromFile);
@@ -134,7 +194,7 @@ class LottieJsonFileLoaderTest {
         assertAll(
                 () -> assertNotNull(a),
                 () -> assertEquals("5.5.7", a.version()),
-                () -> JSONAssert.assertEquals(jsonFromFile, jsonFromObject, false)
+                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
 
         System.out.println("Original:\n" + jsonFromFile);
