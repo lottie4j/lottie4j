@@ -13,7 +13,23 @@ import com.lottie4j.core.model.bezier.Bezier;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#path">Lottie Docs: Path</a>
+ * Represents a path shape in a Lottie animation, defining a custom vector path using Bezier curves.
+ * <p>
+ * A Path shape is one of the fundamental drawing primitives in Lottie animations, allowing for
+ * the creation of arbitrary vector shapes through Bezier curve definitions. The path can be either
+ * static or animated, with the shape morphing over time based on keyframe data.
+ * <p>
+ * This record implements the BaseShape interface and is deserialized from JSON using the "sh" type
+ * identifier. It contains both common shape properties (name, blend mode, visibility) and
+ * path-specific data including the Bezier curve definition that describes the actual path geometry.
+ * <p>
+ * The Bezier curve can be either a FixedBezier (for static paths) or an AnimatedBezier (for paths
+ * that change over time), with the appropriate type determined during JSON deserialization by the
+ * BezierDeserializer.
+ * <p>
+ * Paths can be combined with other shapes in a Group and modified by path operations like Merge,
+ * TrimPath, or RoundedCorners to create complex vector graphics. They form the basis for most
+ * custom vector artwork in Lottie animations.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

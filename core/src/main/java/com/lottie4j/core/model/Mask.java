@@ -7,11 +7,19 @@ import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/layers/#masks">Lottie Docs: Mask</a>
+ * Represents a mask definition in a Lottie animation.
+ * <p>
+ * A mask is used to control the visibility of layers or shapes by defining areas that should be
+ * shown or hidden. Masks can be inverted to reverse their effect, making the masked area visible
+ * and the unmasked area hidden.
+ * <p>
+ * This is an immutable record that provides a simplified representation of mask properties,
+ * with support for JSON deserialization through Jackson annotations. Unknown JSON properties
+ * are ignored during deserialization to maintain forward compatibility.
  *
- * @param name      mask name
- * @param matchName mask match name
- * @param inverted  whether the mask is inverted
+ * @param name      the display name of the mask
+ * @param matchName the match name used for identification and referencing
+ * @param inverted  indicates whether the mask effect is inverted (true) or normal (false)
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Mask(

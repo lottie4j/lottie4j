@@ -16,7 +16,40 @@ import com.lottie4j.core.model.shape.BaseShape;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#stroke">Lottie Docs: Stroke</a>
+ * Represents a stroke shape in a Lottie animation that defines the outline style for vector paths.
+ * <p>
+ * A Stroke defines how the outline of a path is rendered, including properties such as color,
+ * width, opacity, line caps, line joins, and miter limits. It can also include animated properties
+ * to change stroke characteristics over time. Strokes are typically applied to shape layers and
+ * path elements to create visible outlines.
+ * <p>
+ * This record implements BaseShape and is part of the shape type hierarchy used in Lottie animations.
+ * It is deserialized from JSON with the type identifier "st" and supports various stroke styling
+ * options compatible with vector graphics standards.
+ * <p>
+ * The stroke supports both static and animated properties through the Animated type, allowing
+ * for dynamic changes to stroke characteristics during animation playback. Stroke dashes can be
+ * defined to create dashed or dotted line patterns.
+ * <p>
+ * JSON properties are mapped using Jackson annotations, with unknown properties being ignored
+ * during deserialization and null values excluded from serialization.
+ *
+ * @param name                  the display name of the stroke
+ * @param matchName             the match name used for referencing the stroke
+ * @param hidden                whether the stroke is hidden from rendering
+ * @param blendMode             the blend mode used for compositing the stroke
+ * @param index                 the index position of the stroke in the shape stack
+ * @param clazz                 the CSS class identifier for the stroke
+ * @param id                    the unique identifier for the stroke
+ * @param cix                   an undefined property with unknown purpose
+ * @param lineCap               the style of line endings (butt, round, or square)
+ * @param lineJoin              the style of line corners (miter, round, or bevel)
+ * @param miterLimit            the limit for miter joins before beveling occurs
+ * @param miterLimitAlternative an alternative animated miter limit value
+ * @param strokeWidth           the width of the stroke line, can be animated
+ * @param strokeDashes          the list of dash patterns for creating dashed strokes
+ * @param opacity               the opacity of the stroke, can be animated
+ * @param color                 the color of the stroke, can be animated
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

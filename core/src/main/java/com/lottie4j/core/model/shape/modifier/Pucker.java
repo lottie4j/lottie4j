@@ -11,7 +11,30 @@ import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#pucker-bloat">Lottie Docs: Pucker</a>
+ * Represents a Pucker shape effect in a Lottie animation.
+ * <p>
+ * The Pucker effect distorts a shape by pulling its edges inward or outward based on a percentage value.
+ * This shape type is identified by the "pb" type identifier in Lottie JSON files and can be applied
+ * to modify the appearance of paths and other shapes within a composition.
+ * <p>
+ * This record implements BaseShape and includes standard shape properties such as name, blend mode,
+ * visibility, and indexing, along with the pucker-specific percentage parameter that controls the
+ * intensity and direction of the distortion effect.
+ * <p>
+ * The class is designed for JSON serialization and deserialization, ignoring unknown properties
+ * and excluding null values from the output.
+ *
+ * @param name       the display name of the pucker effect
+ * @param matchName  the match name used for identifying the shape in the composition
+ * @param hidden     whether the shape is hidden from rendering
+ * @param blendMode  the blend mode used for compositing this shape with others
+ * @param index      the ordering index of this shape within its parent container
+ * @param clazz      the CSS class identifier for the shape
+ * @param id         the unique identifier for the shape
+ * @param d          an undefined property used in some Lottie files
+ * @param cix        an undefined property used in some Lottie files
+ * @param percentage the animated percentage value controlling the pucker effect intensity and direction,
+ *                   where positive values create an inward pucker and negative values create an outward bloat
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

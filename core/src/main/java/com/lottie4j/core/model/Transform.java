@@ -9,18 +9,18 @@ import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
- *
- * @param anchor   anchor point
- * @param position position
- * @param scale    scale
- * @param rotation rotation
- * @param rx       X-axis rotation
- * @param ry       Y-axis rotation
- * @param rz       Z-axis rotation
- * @param skew     skew angle
- * @param skewAxis skew axis
- * @param opacity  opacity
+ * Represents a transformation applied to a layer or shape in a Lottie animation.
+ * <p>
+ * This class encapsulates all possible transformation properties including position, scale,
+ * rotation, skew, opacity, and anchor point. Each property is animated and can change over
+ * time during the animation. Transformations are applied in a specific order to determine
+ * the final visual appearance of the element.
+ * <p>
+ * The transformation properties support both 2D and 3D transformations, with separate
+ * rotation axes (rx, ry, rz) for 3D rotations in addition to the standard 2D rotation.
+ * <p>
+ * All transformation properties are optional and may be null if not specified in the
+ * animation data.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

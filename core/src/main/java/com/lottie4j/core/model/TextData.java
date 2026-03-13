@@ -11,8 +11,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Text data for text layers in Lottie animations
- * https://lottiefiles.github.io/lottie-docs/text/
+ * Represents text data within a Lottie animation, containing the text document,
+ * animation properties, and path information.
+ * <p>
+ * This record encapsulates all text-related data including the keyframed text
+ * content and styling through the document field, optional animator configurations
+ * for text animations, and optional path data for text along a path effects.
+ * <p>
+ * The class implements PropertyListing to provide a structured representation
+ * of the text data for debugging and inspection purposes.
+ * <p>
+ * JSON properties are mapped using short property names for compact serialization:
+ * "d" for document, "a" for animators, and "p" for path.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

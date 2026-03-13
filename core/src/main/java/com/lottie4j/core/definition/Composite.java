@@ -8,7 +8,14 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#composite
+ * Enumeration representing composite operation types used in Lottie animations.
+ * Defines how layers or shapes are composited together in the rendering pipeline.
+ * <p>
+ * This enum implements DefinitionWithLabel to provide human-readable labels for each composite type
+ * and supports JSON serialization/deserialization through Jackson annotations.
+ * <p>
+ * The composite values correspond to standard compositing operations where elements can be
+ * positioned relative to each other in the layer stack.
  */
 public enum Composite implements DefinitionWithLabel {
     ABOVE(1, "Above"),

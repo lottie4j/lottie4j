@@ -8,7 +8,19 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#star-type
+ * Defines the type of star or polygon shape used in Lottie animations.
+ * This enum represents the two fundamental shape types that can be created when rendering
+ * star-based or polygon-based vector shapes in a Lottie composition.
+ * <p>
+ * The star type creates a traditional star shape with alternating inner and outer vertices,
+ * producing the characteristic pointed star appearance with concave edges between points.
+ * <p>
+ * The polygon type creates a regular polygon shape with vertices distributed evenly around
+ * a circle, producing a convex shape with straight edges connecting adjacent vertices.
+ * <p>
+ * This enum is used in Lottie animation files to specify how star and polygon shapes should
+ * be rendered, determining whether the shape will have the classic star appearance with
+ * indented points or a regular polygon outline.
  */
 public enum StarType implements DefinitionWithLabel {
     STAR(1, "Star"),

@@ -1,7 +1,7 @@
 package com.lottie4j.core.exception;
 
 /**
- * Exception thrown when a Lottie file can not be read.
+ * Exception thrown when a Lottie file cannot be read.
  */
 public class LottieFileException extends Exception {
     /**

@@ -6,7 +6,33 @@ import com.lottie4j.core.exception.LottieModelDefinitionException;
 import com.lottie4j.core.info.DefinitionWithLabel;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/shapes/#shape-element
+ * Enumeration of shape types used in Lottie animations.
+ * <p>
+ * This enum defines all supported shape element types that can appear in a Lottie animation,
+ * categorized by their functional role. Each shape type includes a short string value used
+ * for JSON serialization/deserialization, a human-readable label, and a classification into
+ * a shape group category.
+ * <p>
+ * Shape types are organized into several categories:
+ * <p>
+ * Basic shapes (SHAPE group) define visible geometric elements like ellipses, rectangles,
+ * paths, and polystar shapes that form the visual content of the animation.
+ * <p>
+ * Style elements (STYLE group) control the visual appearance of shapes through fills,
+ * strokes, gradients, and other styling properties.
+ * <p>
+ * Modifiers (MODIFIER group) transform or alter existing shapes through operations like
+ * merge, trim, repeater, rounded corners, pucker/bloat, twist, zig zag, and offset path.
+ * <p>
+ * Grouping elements (GROUP group) provide organizational structure through groups and
+ * transforms that allow hierarchical composition and transformation of shape elements.
+ * <p>
+ * The UNKNOWN type serves as a fallback for unrecognized or unsupported shape types
+ * encountered during parsing.
+ * <p>
+ * This enum implements DefinitionWithLabel to provide human-readable descriptions and
+ * uses Jackson annotations for JSON serialization, with the value field serving as the
+ * JSON representation.
  */
 public enum ShapeType implements DefinitionWithLabel {
     ELLIPSE("el", "Ellipse", ShapeGroup.SHAPE),
@@ -38,8 +64,8 @@ public enum ShapeType implements DefinitionWithLabel {
     /**
      * Constructs a ShapeType with the specified value, label, and shape group.
      *
-     * @param value the string value representing this shape type
-     * @param label the human-readable label for this shape type
+     * @param value      the string value representing this shape type
+     * @param label      the human-readable label for this shape type
      * @param shapeGroup the shape group category this type belongs to
      */
     ShapeType(String value, String label, ShapeGroup shapeGroup) {

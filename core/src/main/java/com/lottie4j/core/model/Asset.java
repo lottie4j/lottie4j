@@ -11,7 +11,30 @@ import com.lottie4j.core.info.PropertyListingList;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/assets/">Lottie Docs: Asset</a>
+ * Represents an asset in a Lottie animation composition.
+ * <p>
+ * Assets are reusable resources that can be referenced throughout the animation, including
+ * images, audio files, precompositions (nested animations), and data sources. Each asset
+ * is uniquely identified and can be embedded or referenced externally.
+ * <p>
+ * This record supports multiple asset types with varying properties:
+ * <p>
+ * Images contain dimensional properties (width, height) and can be either embedded or
+ * externally referenced. Image sequences are supported through the type field.
+ * <p>
+ * Audio assets (sounds) reference external audio files through the fileName and shapeType
+ * properties.
+ * <p>
+ * Precompositions represent nested animation layers with their own layer hierarchy,
+ * frame rate, and composition settings, allowing complex animations to be reused.
+ * <p>
+ * Data sources provide external data references with type classification.
+ * <p>
+ * The fileName property can represent either an embedded resource (as a Boolean) or
+ * an external reference (as a String containing a base64 data URI or file path).
+ * <p>
+ * This class implements PropertyListing to provide structured inspection of asset
+ * properties for debugging and analysis purposes.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

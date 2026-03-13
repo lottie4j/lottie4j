@@ -10,6 +10,31 @@ import com.lottie4j.core.info.PropertyListingList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Represents a keyframe for text animation in a Lottie composition.
+ * <p>
+ * This record encapsulates text content, styling information, and timing data for a specific
+ * point in a text animation. The keyframe can contain either simple text content as a string
+ * or a complex map structure that includes text and various styling properties such as font
+ * family, font size, colors, and stroke information.
+ * <p>
+ * The styling data is stored in a flexible Object format that can be either a String for
+ * simple text content or a Map containing detailed text and style attributes. When the style
+ * data is a Map, it may include:
+ * - "t": text content
+ * - "s": font size
+ * - "fc": font color as RGB array
+ * - "f": font family name
+ * - "sc": stroke color as RGB array
+ * - "sw": stroke width
+ * <p>
+ * The keyframe's start time is specified in frames, indicating when this text state
+ * should be active during the animation timeline.
+ *
+ * @param s the text content and styling data, which can be a String or a Map containing
+ *          detailed text and style information
+ * @param t the start time of this keyframe in frames
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TextKeyframe(

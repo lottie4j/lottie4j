@@ -8,7 +8,17 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/effects/
+ * Enumeration of effect types supported in Lottie animations.
+ * <p>
+ * Each effect type represents a visual transformation or filter that can be applied to layers
+ * in a Lottie animation. Effect types are identified by numeric values used in Lottie JSON files
+ * and include descriptive labels for human readability.
+ * <p>
+ * This enum implements DefinitionWithLabel to provide both programmatic access via numeric values
+ * and user-friendly display names. JSON deserialization is supported through the fromValue method,
+ * which handles both integer and decimal string representations of effect type values.
+ *
+ * @throws LottieModelDefinitionException when attempting to deserialize an unrecognized effect type value
  */
 public enum EffectType implements DefinitionWithLabel {
     NORMAL(5, "Old-style Effect"),

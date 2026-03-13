@@ -8,7 +8,26 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#blendmode
+ * Defines the merge mode used to combine multiple paths or shapes in vector graphics.
+ * This enum represents the different boolean operations that can be applied when merging
+ * multiple shape layers or paths together in a Lottie animation.
+ * <p>
+ * The normal mode renders shapes without any merge operation, stacking them as separate layers.
+ * <p>
+ * The add mode performs a union operation, combining all overlapping and non-overlapping
+ * areas of the shapes into a single merged shape.
+ * <p>
+ * The subtract mode removes the area of subsequent shapes from the first shape, creating
+ * a difference operation where overlapping regions are cut out.
+ * <p>
+ * The intersect mode keeps only the overlapping areas where all shapes intersect, discarding
+ * all non-overlapping regions.
+ * <p>
+ * The exclude intersections mode keeps only the non-overlapping areas of shapes, removing
+ * any regions where shapes overlap, creating an exclusive-or operation.
+ * <p>
+ * This enum is used in Lottie animation files to control how multiple shape paths are
+ * combined, enabling complex shape compositions through boolean path operations.
  */
 public enum MergeMode implements DefinitionWithLabel {
     NORMAL(1, "Normal"),

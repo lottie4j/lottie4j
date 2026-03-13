@@ -8,12 +8,19 @@ import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 
 /**
- * Represents a value parameter for a Lottie effect.
- * Each effect has multiple values that control its behavior.
+ * Represents a value parameter for an effect in a Lottie animation.
+ * <p>
+ * Effect values define the parameters that control how effects are applied to layers.
+ * Each effect value has a name identifier, a type indicator, and an animated value
+ * that can change over time during the animation.
+ * <p>
+ * This record is used as part of the effect system to configure and control various
+ * visual effects that can be applied to animation layers. The value property contains
+ * the actual animated data that drives the effect parameter.
  *
- * @param name  the parameter name
- * @param type  the value type identifier
- * @param value the animated value
+ * @param name  the identifier name of the effect value parameter
+ * @param type  the numeric type indicator that specifies the kind of effect value
+ * @param value the animated value data for this effect parameter
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

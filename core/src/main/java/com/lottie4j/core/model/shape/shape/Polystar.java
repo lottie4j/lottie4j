@@ -12,7 +12,22 @@ import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#polystar">Lottie Docs: Polystar</a>
+ * Represents a polystar shape in a Lottie animation, which can render either star or polygon shapes.
+ * <p>
+ * A polystar is a parametric shape that can create multi-pointed stars or regular polygons based on
+ * configuration. The shape is defined by its number of points, radii (inner and outer for stars),
+ * position, rotation, and roundness values that control the curvature of the points and edges.
+ * <p>
+ * This record implements BaseShape and supports JSON serialization/deserialization for Lottie files.
+ * The shape type is identified by the "sr" type code in JSON. All properties support animation through
+ * the Animated type, allowing the polystar to transform over time.
+ * <p>
+ * The polystar can operate in two modes determined by the StarType:
+ * - Star mode: Uses both inner and outer radius to create pointed star shapes
+ * - Polygon mode: Uses only outer radius to create regular polygons
+ * <p>
+ * Roundness properties control the Bezier curve smoothing applied to the vertices and edges,
+ * allowing for everything from sharp geometric shapes to smooth, rounded forms.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

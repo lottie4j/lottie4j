@@ -11,7 +11,22 @@ import com.lottie4j.core.info.PropertyListingList;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/effects/">Lottie Docs: Effect</a>
+ * Represents an effect applied to a layer in a Lottie animation.
+ * <p>
+ * Effects are visual transformations or filters that can be applied to modify the appearance
+ * of layers. Each effect has a specific type (such as blur, tint, or drop shadow) and contains
+ * a collection of configurable values that control its behavior and visual output.
+ * <p>
+ * This class supports JSON serialization and deserialization for Lottie file format compatibility,
+ * using abbreviated property names as defined in the Lottie specification. Unknown properties
+ * during deserialization are ignored, and null values are excluded from serialization.
+ *
+ * @param name      the display name of the effect
+ * @param matchName the unique identifier used for matching and referencing this effect
+ * @param index     the numeric index position of this effect in the effect stack
+ * @param type      the type of effect being applied, determining its visual transformation behavior
+ * @param enabled   flag indicating whether this effect is active (1 for enabled, 0 for disabled)
+ * @param values    the list of configurable parameters that control the effect's behavior
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

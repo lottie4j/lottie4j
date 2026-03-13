@@ -11,7 +11,29 @@ import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#merge">Lottie Docs: Merge</a>
+ * Represents a merge shape that combines multiple paths using boolean operations.
+ * <p>
+ * The Merge shape is used in Lottie animations to perform path operations such as union, intersect,
+ * subtract, and exclude on multiple shape layers. It combines the geometry of child shapes based on
+ * the specified merge mode to create complex vector shapes from simpler components.
+ * <p>
+ * This record implements BaseShape and provides JSON serialization/deserialization support for
+ * Lottie animation files. The shape is identified by the type "mm" in the JSON structure.
+ * <p>
+ * The merge operation is non-destructive and allows for dynamic boolean operations during animation
+ * playback. The behavior is controlled by the mergeMode property, which determines how the paths
+ * of child shapes are combined.
+ *
+ * @param name      the human-readable name of the merge shape
+ * @param matchName the name used for matching and identification in expressions or scripts
+ * @param hidden    indicates whether the merge shape is hidden and should not be rendered
+ * @param blendMode the blend mode used for compositing this shape with others
+ * @param index     the ordering index of this shape within its parent group
+ * @param clazz     the CSS class identifier for styling or categorization purposes
+ * @param id        the unique identifier for this merge shape
+ * @param d         an undefined property whose purpose is not documented in the Lottie specification
+ * @param cix       an undefined property whose purpose is not documented in the Lottie specification
+ * @param mergeMode the merge mode that defines how child paths are combined (union, intersect, subtract, exclude)
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

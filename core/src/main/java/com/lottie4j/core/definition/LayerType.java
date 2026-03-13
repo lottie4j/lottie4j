@@ -8,28 +8,34 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/layers/
+ * Enumeration of layer types supported in Lottie animations.
+ * Each layer type represents a different kind of visual or functional element that can be rendered
+ * in a Lottie composition. Layer types define how the layer content is interpreted and displayed,
+ * ranging from visual elements like shapes and images to functional elements like cameras and guides.
+ * <p>
+ * This enum supports JSON deserialization with tolerance for decimal numeric values that may appear
+ * in some Lottie files, automatically rounding them to the nearest integer for matching.
  */
 public enum LayerType implements DefinitionWithLabel {
-    PRECOMPOSITION(0D, "Precomposition", "Renders a Precomposition"),
-    SOLD_COLOR(1D, "Solid Color", "Static rectangle filling the canvas with a single color"),
-    IMAGE(2D, "Image", "Renders an Image"),
-    NULL(3D, "Null (Empty)", "No contents, only used for parenting"),
-    SHAPE(4D, "Shape", "Has an array of shapes"),
-    TEXT(5D, "Text", "Renders text"),
-    AUDIO(6D, "Audio", "Plays some audio"),
-    VIDEO_PLACEHOLDER(7D, "Video Placeholder", ""),
-    IMAGE_SEQUENCE(8D, "Image Sequence", ""),
-    VIDEO(9D, "Video", ""),
-    IMAGE_PLACEHOLDER(10D, "Image Placeholder", ""),
-    GUIDE(11D, "Guide", ""),
-    ADJUSTMENT(12D, "Adjustment", ""),
-    CAMERA(13D, "3D Camera", ""),
-    LIGHT(14D, "Light", ""),
-    DATA(15D, "Data", "");
+    PRECOMPOSITION(0, "Precomposition", "Renders a Precomposition"),
+    SOLD_COLOR(1, "Solid Color", "Static rectangle filling the canvas with a single color"),
+    IMAGE(2, "Image", "Renders an Image"),
+    NULL(3, "Null (Empty)", "No contents, only used for parenting"),
+    SHAPE(4, "Shape", "Has an array of shapes"),
+    TEXT(5, "Text", "Renders text"),
+    AUDIO(6, "Audio", "Plays some audio"),
+    VIDEO_PLACEHOLDER(7, "Video Placeholder", ""),
+    IMAGE_SEQUENCE(8, "Image Sequence", ""),
+    VIDEO(9, "Video", ""),
+    IMAGE_PLACEHOLDER(10, "Image Placeholder", ""),
+    GUIDE(11, "Guide", ""),
+    ADJUSTMENT(12, "Adjustment", ""),
+    CAMERA(13, "3D Camera", ""),
+    LIGHT(14, "Light", ""),
+    DATA(15, "Data", "");
 
     @JsonValue
-    private final Double value;
+    private final Integer value;
     private final String label;
     private final String description;
 
@@ -40,7 +46,7 @@ public enum LayerType implements DefinitionWithLabel {
      * @param label       the human-readable label for this layer type
      * @param description the description explaining this layer type's purpose
      */
-    LayerType(Double value, String label, String description) {
+    LayerType(Integer value, String label, String description) {
         this.value = value;
         this.label = label;
         this.description = description;
@@ -56,7 +62,7 @@ public enum LayerType implements DefinitionWithLabel {
     @JsonCreator
     public static LayerType fromValue(String value) throws LottieModelDefinitionException {
         return Arrays.stream(LayerType.values()).sequential()
-                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
+                .filter(v -> Math.round(Double.parseDouble(value)) == v.value)
                 .findFirst()
                 .orElseThrow(() -> new LottieModelDefinitionException(LayerType.class, value));
     }
@@ -66,7 +72,7 @@ public enum LayerType implements DefinitionWithLabel {
      *
      * @return the numeric value
      */
-    public Double value() {
+    public Integer value() {
         return value;
     }
 

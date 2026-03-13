@@ -8,7 +8,24 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#trim-multiple-shapes
+ * Defines how trim operations are applied when multiple shapes are being trimmed together.
+ * This enum represents the behavior modes for trim path effects when applied to multiple
+ * shapes within a Lottie animation, controlling whether shapes are trimmed as separate
+ * entities or as a unified group.
+ * <p>
+ * The individually mode applies the trim operation to each shape separately, treating
+ * each shape as an independent entity. Each shape's trim calculations are performed
+ * independently, resulting in each shape being trimmed according to its own path length
+ * and position.
+ * <p>
+ * The simultaneously mode applies the trim operation to all shapes as a single unified
+ * path. The shapes are treated as if they were merged together, and the trim calculation
+ * is performed on the combined path length, resulting in a synchronized trim effect
+ * across all shapes.
+ * <p>
+ * This enum is used in Lottie animation files to specify the behavior of trim path
+ * modifiers when working with groups of shapes, affecting how animated trims are
+ * distributed across multiple shape elements.
  */
 public enum TrimMultipleShapes implements DefinitionWithLabel {
     INDIVIDUALLY(1, "Individually"),

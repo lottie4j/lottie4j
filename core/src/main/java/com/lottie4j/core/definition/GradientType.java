@@ -8,7 +8,20 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#linecap
+ * Defines the type of gradient fill used in Lottie animations.
+ * This enum represents the two standard gradient types supported in vector graphics:
+ * linear and radial gradients.
+ * <p>
+ * A linear gradient creates a color transition along a straight line, with colors
+ * blending from the start point to the end point in a linear fashion.
+ * <p>
+ * A radial gradient creates a color transition that radiates outward from a central
+ * point in a circular or elliptical pattern, with colors blending from the center
+ * to the outer edge.
+ * <p>
+ * This enum is used in Lottie animation files to specify how gradient fills should
+ * be rendered on shapes and paths. The enum supports JSON serialization and
+ * deserialization for parsing Lottie animation data.
  */
 public enum GradientType implements DefinitionWithLabel {
     LINEAR(1, "Linear"),

@@ -8,7 +8,16 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#blendmode
+ * Enumeration of blend modes used in Lottie animations for compositing layers and effects.
+ * <p>
+ * Blend modes determine how a layer's colors are combined with the colors of layers beneath it.
+ * Each blend mode uses a different mathematical formula to calculate the final pixel color.
+ * The modes range from simple operations like Normal (no blending) to complex color manipulations
+ * like Hue, Saturation, and Luminosity.
+ * <p>
+ * This enum implements DefinitionWithLabel to provide human-readable labels for each blend mode
+ * and supports JSON serialization/deserialization with numeric values. The fromValue method
+ * handles both integer and decimal representations found in Lottie JSON files.
  */
 public enum BlendMode implements DefinitionWithLabel {
     NORMAL(0, "Normal"),

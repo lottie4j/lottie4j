@@ -9,7 +9,33 @@ import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#transform">Lottie Docs: Transform</a>
+ * Represents transformation properties for a repeater element in a Lottie animation.
+ * <p>
+ * This record encapsulates all transformation parameters that can be applied to repeated instances
+ * of shapes or elements, including spatial transformations (position, rotation, scale), skew effects,
+ * and opacity gradients. The transformation properties are animated values that can change over time.
+ * <p>
+ * The transformation properties control how each repeated instance is transformed relative to the
+ * previous instance. This allows for creating complex patterns and effects by repeating and
+ * progressively transforming shapes.
+ * <p>
+ * Supports both 2D and 3D transformations through separate rotation axes (rx, ry, rz).
+ * Opacity can be controlled with start and end values to create fade effects across repeated instances.
+ * <p>
+ * JSON deserialization ignores unknown properties and excludes null values during serialization.
+ *
+ * @param anchor       the anchor point for the transformation
+ * @param position     the position offset applied to each repeated instance
+ * @param scale        the scale factor applied to each repeated instance
+ * @param rotation     the rotation angle applied to each repeated instance
+ * @param rx           the rotation around the X-axis (3D rotation)
+ * @param ry           the rotation around the Y-axis (3D rotation)
+ * @param rz           the rotation around the Z-axis (3D rotation)
+ * @param skew         the skew angle applied to each repeated instance
+ * @param skewAxis     the axis along which skew is applied
+ * @param opacityStart the starting opacity value for the first repeated instance
+ * @param opacityEnd   the ending opacity value for the last repeated instance
+ * @param unknown      an unidentified property that may be present in some Lottie files
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

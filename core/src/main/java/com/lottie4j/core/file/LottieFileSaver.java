@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * Utility class for exporting Lottie animations and individual layers to JSON files.
- * Handles asset collection for precomposition layers to ensure self-contained exports.
+ * Handles an asset collection for precomposition layers to ensure self-contained exports.
  */
 public class LottieFileSaver {
 
@@ -56,7 +56,8 @@ public class LottieFileSaver {
                     animation.width() != null ? animation.width() : 1280,
                     animation.height() != null ? animation.height() : 720,
                     requiredAssets,
-                    java.util.List.of(layer)
+                    List.of(layer),
+                    null
             );
 
             // Write to file using Jackson - Animation record handles serialization

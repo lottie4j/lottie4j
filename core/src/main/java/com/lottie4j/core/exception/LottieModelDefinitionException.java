@@ -2,7 +2,7 @@ package com.lottie4j.core.exception;
 
 /**
  * Exception thrown when a Lottie definition value cannot be mapped to a known enum constant.
- * Typically occurs when parsing JSON with unrecognized or unsupported values.
+ * Typically, occurs when parsing JSON with unrecognized or unsupported values.
  */
 public class LottieModelDefinitionException extends Exception {
     /**

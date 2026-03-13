@@ -14,37 +14,54 @@ import com.lottie4j.core.model.shape.BaseShape;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/layers/">Lottie Docs: Layer</a>
+ * Represents a layer in a Lottie animation composition.
+ * <p>
+ * A layer is a fundamental building block of Lottie animations that defines a visual or functional element
+ * within the composition. Layers can contain various types of content such as shapes, images, text, or
+ * precompositions, and support transformations, masking, effects, and blending operations.
+ * <p>
+ * Layers are organized hierarchically and can be parented to other layers for coordinated transformations.
+ * They have temporal properties that control when they appear in the animation timeline and can be styled
+ * with different blend modes and visibility states.
+ * <p>
+ * Different layer types support specific properties:
+ * - Shape layers contain vector shapes defined in the shapes array
+ * - Precomposition layers reference other compositions via referenceId and may include dimensions and time remapping
+ * - Solid color layers render a rectangle with a specified color
+ * - Text layers contain text data with styling and animation properties
+ * <p>
+ * This record uses JSON property annotations for deserialization from Lottie JSON files and implements
+ * PropertyListing to provide structured output of the layer's configuration.
  *
- * @param name           layer name
- * @param matchName      layer match name
- * @param has3dLayers    flag indicating 3D layers
- * @param hidden         layer visibility flag
- * @param layerType      type of the layer
- * @param indexLayer     layer index
- * @param indexParent    parent layer index
- * @param timeStretch    time stretch value
- * @param inPoint        in point for layer timing
- * @param outPoint       out point for layer timing
- * @param startTime      start time of the layer
- * @param blendMode      blend mode for the layer
- * @param clazz          CSS class attribute
- * @param idAttribute    ID attribute
- * @param tagName        HTML tag name
- * @param matteMode      matte mode for masking
- * @param matteTarget    matte target layer
- * @param masks          list of masks applied to the layer
- * @param effects        list of effects applied to the layer
- * @param transform      transform properties for the layer
- * @param autoRotate     auto-rotation flag
- * @param hix            unknown property
- * @param shapes         list of shapes for shape layers
- * @param referenceId    reference ID for precomposition layers
- * @param width          width for precomposition layers
- * @param height         height for precomposition layers
- * @param timeRemapping  time remapping for precomposition layers
- * @param solidColor     solid color for solid color layers
- * @param textData       text data for text layers
+ * @param name          the display name of the layer
+ * @param matchName     the match name used for expressions and identification
+ * @param has3dLayers   indicator for 3D layer capabilities (0 for 2D, 1 for 3D)
+ * @param hidden        whether the layer is hidden from rendering
+ * @param layerType     the type of layer defining its content and behavior
+ * @param indexLayer    the unique index identifying this layer in the composition
+ * @param indexParent   the index of the parent layer for hierarchical transformations, null if no parent
+ * @param timeStretch   the time stretch factor applied to the layer's animation speed
+ * @param inPoint       the frame number when the layer becomes active in the timeline
+ * @param outPoint      the frame number when the layer becomes inactive in the timeline
+ * @param startTime     the offset in frames for when the layer's content starts playing
+ * @param blendMode     the blend mode determining how this layer composites with layers below
+ * @param clazz         the CSS class attribute for HTML rendering contexts
+ * @param idAttribute   the ID attribute for HTML rendering contexts
+ * @param tagName       the HTML tag name for HTML rendering contexts
+ * @param matteMode     the matte mode defining how this layer affects or is affected by adjacent layers
+ * @param matteTarget   indicates if this layer is the target of a matte operation
+ * @param masks         the list of masks applied to this layer for clipping or alpha operations
+ * @param effects       the list of effects applied to this layer
+ * @param transform     the transformation properties controlling position, rotation, scale, and opacity
+ * @param autoRotate    whether the layer automatically orients along a motion path
+ * @param hix           unknown property, potentially for internal use
+ * @param shapes        the list of shapes contained in a shape layer
+ * @param referenceId   the ID referencing a precomposition asset
+ * @param width         the width of a precomposition layer in pixels
+ * @param height        the height of a precomposition layer in pixels
+ * @param timeRemapping animated property for remapping time in precomposition layers
+ * @param solidColor    the hex color string for solid color layers
+ * @param textData      the text content and styling information for text layers
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -54,7 +71,7 @@ public record Layer(
         @JsonProperty("ddd") Integer has3dLayers,
         @JsonProperty("hd") Boolean hidden,
         @JsonProperty("ty") LayerType layerType,
-        @JsonProperty("ind") Double indexLayer,
+        @JsonProperty("ind") Integer indexLayer,
         @JsonProperty("parent") Integer indexParent,
         @JsonProperty("sr") Integer timeStretch,
         @JsonProperty("ip") Double inPoint,

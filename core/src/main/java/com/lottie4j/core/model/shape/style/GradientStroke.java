@@ -14,7 +14,38 @@ import com.lottie4j.core.model.shape.BaseShape;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#gradients">Lottie Docs: Gradient Stroke</a>
+ * Represents a gradient stroke shape in a Lottie animation.
+ * <p>
+ * A gradient stroke applies a gradient color transition along a stroke path, similar to a regular stroke
+ * but with color interpolation between multiple color stops. The gradient can be linear or radial and
+ * is defined by starting and ending points that determine the gradient's direction and spread.
+ * <p>
+ * This record extends the base shape functionality with gradient-specific properties including gradient
+ * type, color definitions, stroke appearance settings (line caps, joins, miter limits), and optional
+ * dash patterns for creating dashed or dotted gradient strokes.
+ * <p>
+ * All animated properties (stroke width, opacity, gradient points, colors) can change over time according
+ * to their respective animation keyframes, allowing for dynamic gradient stroke effects in animations.
+ *
+ * @param name                  the display name of the gradient stroke
+ * @param matchName             the match name used for identification and referencing
+ * @param hidden                whether this gradient stroke is hidden in the output
+ * @param blendMode             the blend mode used for compositing this stroke with underlying layers
+ * @param index                 the rendering order index of this shape
+ * @param clazz                 the CSS class name associated with this shape
+ * @param id                    the unique identifier for this shape
+ * @param cix                   an undefined property for potential future use
+ * @param lineCap               the style of line endings (butt, round, or square)
+ * @param lineJoin              the style of line corners (miter, round, or bevel)
+ * @param miterLimit            the maximum miter length for miter joins, as an integer
+ * @param miterLimitAlternative an alternative animated miter limit value
+ * @param strokeWidth           the animated width of the stroke
+ * @param opacity               the animated opacity of the gradient stroke (0-100)
+ * @param startingPoint         the animated starting position of the gradient in coordinate space
+ * @param endPoint              the animated ending position of the gradient in coordinate space
+ * @param gradientType          the type of gradient (linear or radial)
+ * @param colors                the gradient color configuration including color stops and interpolation
+ * @param strokeDashes          optional list of dash patterns to create dashed gradient strokes
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

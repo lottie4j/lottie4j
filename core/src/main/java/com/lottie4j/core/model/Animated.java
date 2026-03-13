@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.helper.KeyframeDeserializer;
 import com.lottie4j.core.helper.KeyframeSerializer;
 import com.lottie4j.core.info.PropertyListing;
@@ -18,7 +19,29 @@ import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import java.util.List;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/concepts/#animated-property">Lottie Docs: Animated</a>
+ * Represents an animated property in a Lottie animation that can contain either static values or keyframe-based animations.
+ * This class handles both single-value properties (like opacity) and multi-value properties (like position or color).
+ * <p>
+ * Animated properties can be either:
+ * - Static: defined by a single constant value
+ * - Animated: defined by a series of keyframes with interpolation between them
+ * <p>
+ * The class supports:
+ * - Value interpolation between keyframes based on the current animation frame
+ * - Cubic Bezier easing curves for smooth transitions
+ * - Separation of X and Y components for dimensional properties
+ * - Both timed keyframes (with start/end values) and static number keyframes
+ * <p>
+ * This is a core component of the Lottie animation system, used throughout shape properties,
+ * transform properties, and effects to define how values change over time.
+ *
+ * @param animated  indicates whether this property is animated (1) or static (0)
+ * @param keyframes list of keyframes defining the animation, can contain NumberKeyframe or TimedKeyframe instances
+ * @param ix        property index for identification purposes
+ * @param l         property length or dimension indicator
+ * @param s         indicates if this is a split/separated property
+ * @param x         the X-axis component for split dimensional properties
+ * @param y         the Y-axis component for split dimensional properties
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

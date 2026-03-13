@@ -11,20 +11,29 @@ import com.lottie4j.core.info.PropertyListingList;
 import java.util.List;
 
 /**
- * Top level object, describing the
- * <a href="https://lottiefiles.github.io/lottie-docs/composition/#animation">Lottie Docs: Animation</a>
+ * Represents the root structure of a Lottie animation file.
+ * <p>
+ * This record encapsulates all the essential information required to define and render a Lottie animation,
+ * including metadata, timing information, dimensions, and the hierarchical structure of assets, layers, and markers.
+ * The animation serves as the top-level container that orchestrates all visual elements and their behaviors
+ * throughout the animation timeline.
+ * <p>
+ * The animation timeline is defined by frame-based timing using inPoint and outPoint values, with the
+ * frame rate specified by framesPerSecond. The coordinate system uses the width and height properties
+ * to define the animation canvas dimensions.
  *
- * @param version          Lottie format version
- * @param name             animation name
- * @param matchName        animation match name
- * @param has3dLayers      flag indicating 3D layers
- * @param framesPerSecond  frames per second
- * @param inPoint          start frame
- * @param outPoint         end frame
- * @param width            animation width in pixels
- * @param height           animation height in pixels
- * @param assets           list of assets used in the animation
- * @param layers           list of layers in the animation
+ * @param version         the version of the Lottie specification used for this animation
+ * @param name            the human-readable name of the animation
+ * @param matchName       the match name identifier used for referencing
+ * @param has3dLayers     flag indicating whether the animation contains 3D layers (1 for true, 0 for false)
+ * @param framesPerSecond the frame rate at which the animation should be played
+ * @param inPoint         the starting frame of the animation timeline
+ * @param outPoint        the ending frame of the animation timeline
+ * @param width           the width of the animation canvas in pixels
+ * @param height          the height of the animation canvas in pixels
+ * @param assets          collection of reusable assets referenced by layers (images, precompositions, etc.)
+ * @param layers          ordered collection of layers that compose the visual hierarchy of the animation
+ * @param markers         collection of named markers for identifying specific points in the timeline
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
@@ -39,7 +48,8 @@ public record Animation(
         @JsonProperty("w") Integer width,
         @JsonProperty("h") Integer height,
         @JsonProperty("assets") List<Asset> assets,
-        @JsonProperty("layers") List<Layer> layers
+        @JsonProperty("layers") List<Layer> layers,
+        @JsonProperty("markers") List<Marker> markers
 ) implements PropertyListing {
     @Override
     @JsonIgnore
@@ -55,6 +65,7 @@ public record Animation(
         list.add("Height", height);
         list.addList("Assets", assets);
         list.addList("Layers", layers);
+        list.addList("Markers", markers);
         return list;
     }
 }

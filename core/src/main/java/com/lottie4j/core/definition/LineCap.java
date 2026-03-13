@@ -8,7 +8,22 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#linecap
+ * Defines the line cap style used to render the endpoints of open paths and strokes.
+ * This enum represents the three standard cap styles used in vector graphics to determine
+ * how the end of a stroke should be rendered.
+ * <p>
+ * The butt cap style terminates the stroke exactly at the endpoint with a flat edge
+ * perpendicular to the stroke direction, with no extension beyond the endpoint.
+ * <p>
+ * The round cap style extends the stroke beyond the endpoint with a semicircular cap
+ * whose diameter equals the stroke width, creating a smooth rounded end.
+ * <p>
+ * The square cap style extends the stroke beyond the endpoint with a rectangular cap
+ * whose width equals the stroke width and extends by half the stroke width, creating
+ * a squared end that projects beyond the endpoint.
+ * <p>
+ * This enum is used in Lottie animation files to specify how stroked paths should be
+ * rendered at their endpoints, affecting the visual appearance of lines and open shapes.
  */
 public enum LineCap implements DefinitionWithLabel {
     BUTT(1, "Butt"),

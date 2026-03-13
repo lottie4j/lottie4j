@@ -14,7 +14,26 @@ import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#gradients">Lottie Docs: Gradient Fill</a>
+ * Represents a gradient fill shape in a Lottie animation that fills a path with a gradient color transition.
+ * <p>
+ * A gradient fill defines how colors transition smoothly from one point to another within a shape path.
+ * The gradient can be either linear or radial, with multiple color stops defining the color progression.
+ * The fill behavior is controlled by fill rules that determine which areas of complex paths are filled.
+ * <p>
+ * The gradient is defined by a starting point and ending point (for linear gradients), or by radial
+ * parameters including highlight position and angle (for radial gradients). The actual colors and their
+ * positions along the gradient are specified in the GradientColor object.
+ * <p>
+ * This class implements the BaseShape interface and is part of a polymorphic shape hierarchy used in
+ * Lottie animations. It is deserialized from JSON using the type identifier "gf".
+ * <p>
+ * All visual properties such as opacity, start/end points, and highlight parameters can be animated
+ * over time using the Animated wrapper type. This allows the gradient to change dynamically throughout
+ * the animation timeline.
+ * <p>
+ * The class includes standard shape properties inherited from BaseShape such as name, match name,
+ * blend mode, visibility, and layer ordering index. These properties control how the gradient fill
+ * interacts with other shapes and layers in the animation.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

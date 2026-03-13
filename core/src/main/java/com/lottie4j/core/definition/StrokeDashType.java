@@ -8,7 +8,23 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#strokedashtype
+ * Defines the dash pattern components used to create dashed or dotted strokes in vector graphics.
+ * This enum represents the three essential elements that compose a stroke dash pattern in Lottie animations.
+ * <p>
+ * A dash pattern is created by combining these components to define how a continuous stroke should be
+ * broken into segments. The dash component represents the visible portion of the stroke pattern,
+ * defining the length of each drawn segment. The gap component represents the invisible portion,
+ * defining the spacing between consecutive dash segments. The offset component shifts the starting
+ * position of the entire dash pattern along the stroke path.
+ * <p>
+ * These components work together to create various stroke effects, from simple dashed lines to
+ * complex animated patterns. The dash and gap values are typically used in alternating sequences
+ * to define repeating patterns, while the offset value allows for pattern animation by shifting
+ * the pattern position.
+ * <p>
+ * This enum is used in Lottie animation files to specify stroke dash patterns, enabling the
+ * creation of non-continuous strokes and animated stroke effects that are commonly used in
+ * motion graphics and vector animations.
  */
 public enum StrokeDashType implements DefinitionWithLabel {
     DASH("d", "Dash"),

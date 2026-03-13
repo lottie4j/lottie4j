@@ -8,7 +8,25 @@ import com.lottie4j.core.info.DefinitionWithLabel;
 import java.util.Arrays;
 
 /**
- * https://lottiefiles.github.io/lottie-docs/constants/#linejoin
+ * Defines the line join style used to render the connection points where two line segments meet.
+ * This enum represents the three standard join styles used in vector graphics to determine
+ * how corners and vertices should be rendered when stroke paths change direction.
+ * <p>
+ * The miter join style extends the outer edges of the strokes until they meet at a point,
+ * creating a sharp corner. This creates a pointed join that extends beyond the actual
+ * intersection point of the path segments.
+ * <p>
+ * The round join style connects the outer edges of the strokes with a circular arc,
+ * creating a smooth rounded corner. The radius of the arc equals half the stroke width,
+ * resulting in a curved transition between path segments.
+ * <p>
+ * The bevel join style connects the outer edges of the strokes with a straight line,
+ * creating a flat, chamfered corner. This clips the corner at the point where the outer
+ * edges of each stroke would intersect, producing a truncated join.
+ * <p>
+ * This enum is used in Lottie animation files to specify how stroked paths should be
+ * rendered at their join points, affecting the visual appearance of corners in lines
+ * and shapes.
  */
 public enum LineJoin implements DefinitionWithLabel {
     MITER(1, "Miter"),

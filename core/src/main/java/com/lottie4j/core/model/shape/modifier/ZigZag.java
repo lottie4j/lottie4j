@@ -12,7 +12,34 @@ import com.lottie4j.core.model.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**
- * <a href="https://lottiefiles.github.io/lottie-docs/shapes/#zig-zag">Lottie Docs: ZigZag</a>
+ * Represents a Zig Zag shape effect in a Lottie animation.
+ * <p>
+ * The Zig Zag effect creates a wave-like distortion along the edges of a shape by adding alternating
+ * peaks and valleys. This effect is commonly used to create decorative borders, stylized edges, or
+ * animated wave patterns. The distortion can be controlled through the amount property and supports
+ * different line join styles for controlling how the zig zag corners are rendered.
+ * <p>
+ * This record implements BaseShape and is deserialized from Lottie JSON files with the type identifier "zz".
+ * It supports JSON serialization/deserialization through Jackson annotations, ignoring unknown properties
+ * and excluding null values from output.
+ * <p>
+ * The Zig Zag effect includes standard shape properties inherited from BaseShape such as name, match name,
+ * visibility, blend mode, and layer ordering properties. Additionally, it provides specific properties
+ * for controlling the zig zag distortion including the line join style, amount of distortion, and miter
+ * limit for controlling sharp corners.
+ *
+ * @param name       the display name of the zig zag effect
+ * @param matchName  the match name used for identifying the effect in expressions
+ * @param hidden     whether the effect is hidden from rendering
+ * @param blendMode  the blend mode used for compositing this effect
+ * @param index      the index position of this effect in the layer's effect stack
+ * @param clazz      the CSS class name for styling purposes
+ * @param id         the unique identifier for this effect
+ * @param d          an undefined property for future or internal use
+ * @param cix        an undefined composition index property
+ * @param lineJoin   the line join style determining how corners are rendered in the zig zag pattern
+ * @param amount     the animated property controlling the amplitude or intensity of the zig zag distortion
+ * @param miterLimit the animated property controlling the limit at which mitered corners are beveled
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
