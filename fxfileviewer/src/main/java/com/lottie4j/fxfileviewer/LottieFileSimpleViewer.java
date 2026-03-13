@@ -30,6 +30,13 @@ public class LottieFileSimpleViewer extends Application {
     private double currentScalePercent = 100.0;
 
     /**
+     * Creates a new LottieFileDebugViewer.
+     */
+    public LottieFileSimpleViewer() {
+        // Constructor for LottieFileSimpleViewer
+    }
+
+    /**
      * Initializes the JavaFX application stage and UI components.
      * Sets up the menu bar, scene, and handles command-line arguments for loading animations.
      *

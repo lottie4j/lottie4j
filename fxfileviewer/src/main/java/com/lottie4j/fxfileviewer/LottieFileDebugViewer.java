@@ -1,9 +1,7 @@
 package com.lottie4j.fxfileviewer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.exception.LottieFileException;
 import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.Animation;
 import com.lottie4j.fxfileviewer.component.*;
 import com.lottie4j.fxfileviewer.util.AlertHelper;
@@ -45,7 +43,6 @@ import java.util.concurrent.CountDownLatch;
  */
 public class LottieFileDebugViewer extends Application {
     private static final Logger logger = LoggerFactory.getLogger(LottieFileDebugViewer.class);
-    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
     private Canvas canvas;
     private GraphicsContext gc;
@@ -75,6 +72,7 @@ public class LottieFileDebugViewer extends Application {
      * Creates a new LottieFileDebugViewer.
      */
     public LottieFileDebugViewer() {
+        // Constructor for LottieFileDebugViewer
     }
 
     /**
@@ -383,7 +381,6 @@ public class LottieFileDebugViewer extends Application {
             });
 
             // Update the JavaFX player box
-            var playersBox = (HBox) root.getCenter();
             var javaFXPlayerBox = (VBox) playersBox.getChildren().get(0);
             if (javaFXPlayerBox.getChildren().size() > 1) {
                 javaFXPlayerBox.getChildren().remove(1);
@@ -556,13 +553,13 @@ public class LottieFileDebugViewer extends Application {
 
                 // Save all frames
                 for (int frame = startFrame; frame <= endFrame; frame++) {
-                    final int currentFrame = frame;
+                    final int finalCurrentFrame = frame;
                     CountDownLatch latch = new CountDownLatch(1);
 
                     // Update UI on JavaFX thread
                     Platform.runLater(() -> {
                         try {
-                            this.currentFrame = currentFrame;
+                            this.currentFrame = finalCurrentFrame;
                             lottiePlayer.seekToFrame(currentFrame);
                             frameSlider.setValue(currentFrame);
                             updateFrameLabel();
