@@ -32,10 +32,15 @@ import java.util.Arrays;
  * track matte compositing, enabling sophisticated masking and transparency effects.
  */
 public enum MatteMode implements DefinitionWithLabel {
+    /** No track matte effect applied. */
     NORMAL(0, "Normal"),
+    /** Uses the alpha channel of the matte layer for transparency. */
     ALPHA(1, "Alpha"),
+    /** Uses the inverted alpha channel of the matte layer for transparency. */
     INVERTED_ALPHA(2, "Inverted Alpha"),
+    /** Uses the luminance values of the matte layer for transparency. */
     LUMA(3, "Luma"),
+    /** Uses the inverted luminance values of the matte layer for transparency. */
     INVERTED_LUMA(4, "Inverted Luma");
 
     @JsonValue

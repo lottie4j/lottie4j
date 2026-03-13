@@ -19,21 +19,37 @@ import java.util.Arrays;
  * which handles both integer and decimal string representations of effect type values.
  */
 public enum EffectType implements DefinitionWithLabel {
+    /** Legacy effect type for older Lottie files. */
     NORMAL(5, "Old-style Effect"),
+    /** Paints effects over transparent areas. */
     PAINT_OVER_TRANSPARENT(7, "Paint Over Transparent"),
+    /** Applies a color tint to the layer. */
     TINT(20, "Tint"),
+    /** Fills the layer with a solid color. */
     FILL(21, "Fill"),
+    /** Adds a stroke effect to the layer. */
     STROKE(22, "Stroke"),
+    /** Applies a three-color gradient mapping. */
     TRITONE(23, "Tritone"),
+    /** Advanced color level adjustments. */
     PRO_LEVELS(24, "Pro Levels"),
+    /** Creates a shadow effect beneath the layer. */
     DROP_SHADOW(25, "Drop Shadow"),
+    /** Wipes the layer in a circular pattern. */
     RADIAL_WIPE(26, "Radial Wipe"),
+    /** Displaces pixels based on a displacement map. */
     DISPLACEMENT_MAP(27, "Displacement Map"),
+    /** Applies a matte effect (version 3). */
     MATTE3(28, "Matte3"),
+    /** Blurs the layer using a Gaussian blur algorithm. */
     GAUSSIAN_BLUR(29, "Gaussian Blur"),
+    /** Warps the layer using a mesh deformation. */
     MESH_WARP(31, "Mesh Warp"),
+    /** Creates a wavy distortion effect. */
     WAVY(32, "Wavy"),
+    /** Applies a spherical distortion to the layer. */
     SPHERIZE(33, "Spherize"),
+    /** Puppet pin deformation effect. */
     PUPPET(34, "Puppet");
 
     @JsonValue

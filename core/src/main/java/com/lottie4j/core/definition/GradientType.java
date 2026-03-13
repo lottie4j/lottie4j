@@ -24,7 +24,9 @@ import java.util.Arrays;
  * deserialization for parsing Lottie animation data.
  */
 public enum GradientType implements DefinitionWithLabel {
+    /** Creates a linear gradient along a straight line. */
     LINEAR(1, "Linear"),
+    /** Creates a radial gradient radiating from a center point. */
     RADIAL(2, "Radial");
 
     @JsonValue

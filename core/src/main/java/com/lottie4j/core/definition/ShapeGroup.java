@@ -28,10 +28,15 @@ import com.lottie4j.core.info.DefinitionWithLabel;
  * and handle different types of shape elements appropriately.
  */
 public enum ShapeGroup implements DefinitionWithLabel {
+    /** Container elements that organize and group other shapes. */
     GROUP,
+    /** Elements that modify or transform other shapes. */
     MODIFIER,
+    /** Basic geometric shape elements. */
     SHAPE,
+    /** Visual appearance properties like fills and strokes. */
     STYLE,
+    /** Unrecognized or unclassified shape elements. */
     UNKNOWN;
 
     /**

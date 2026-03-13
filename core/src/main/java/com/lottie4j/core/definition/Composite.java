@@ -18,7 +18,9 @@ import java.util.Arrays;
  * positioned relative to each other in the layer stack.
  */
 public enum Composite implements DefinitionWithLabel {
+    /** Positions the element above other layers in the rendering stack. */
     ABOVE(1, "Above"),
+    /** Positions the element below other layers in the rendering stack. */
     BELOW(2, "Below");
 
     @JsonValue

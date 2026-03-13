@@ -26,8 +26,11 @@ import java.util.Arrays;
  * rendered at their endpoints, affecting the visual appearance of lines and open shapes.
  */
 public enum LineCap implements DefinitionWithLabel {
+    /** Flat cap with no extension beyond the endpoint. */
     BUTT(1, "Butt"),
+    /** Rounded cap extending beyond the endpoint. */
     ROUND(2, "Round"),
+    /** Square cap extending beyond the endpoint. */
     SQUARE(3, "Square");
 
     @JsonValue

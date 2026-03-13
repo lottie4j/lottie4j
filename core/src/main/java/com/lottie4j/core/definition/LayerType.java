@@ -17,21 +17,37 @@ import java.util.Arrays;
  * in some Lottie files, automatically rounding them to the nearest integer for matching.
  */
 public enum LayerType implements DefinitionWithLabel {
+    /** Renders a precomposition (nested composition). */
     PRECOMPOSITION(0, "Precomposition", "Renders a Precomposition"),
+    /** Static rectangle filling the canvas with a single color. */
     SOLD_COLOR(1, "Solid Color", "Static rectangle filling the canvas with a single color"),
+    /** Renders a static image. */
     IMAGE(2, "Image", "Renders an Image"),
+    /** Empty layer used only for parenting other layers. */
     NULL(3, "Null (Empty)", "No contents, only used for parenting"),
+    /** Contains an array of shapes to render vector graphics. */
     SHAPE(4, "Shape", "Has an array of shapes"),
+    /** Renders text content. */
     TEXT(5, "Text", "Renders text"),
+    /** Plays audio content. */
     AUDIO(6, "Audio", "Plays some audio"),
+    /** Placeholder for video content. */
     VIDEO_PLACEHOLDER(7, "Video Placeholder", ""),
+    /** Sequence of images for frame-by-frame animation. */
     IMAGE_SEQUENCE(8, "Image Sequence", ""),
+    /** Renders video content. */
     VIDEO(9, "Video", ""),
+    /** Placeholder for image content. */
     IMAGE_PLACEHOLDER(10, "Image Placeholder", ""),
+    /** Guide layer for design reference (not rendered). */
     GUIDE(11, "Guide", ""),
+    /** Adjustment layer for applying effects to layers below. */
     ADJUSTMENT(12, "Adjustment", ""),
+    /** 3D camera for perspective and view control. */
     CAMERA(13, "3D Camera", ""),
+    /** Light source for 3D lighting effects. */
     LIGHT(14, "Light", ""),
+    /** Data layer for storing animation data. */
     DATA(15, "Data", "");
 
     @JsonValue

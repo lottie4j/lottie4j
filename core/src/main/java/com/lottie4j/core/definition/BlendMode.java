@@ -20,21 +20,37 @@ import java.util.Arrays;
  * handles both integer and decimal representations found in Lottie JSON files.
  */
 public enum BlendMode implements DefinitionWithLabel {
+    /** No blending; the layer appears as-is without color mixing. */
     NORMAL(0, "Normal"),
+    /** Multiplies the colors, resulting in a darker image. */
     MULTIPLY(1, "Multiply"),
+    /** Inverts, multiplies, and inverts again, resulting in a brighter image. */
     SCREEN(2, "Screen"),
+    /** Combines Multiply and Screen modes depending on the base color. */
     OVERLAY(3, "Overlay"),
+    /** Selects the darker of the two colors. */
     DARKEN(4, "Darken"),
+    /** Selects the lighter of the two colors. */
     LIGHTEN(5, "Lighten"),
+    /** Brightens the base color by decreasing contrast. */
     COLOR_DODGE(6, "Color Dodge"),
+    /** Darkens the base color by increasing contrast. */
     COLOR_BURN(7, "Color Burn"),
+    /** Combines Multiply and Screen modes with increased contrast. */
     HARD_LIGHT(8, "Hard Light"),
+    /** Similar to Overlay but with a softer effect. */
     SOFT_LIGHT(9, "Soft Light"),
+    /** Subtracts the darker color from the lighter color. */
     DIFFERENCE(10, "Difference"),
+    /** Similar to Difference but with lower contrast. */
     EXCLUSION(11, "Exclusion"),
+    /** Applies the hue of the blend color while preserving saturation and luminosity. */
     HUE(12, "Hue"),
+    /** Applies the saturation of the blend color while preserving hue and luminosity. */
     SATURATION(13, "Saturation"),
+    /** Applies the hue and saturation of the blend color while preserving luminosity. */
     COLOR(14, "Color"),
+    /** Applies the luminosity of the blend color while preserving hue and saturation. */
     LUMINOSITY(15, "Luminosity");
 
     @JsonValue

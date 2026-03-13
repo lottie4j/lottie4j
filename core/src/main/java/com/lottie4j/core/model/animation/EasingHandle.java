@@ -34,6 +34,12 @@ public class EasingHandle implements Keyframe, PropertyListing {
     @JsonProperty("y")
     private final Object rawY;
 
+    /**
+     * Constructs an easing handle with the specified control point coordinates.
+     *
+     * @param rawX the x-coordinate values (can be a single number or array)
+     * @param rawY the y-coordinate values (can be a single number or array)
+     */
     @JsonCreator
     public EasingHandle(
             @JsonProperty("x") Object rawX,
@@ -65,10 +71,20 @@ public class EasingHandle implements Keyframe, PropertyListing {
         return Collections.emptyList();
     }
 
+    /**
+     * Returns the x-coordinate values of the easing handle control point.
+     *
+     * @return list of x-coordinate values
+     */
     public List<Double> x() {
         return toDoubleList(rawX);
     }
 
+    /**
+     * Returns the y-coordinate values of the easing handle control point.
+     *
+     * @return list of y-coordinate values
+     */
     public List<Double> y() {
         return toDoubleList(rawY);
     }

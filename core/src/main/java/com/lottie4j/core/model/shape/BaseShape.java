@@ -64,17 +64,34 @@ import com.lottie4j.core.model.shape.style.*;
         @JsonSubTypes.Type(name = "zz", value = ZigZag.class)
 })
 public interface BaseShape {
+    /** Default name for the shape. */
     String name = "";
+
+    /** Default match name used for identification and referencing. */
     String matchName = "";
+
+    /** Default shape type. */
     ShapeType type = ShapeType.UNKNOWN;
+
+    /** Default visibility state of the shape. */
     Boolean hidden = false;
+
+    /** Default blend mode for compositing. */
     BlendMode blendMode = BlendMode.NORMAL;
+
+    /** Default rendering order index. */
     Integer index = 0;
+
+    /** Default CSS class name. */
     String clazz = "";
+
+    /** Default unique identifier. */
     String id = "";
 
-    // Undefined
+    /** Undefined property for potential future use. */
     Integer d = 0;
+
+    /** Undefined property for potential future use. */
     Integer cix = 0;
 
     /**

@@ -35,25 +35,45 @@ import com.lottie4j.core.info.DefinitionWithLabel;
  * JSON representation.
  */
 public enum ShapeType implements DefinitionWithLabel {
+    /** Ellipse or circle shape. */
     ELLIPSE("el", "Ellipse", ShapeGroup.SHAPE),
+    /** Solid color fill. */
     FILL("fl", "Fill", ShapeGroup.STYLE),
+    /** Gradient fill with color transitions. */
     GRADIENT_FILL("gf", "Gradient Fill", ShapeGroup.STYLE),
+    /** Gradient stroke with color transitions. */
     GRADIENT_STROKE("gs", "Gradient Stroke", ShapeGroup.STYLE),
+    /** Container for organizing multiple shapes. */
     GROUP("gr", "Group", ShapeGroup.GROUP),
+    /** Merges multiple paths using boolean operations. */
     MERGE("mm", "Merge", ShapeGroup.MODIFIER),
+    /** Placeholder for no style applied. */
     NO_STYLE("no", "No Style", ShapeGroup.STYLE),
+    /** Offsets a path by a specified distance. */
     OFFSET_PATH("op", "Offset Path", ShapeGroup.MODIFIER),
+    /** Custom bezier path shape. */
     PATH("sh", "Path", ShapeGroup.SHAPE),
+    /** Star or polygon shape. */
     POLYSTAR("sr", "PolyStar", ShapeGroup.SHAPE),
+    /** Pucker or bloat distortion effect. */
     PUCKER("pb", "Pucker / Bloat", ShapeGroup.MODIFIER),
+    /** Rectangle or rounded rectangle shape. */
     RECTANGLE("rc", "Rectangle", ShapeGroup.SHAPE),
+    /** Repeats shapes multiple times. */
     REPEATER("rp", "Repeater", ShapeGroup.MODIFIER),
+    /** Rounds the corners of shapes. */
     ROUNDED_CORNERS("rd", "Rounded Corners", ShapeGroup.MODIFIER),
+    /** Stroke outline. */
     STROKE("st", "Stroke", ShapeGroup.STYLE),
+    /** Transformation properties for shapes. */
     TRANSFORM("tr", "Transform", ShapeGroup.GROUP),
+    /** Trims paths to partial segments. */
     TRIM("tm", "Trim", ShapeGroup.SHAPE),
+    /** Twists shapes around a point. */
     TWIST("tw", "Twist", ShapeGroup.MODIFIER),
+    /** Creates a zigzag pattern along a path. */
     ZIG_ZAG("zz", "Zig Zag", ShapeGroup.MODIFIER),
+    /** Unknown or unrecognized shape type. */
     UNKNOWN("", "", ShapeGroup.UNKNOWN);
 
     @JsonValue

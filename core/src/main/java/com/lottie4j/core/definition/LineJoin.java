@@ -29,8 +29,11 @@ import java.util.Arrays;
  * and shapes.
  */
 public enum LineJoin implements DefinitionWithLabel {
+    /** Sharp pointed corner extending beyond the join point. */
     MITER(1, "Miter"),
+    /** Rounded corner with a circular arc. */
     ROUND(2, "Round"),
+    /** Flat beveled corner connecting the stroke edges. */
     BEVEL(3, "Bevel");
 
     @JsonValue

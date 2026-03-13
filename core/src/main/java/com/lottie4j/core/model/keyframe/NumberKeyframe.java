@@ -33,10 +33,20 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class NumberKeyframe extends BigDecimal implements Keyframe, PropertyListing {
+    /**
+     * Constructs a NumberKeyframe with an integer value.
+     *
+     * @param val the integer value
+     */
     public NumberKeyframe(Integer val) {
         super(val);
     }
 
+    /**
+     * Constructs a NumberKeyframe with a double value.
+     *
+     * @param val the double value
+     */
     public NumberKeyframe(Double val) {
         super(val);
     }

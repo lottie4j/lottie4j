@@ -24,7 +24,9 @@ import java.util.Arrays;
  * particularly when dealing with complex paths that may overlap or have holes.
  */
 public enum FillRule implements DefinitionWithLabel {
+    /** Uses the non-zero winding rule to determine fill areas. */
     NON_ZERO(1, "Non Zero"),
+    /** Uses the even-odd rule to determine fill areas. */
     EVEN_ODD(2, "Even Odd");
 
     @JsonValue

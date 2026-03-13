@@ -106,6 +106,13 @@ public record GradientStroke(
         return ShapeType.GRADIENT_STROKE;
     }
 
+    /**
+     * Defines the gradient color configuration for a gradient stroke.
+     * Specifies the number of color stops and the animated color values.
+     *
+     * @param numberOfColors the number of colors in the gradient
+     * @param colors         the animated color values and stops
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record GradientColor(

@@ -30,5 +30,10 @@ import com.lottie4j.core.info.PropertyListingList;
 })
 public interface Keyframe {
 
+    /**
+     * Returns a property listing describing the keyframe configuration.
+     *
+     * @return the property listing for this keyframe
+     */
     PropertyListingList getList();
 }

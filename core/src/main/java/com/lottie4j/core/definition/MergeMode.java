@@ -30,10 +30,15 @@ import java.util.Arrays;
  * combined, enabling complex shape compositions through boolean path operations.
  */
 public enum MergeMode implements DefinitionWithLabel {
+    /** Renders shapes without any merge operation. */
     NORMAL(1, "Normal"),
+    /** Performs a union, combining all shape areas. */
     ADD(2, "Add"),
+    /** Removes subsequent shapes from the first shape. */
     SUBTRACT(3, "Subtract"),
+    /** Keeps only the overlapping areas where all shapes intersect. */
     INTERSECT(4, "Intersect"),
+    /** Keeps only non-overlapping areas, removing intersections. */
     EXCLUDE(5, "Exclude Intersections");
 
     @JsonValue
