@@ -41,6 +41,9 @@ public final class FrameTiming {
 
     /**
      * Alias for explicit readability at call sites that rely on exclusive semantics.
+     *
+     * @param animation animation model
+     * @return exclusive end frame index used for playback bounds
      */
     public static int getOutPointExclusive(Animation animation) {
         return getOutPoint(animation);
@@ -48,6 +51,9 @@ public final class FrameTiming {
 
     /**
      * Returns the last frame that should be sampled/rendered (inclusive).
+     *
+     * @param animation animation model
+     * @return last frame that should be sampled or rendered
      */
     public static int getLastRenderableFrame(Animation animation) {
         int inPoint = getInPoint(animation);

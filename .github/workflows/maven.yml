@@ -10,6 +10,7 @@ on:
 
 jobs:
   test:
+    name: Test validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -25,6 +26,7 @@ jobs:
         run: mvn -ntp -B test
 
   build:
+    name: Build validation
     needs: test
     runs-on: ubuntu-latest
     steps:

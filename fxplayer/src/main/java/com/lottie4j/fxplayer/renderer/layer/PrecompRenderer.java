@@ -94,6 +94,17 @@ public class PrecompRenderer {
 
     /**
      * Renders a precomposition layer with a configurable off-screen resolution scale.
+     *
+     * @param gc                      destination graphics context
+     * @param layer                   precomposition layer
+     * @param frame                   frame in parent timeline
+     * @param assetsById              asset lookup map
+     * @param animation               root animation, used for nested image layers
+     * @param renderResolutionScale   render resolution scale for off-screen buffers
+     * @param layerActivityEvaluator  callback used to evaluate layer in/out activity
+     * @param solidColorLayerRenderer callback to render solid color layers
+     * @param shapeGroupRenderer      callback to render grouped shapes
+     * @param shapeRendererDelegate   callback to render non-group shapes
      */
     public void renderPrecompositionLayer(GraphicsContext gc,
                                           Layer layer,
