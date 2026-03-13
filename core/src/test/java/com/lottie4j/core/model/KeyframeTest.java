@@ -123,7 +123,7 @@ class KeyframeTest {
         assertAll(
                 () -> assertEquals(2, animated.keyframes().size()),
                 () -> assertInstanceOf(TimedKeyframe.class, animated.keyframes().get(0)),
-                () -> assertEquals(60, ((TimedKeyframe) animated.keyframes().get(0)).time()),
+                () -> assertEquals(60.0, ((TimedKeyframe) animated.keyframes().get(0)).time()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
         );
     }
