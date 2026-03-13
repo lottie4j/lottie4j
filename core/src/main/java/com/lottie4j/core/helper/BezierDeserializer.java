@@ -20,6 +20,13 @@ public class BezierDeserializer extends JsonDeserializer {
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
+     * Default constructor for BezierDeserializer.
+     */
+    public BezierDeserializer() {
+        // Default constructor
+    }
+
+    /**
      * Deserializes a JSON node into the appropriate Bezier type.
      * Determines whether to create an AnimatedBezier or FixedBezier based on the "a" field.
      *

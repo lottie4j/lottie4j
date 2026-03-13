@@ -1,3 +1,7 @@
+/**
+ * Core module for Lottie4J animation parsing and manipulation.
+ * Provides model classes, definitions, and utilities for Lottie animations.
+ */
 module com.lottie4j.core {
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.databind;

@@ -23,7 +23,14 @@ import java.util.Arrays;
  * indented points or a regular polygon outline.
  */
 public enum StarType implements DefinitionWithLabel {
+    /**
+     * Star shape with alternating inner and outer vertices.
+     */
     STAR(1, "Star"),
+
+    /**
+     * Regular polygon shape with evenly distributed vertices.
+     */
     POLYGON(2, "Polygon");
 
     @JsonValue

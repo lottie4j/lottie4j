@@ -18,6 +18,13 @@ import java.util.List;
 public class ListDoubleDeserializer extends JsonDeserializer {
 
     /**
+     * Default constructor for ListDoubleDeserializer.
+     */
+    public ListDoubleDeserializer() {
+        // Default constructor
+    }
+
+    /**
      * Deserializes JSON into a list of Double values.
      * Accepts both array notation and single values.
      *

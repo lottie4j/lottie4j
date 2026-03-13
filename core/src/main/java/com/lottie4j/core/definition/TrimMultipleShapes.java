@@ -28,7 +28,14 @@ import java.util.Arrays;
  * distributed across multiple shape elements.
  */
 public enum TrimMultipleShapes implements DefinitionWithLabel {
+    /**
+     * Apply trim operation to each shape separately.
+     */
     INDIVIDUALLY(1, "Individually"),
+
+    /**
+     * Apply trim operation to all shapes as unified path.
+     */
     SIMULTANEOUSLY(2, "Simultaneously");
 
     @JsonValue

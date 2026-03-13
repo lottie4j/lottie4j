@@ -27,8 +27,19 @@ import java.util.Arrays;
  * motion graphics and vector animations.
  */
 public enum StrokeDashType implements DefinitionWithLabel {
+    /**
+     * Visible portion of the stroke pattern.
+     */
     DASH("d", "Dash"),
+
+    /**
+     * Invisible spacing between consecutive dash segments.
+     */
     GAP("g", "Gap"),
+
+    /**
+     * Starting position shift of the dash pattern.
+     */
     OFFSET("o", "Offset");
 
     @JsonValue

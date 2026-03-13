@@ -15,6 +15,13 @@ import java.util.stream.Collectors;
 public class ListListSerializer extends JsonSerializer {
 
     /**
+     * Default constructor for ListListSerializer.
+     */
+    public ListListSerializer() {
+        // Default constructor
+    }
+
+    /**
      * Serializes a nested list structure to JSON.
      * Each inner list is expected to contain coordinate pairs.
      *

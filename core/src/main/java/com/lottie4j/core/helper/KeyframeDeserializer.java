@@ -25,6 +25,13 @@ public class KeyframeDeserializer extends JsonDeserializer {
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
+     * Default constructor for KeyframeDeserializer.
+     */
+    public KeyframeDeserializer() {
+        // Default constructor
+    }
+
+    /**
      * Deserializes JSON into a list of Keyframe objects.
      * Handles both array and single value representations.
      *

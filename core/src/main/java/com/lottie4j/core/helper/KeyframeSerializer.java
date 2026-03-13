@@ -27,6 +27,13 @@ public class KeyframeSerializer extends JsonSerializer {
     private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     /**
+     * Default constructor for KeyframeSerializer.
+     */
+    public KeyframeSerializer() {
+        // Default constructor
+    }
+
+    /**
      * Serializes a list of keyframes to JSON.
      *
      * @param o the object to serialize (expected to be a List of Keyframes)

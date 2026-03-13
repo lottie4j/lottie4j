@@ -15,6 +15,13 @@ import java.util.stream.Collectors;
 public class ListDoubleSerializer extends JsonSerializer {
 
     /**
+     * Default constructor for ListDoubleSerializer.
+     */
+    public ListDoubleSerializer() {
+        // Default constructor
+    }
+
+    /**
      * Serializes a list of Double values to a JSON array.
      *
      * @param o                  the object to serialize (expected to be a List of Doubles)

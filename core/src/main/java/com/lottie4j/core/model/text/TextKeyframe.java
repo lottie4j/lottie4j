@@ -46,6 +46,8 @@ public record TextKeyframe(
 ) implements PropertyListing {
     /**
      * Get the text string from this keyframe
+     *
+     * @return the text content, or empty string if unavailable
      */
     public String getText() {
         if (s == null) {
@@ -66,6 +68,8 @@ public record TextKeyframe(
 
     /**
      * Get font size from this keyframe
+     *
+     * @return the font size, or null if unavailable
      */
     public Double getFontSize() {
         if (s instanceof Map) {
@@ -80,6 +84,8 @@ public record TextKeyframe(
 
     /**
      * Get font color (RGB) from this keyframe
+     *
+     * @return the font color as RGB array, or null
      */
     @SuppressWarnings("unchecked")
     public double[] getFontColor() {
@@ -102,6 +108,8 @@ public record TextKeyframe(
 
     /**
      * Get font family from this keyframe
+     *
+     * @return the font family name, or null if unavailable
      */
     public String getFontFamily() {
         if (s instanceof Map) {
@@ -116,6 +124,8 @@ public record TextKeyframe(
 
     /**
      * Get stroke color (RGB) from this keyframe
+     *
+     * @return the stroke color as RGB array, or null
      */
     @SuppressWarnings("unchecked")
     public double[] getStrokeColor() {
@@ -138,6 +148,8 @@ public record TextKeyframe(
 
     /**
      * Get stroke width from this keyframe
+     *
+     * @return the stroke width, or null if unavailable
      */
     public Double getStrokeWidth() {
         if (s instanceof Map) {
@@ -152,6 +164,8 @@ public record TextKeyframe(
 
     /**
      * Get the full style object for advanced processing
+     *
+     * @return the style map, or null if unavailable
      */
     public Map<String, Object> getStyleMap() {
         if (s instanceof Map) {
