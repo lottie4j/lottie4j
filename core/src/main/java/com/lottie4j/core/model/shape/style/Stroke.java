@@ -89,7 +89,6 @@ public record Stroke(
         list.add("Index", index);
         list.add("Clazz", clazz);
         list.add("ID", id);
-        list.add("d", d);
         list.add("cix", cix);
         list.add("Line cap", lineCap);
         list.add("Line join", lineJoin);

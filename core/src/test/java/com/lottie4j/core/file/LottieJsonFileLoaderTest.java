@@ -9,7 +9,6 @@ import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.shape.Path;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -64,8 +63,76 @@ class LottieJsonFileLoaderTest {
         JsonNode expected = normalizeOptionalFields(mapper.readTree(expectedJson));
         JsonNode actual = normalizeOptionalFields(mapper.readTree(actualJson));
 
-        assertTrue(expected.equals(JSON_NODE_COMPARATOR, actual), () ->
-                "JSON mismatch after normalization.\nExpected: " + expected + "\nActual: " + actual);
+        List<String> differences = findDifferences("", expected, actual);
+
+        assertTrue(differences.isEmpty(), () -> {
+            StringBuilder msg = new StringBuilder("JSON mismatch after normalization. Differences found:\n");
+            int maxDifferences = Math.min(differences.size(), 20);
+            for (int i = 0; i < maxDifferences; i++) {
+                msg.append("  ").append(differences.get(i)).append("\n");
+            }
+            if (differences.size() > maxDifferences) {
+                msg.append("  ... and ").append(differences.size() - maxDifferences).append(" more differences\n");
+            }
+            return msg.toString();
+        });
+    }
+
+    private static List<String> findDifferences(String path, JsonNode expected, JsonNode actual) {
+        List<String> differences = new ArrayList<>();
+
+        if (expected == null && actual == null) {
+            return differences;
+        }
+
+        if (expected == null) {
+            differences.add(path + ": expected null but was " + actual);
+            return differences;
+        }
+
+        if (actual == null) {
+            differences.add(path + ": expected " + expected + " but was null");
+            return differences;
+        }
+
+        if (expected.getNodeType() != actual.getNodeType()) {
+            differences.add(path + ": type mismatch - expected " + expected.getNodeType() + " but was " + actual.getNodeType());
+            return differences;
+        }
+
+        if (expected.isObject()) {
+            // Check all fields in expected
+            expected.fieldNames().forEachRemaining(fieldName -> {
+                String fieldPath = path.isEmpty() ? fieldName : path + "." + fieldName;
+                JsonNode expectedField = expected.get(fieldName);
+                JsonNode actualField = actual.get(fieldName);
+                differences.addAll(findDifferences(fieldPath, expectedField, actualField));
+            });
+
+            // Check for extra fields in actual
+            actual.fieldNames().forEachRemaining(fieldName -> {
+                if (!expected.has(fieldName)) {
+                    String fieldPath = path.isEmpty() ? fieldName : path + "." + fieldName;
+                    differences.add(fieldPath + ": unexpected field with value " + actual.get(fieldName));
+                }
+            });
+        } else if (expected.isArray()) {
+            if (expected.size() != actual.size()) {
+                differences.add(path + ": array size mismatch - expected " + expected.size() + " but was " + actual.size());
+            } else {
+                for (int i = 0; i < expected.size(); i++) {
+                    String indexPath = path + "[" + i + "]";
+                    differences.addAll(findDifferences(indexPath, expected.get(i), actual.get(i)));
+                }
+            }
+        } else {
+            // Compare values using the comparator
+            if (JSON_NODE_COMPARATOR.compare(expected, actual) != 0) {
+                differences.add(path + ": expected " + expected + " but was " + actual);
+            }
+        }
+
+        return differences;
     }
 
     private static JsonNode normalizeOptionalFields(JsonNode node) {
@@ -116,9 +183,6 @@ class LottieJsonFileLoaderTest {
         String jsonFromFile = Files.readString(f.toPath());
         var objectFromJson = mapper.readValue(jsonFromFile, clazz);
         String jsonFromObject = mapper.writeValueAsString(objectFromJson);
-
-        //System.out.println("Original:\n" + jsonFromFile.replace("\n", "").replace(" ", ""));
-        //System.out.println("Generated:\n" + jsonFromObject);
 
         assertAll(
                 () -> assertTrue(clazz.isInstance(objectFromJson)),
@@ -176,24 +240,6 @@ class LottieJsonFileLoaderTest {
                 () -> assertEquals(400, a.height()),
                 () -> assertEquals(5, a.layers().size()),
                 () -> assertEquals("Java_Duke_waving", a.layers().get(0).name()),
-                () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
-        );
-
-        System.out.println("Original:\n" + jsonFromFile);
-        System.out.println("Generated:\n" + jsonFromObject);
-    }
-
-    @Test
-    @Disabled("To be completed")
-    void testLoadBigFile() throws IOException {
-        File f = new File(this.getClass().getResource("/json/lf20_gOmta2.json").getFile());
-        var jsonFromFile = Files.readString(f.toPath());
-        var a = mapper.readValue(jsonFromFile, Animation.class);
-        String jsonFromObject = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(a);
-
-        assertAll(
-                () -> assertNotNull(a),
-                () -> assertEquals("5.5.7", a.version()),
                 () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
 

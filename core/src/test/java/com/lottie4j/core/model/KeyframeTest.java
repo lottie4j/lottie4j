@@ -1,18 +1,13 @@
 package com.lottie4j.core.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.animation.Animated;
-import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -126,38 +121,6 @@ class KeyframeTest {
                 () -> assertInstanceOf(TimedKeyframe.class, animated.keyframes().get(0)),
                 () -> assertEquals(60.0, ((TimedKeyframe) animated.keyframes().get(0)).time()),
                 () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(animated), false)
-        );
-    }
-
-    @Test
-    @Disabled("Not sure if this use-case exists in Lottie format, to be checked later")
-    void testMixed() throws JsonProcessingException {
-        var json = """
-                {
-                    "k": [
-                    100,
-                    33.44,
-                     {
-                       "t": 60,
-                       "s": [
-                         1.1,
-                         2.2,
-                         3.3
-                       ]
-                     }
-                   ]
-                }
-                """;
-
-        var keyFrames = mapper.readValue(json, new TypeReference<List<Keyframe>>() {
-        });
-
-        assertAll(
-                () -> assertEquals(3, keyFrames.size()),
-                () -> assertInstanceOf(NumberKeyframe.class, keyFrames.get(0)),
-                () -> assertInstanceOf(NumberKeyframe.class, keyFrames.get(1)),
-                () -> assertInstanceOf(TimedKeyframe.class, keyFrames.get(2)),
-                () -> JSONAssert.assertEquals(json, mapper.writeValueAsString(keyFrames), false)
         );
     }
 }

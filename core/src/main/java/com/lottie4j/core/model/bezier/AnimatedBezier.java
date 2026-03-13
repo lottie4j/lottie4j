@@ -34,7 +34,10 @@ public record AnimatedBezier(
         Integer animated,
 
         @JsonProperty("k")
-        List<BezierKeyframe> beziers
+        List<BezierKeyframe> beziers,
+
+        @JsonProperty("ix")
+        Integer ix
 ) implements Bezier {
     @Override
     @JsonIgnore
@@ -42,6 +45,7 @@ public record AnimatedBezier(
         var list = new PropertyListingList("Animated Bezier");
         list.add("Animated", animated);
         list.addList("Beziers", beziers);
+        list.add("ix", ix);
         return list;
     }
 }

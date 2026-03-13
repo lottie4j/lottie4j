@@ -34,7 +34,10 @@ public record FixedBezier(
         Integer animated,
 
         @JsonProperty("k")
-        BezierDefinition bezier
+        BezierDefinition bezier,
+
+        @JsonProperty("ix")
+        Integer ix
 
 ) implements Bezier {
     @Override
@@ -43,6 +46,7 @@ public record FixedBezier(
         var list = new PropertyListingList("Fixed Bezier");
         list.add("Animated", animated);
         list.add("Bezier", bezier);
+        list.add("ix", ix);
         return list;
     }
 }

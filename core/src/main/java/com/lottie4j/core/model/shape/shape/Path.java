@@ -46,7 +46,7 @@ public record Path(
         // Undefined
         @JsonProperty("d") Integer d,
         @JsonProperty("cix") Integer cix,
-        @JsonProperty("ind") Double ind,
+        @JsonProperty("ind") Integer ind,
 
         // Path
         @JsonProperty("ks")

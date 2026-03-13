@@ -47,7 +47,7 @@ import java.util.List;
 @JsonInclude(Include.NON_NULL)
 public record Animated(
         @JsonProperty("a")
-        Double animated,
+        Integer animated,
 
         @JsonProperty("k")
         @JsonSerialize(using = KeyframeSerializer.class)
