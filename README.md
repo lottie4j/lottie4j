@@ -15,6 +15,8 @@ Further technical information about this project can be found on [lottie4j.com](
 
 Lottie4J requires **Java 21** or higher.
 
+[![Watch the video](https://img.youtube.com/vi/_zZ1q6zbRgM/maxresdefault.jpg)](https://www.youtube.com/watch?v=_zZ1q6zbRgM)
+
 ## What is Lottie?
 
 [Lottie](https://lottiefiles.com/what-is-lottie) is a JSON-based animation file format that enables designers to ship
