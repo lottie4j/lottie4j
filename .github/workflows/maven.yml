@@ -37,8 +37,8 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn -ntp -B -Dmaven.test.skip=true -B package
+      - name: Build with Maven and install for the JavaDoc validation
+        run: mvn -ntp -B -Dmaven.test.skip=true -B install
 
       - name: Validate JavaDoc
         run: mvn -ntp -B javadoc:javadoc
