@@ -1,7 +1,7 @@
 package com.lottie4j.fxfileviewer;
 
 import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.fxfileviewer.component.LottieWebView;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;

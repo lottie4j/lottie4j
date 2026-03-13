@@ -1,8 +1,8 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
-import com.lottie4j.core.model.Animation;
-import com.lottie4j.core.model.Asset;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.asset.Asset;
+import com.lottie4j.core.model.layer.Layer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import org.slf4j.Logger;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;

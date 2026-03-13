@@ -1,4 +1,4 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.model.transform;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.StrokeDashType;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
+import com.lottie4j.core.model.animation.Animated;
 
 /**
  * Represents a single component of a stroke dash pattern in Lottie animations.

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.EasingHandle;
+import com.lottie4j.core.model.animation.EasingHandle;
 
 import java.util.List;
 

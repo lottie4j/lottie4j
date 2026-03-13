@@ -2,7 +2,7 @@ package com.lottie4j.fxfileviewer.component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
-import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.animation.Animation;
 import javafx.application.Platform;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -93,7 +93,7 @@ public class LottieWebView extends Pane {
      * Waits until the animation reaches a specific frame.
      *
      * @param expectedFrame the frame number to wait for
-     * @param timeoutMs the maximum time to wait in milliseconds
+     * @param timeoutMs     the maximum time to wait in milliseconds
      * @return true if the expected frame was reached within the timeout, false otherwise
      * @throws InterruptedException if the thread is interrupted while waiting
      */
@@ -111,7 +111,7 @@ public class LottieWebView extends Pane {
     /**
      * Executes a JavaScript command synchronously, handling both FX and non-FX threads.
      *
-     * @param script the JavaScript code to execute
+     * @param script   the JavaScript code to execute
      * @param fallback the value to return if execution fails
      * @return the result of script execution, or fallback on error
      */
@@ -174,7 +174,7 @@ public class LottieWebView extends Pane {
     /**
      * Sets the size of the WebView component.
      *
-     * @param width the width in pixels
+     * @param width  the width in pixels
      * @param height the height in pixels
      */
     public void setSize(int width, int height) {
@@ -234,9 +234,9 @@ public class LottieWebView extends Pane {
     /**
      * Loads a Lottie animation into the WebView and optionally shows an in-WebView debug overlay.
      *
-     * @param animation the Lottie animation to load
-     * @param width the width of the player in pixels
-     * @param height the height of the player in pixels
+     * @param animation     the Lottie animation to load
+     * @param width         the width of the player in pixels
+     * @param height        the height of the player in pixels
      * @param showDebugInfo if true, displays a debug overlay with rendering information
      */
     public void loadLottie(Animation animation, int width, int height, boolean showDebugInfo) {

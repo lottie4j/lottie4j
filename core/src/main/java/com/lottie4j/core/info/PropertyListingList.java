@@ -1,6 +1,6 @@
 package com.lottie4j.core.info;
 
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.bezier.Bezier;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.shape.BaseShape;

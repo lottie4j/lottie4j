@@ -1,6 +1,6 @@
 package com.lottie4j.core.model.dot;
 
-import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.animation.Animation;
 
 import java.util.List;
 

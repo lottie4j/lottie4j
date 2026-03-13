@@ -2,13 +2,13 @@ package com.lottie4j.fxplayer.renderer.shape;
 
 import com.lottie4j.core.definition.LineCap;
 import com.lottie4j.core.definition.LineJoin;
-import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.StrokeDash;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.core.model.shape.style.Stroke;
+import com.lottie4j.core.model.transform.StrokeDash;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.scene.canvas.GraphicsContext;

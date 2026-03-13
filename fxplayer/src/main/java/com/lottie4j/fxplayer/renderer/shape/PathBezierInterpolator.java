@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
-import com.lottie4j.core.model.EasingHandle;
+import com.lottie4j.core.model.animation.EasingHandle;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 

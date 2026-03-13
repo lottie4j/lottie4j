@@ -2,8 +2,8 @@ package com.lottie4j.core.file;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
-import com.lottie4j.core.model.Animation;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.layer.Layer;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

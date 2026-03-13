@@ -1,9 +1,9 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.EffectType;
-import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
+import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.BoxBlur;

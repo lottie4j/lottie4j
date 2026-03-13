@@ -1,4 +1,4 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.model.animation;
 
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;

@@ -10,7 +10,7 @@ import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**

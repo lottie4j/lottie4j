@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.EasingHandle;
+import com.lottie4j.core.model.animation.EasingHandle;
 
 import java.math.BigDecimal;
 import java.util.List;

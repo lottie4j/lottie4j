@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.util;
 
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.layer.Layer;
 
 /**
  * Utility for determining layer visibility and activity at specific animation frames.

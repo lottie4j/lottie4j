@@ -1,4 +1,4 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.model.layer;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -9,7 +9,11 @@ import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.definition.MatteMode;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
+import com.lottie4j.core.model.animation.Animated;
+import com.lottie4j.core.model.effect.Effect;
 import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.text.TextData;
+import com.lottie4j.core.model.transform.Transform;
 
 import java.util.List;
 

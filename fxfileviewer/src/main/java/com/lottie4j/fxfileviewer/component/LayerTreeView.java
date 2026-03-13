@@ -1,7 +1,7 @@
 package com.lottie4j.fxfileviewer.component;
 
-import com.lottie4j.core.model.Animation;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;

@@ -1,7 +1,7 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.MatteMode;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.layer.Layer;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;

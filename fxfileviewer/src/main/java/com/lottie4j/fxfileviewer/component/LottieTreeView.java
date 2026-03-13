@@ -2,7 +2,7 @@ package com.lottie4j.fxfileviewer.component;
 
 import com.lottie4j.core.info.PropertyLabelValue;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.animation.Animation;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.TreeItem;

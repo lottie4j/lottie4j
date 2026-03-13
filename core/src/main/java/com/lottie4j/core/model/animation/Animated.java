@@ -1,4 +1,4 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.model.animation;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

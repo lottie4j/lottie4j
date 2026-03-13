@@ -1,4 +1,4 @@
-package com.lottie4j.core.model;
+package com.lottie4j.core.model.animation;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
+import com.lottie4j.core.model.asset.Asset;
+import com.lottie4j.core.model.layer.Layer;
 
 import java.util.List;
 

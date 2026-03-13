@@ -8,7 +8,7 @@ import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.FillRule;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.Animated;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
 
 /**

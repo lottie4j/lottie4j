@@ -42,7 +42,7 @@ This is the minimal code needed to display a Lottie animation.
 
 ```java
 import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.Animation;
+import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.fxplayer.LottiePlayer;
 import javafx.application.Application;
 import javafx.scene.Scene;

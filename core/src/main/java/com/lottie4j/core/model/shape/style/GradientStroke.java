@@ -7,9 +7,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.definition.*;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.Animated;
-import com.lottie4j.core.model.StrokeDash;
+import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.shape.BaseShape;
+import com.lottie4j.core.model.transform.StrokeDash;
 
 import java.util.List;
 

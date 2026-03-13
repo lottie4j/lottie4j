@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.fxplayer.util.ColorParser;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;

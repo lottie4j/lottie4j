@@ -1,9 +1,9 @@
 package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.definition.LayerType;
-import com.lottie4j.core.model.Animation;
-import com.lottie4j.core.model.Asset;
-import com.lottie4j.core.model.Layer;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.asset.Asset;
+import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
