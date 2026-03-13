@@ -18,8 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.skyscreamer.jsonassert.JSONAssert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +27,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BaseShapeTest {
-    private static final Logger logger = LoggerFactory.getLogger(BaseShapeTest.class);
-
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     private static Stream<Arguments> provideShapeFiles() {
@@ -56,9 +52,6 @@ class BaseShapeTest {
         BaseShape baseShape = mapper.readValue(jsonFromFile, BaseShape.class);
 
         String jsonFromObject = mapper.writeValueAsString(baseShape);
-
-        logger.info("Original:\n{}", jsonFromFile.replace("\n", "").replace(" ", ""));
-        logger.info("Generated:\n{}", jsonFromObject);
 
         assertAll(
                 () -> assertTrue(clazz.isInstance(baseShape)),

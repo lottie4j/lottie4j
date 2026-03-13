@@ -202,9 +202,6 @@ class LottieJsonFileLoaderTest {
                 () -> assertEquals(3, l.transform().anchor().keyframes().size()),
                 () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
-
-        System.out.println("Original:\n" + jsonFromFile);
-        System.out.println("Generated:\n" + jsonFromObject);
     }
 
     @Test
