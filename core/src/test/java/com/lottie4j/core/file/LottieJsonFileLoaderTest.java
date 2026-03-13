@@ -242,8 +242,5 @@ class LottieJsonFileLoaderTest {
                 () -> assertEquals("Java_Duke_waving", a.layers().get(0).name()),
                 () -> assertJsonSemanticallyEqual(jsonFromFile, jsonFromObject)
         );
-
-        System.out.println("Original:\n" + jsonFromFile);
-        System.out.println("Generated:\n" + jsonFromObject);
     }
 }
