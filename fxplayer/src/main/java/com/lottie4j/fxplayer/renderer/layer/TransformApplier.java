@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
-import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.model.Layer;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import javafx.scene.canvas.GraphicsContext;

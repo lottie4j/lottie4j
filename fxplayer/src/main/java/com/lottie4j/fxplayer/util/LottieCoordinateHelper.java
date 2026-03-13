@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.util;
 
-import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.model.shape.shape.Ellipse;
 import com.lottie4j.core.model.shape.shape.Rectangle;
 
@@ -130,12 +130,12 @@ public class LottieCoordinateHelper {
     /**
      * Lottie positioning data extracted from Lottie format.
      *
-     * @param x         center x position in Lottie coordinates
-     * @param y         center y position in Lottie coordinates
-     * @param width     rectangle width
-     * @param height    rectangle height
-     * @param topLeftX  converted top-left x for JavaFX
-     * @param topLeftY  converted top-left y for JavaFX
+     * @param x        center x position in Lottie coordinates
+     * @param y        center y position in Lottie coordinates
+     * @param width    rectangle width
+     * @param height   rectangle height
+     * @param topLeftX converted top-left x for JavaFX
+     * @param topLeftY converted top-left y for JavaFX
      */
     public record LottiePosition(
             double x,

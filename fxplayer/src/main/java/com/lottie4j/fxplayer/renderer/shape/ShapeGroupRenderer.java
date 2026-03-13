@@ -1,9 +1,9 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.FillRule;
 import com.lottie4j.core.definition.MergeMode;
 import com.lottie4j.core.definition.ShapeGroup;
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.bezier.AnimatedBezier;
 import com.lottie4j.core.model.bezier.BezierDefinition;
 import com.lottie4j.core.model.bezier.FixedBezier;

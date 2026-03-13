@@ -1,7 +1,7 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.StarType;
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Polystar;

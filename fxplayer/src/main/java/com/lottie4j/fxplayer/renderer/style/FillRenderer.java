@@ -1,6 +1,6 @@
 package com.lottie4j.fxplayer.renderer.style;
 
-import com.lottie4j.core.model.AnimatedValueType;
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.model.shape.style.Fill;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;

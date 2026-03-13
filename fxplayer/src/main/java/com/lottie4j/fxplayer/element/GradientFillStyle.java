@@ -1,7 +1,7 @@
 package com.lottie4j.fxplayer.element;
 
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.GradientType;
-import com.lottie4j.core.model.AnimatedValueType;
 import com.lottie4j.core.model.shape.style.GradientFill;
 import com.lottie4j.fxplayer.util.LottieValueHelper;
 import javafx.scene.paint.*;

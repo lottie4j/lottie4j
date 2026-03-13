@@ -1,5 +1,6 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.shape.Rectangle;
@@ -54,15 +55,15 @@ public class RectangleRenderer implements ShapeRenderer {
         }
 
         // Get size from animated property
-        double width = rectangle.size().getValue(com.lottie4j.core.model.AnimatedValueType.WIDTH, frame);
-        double height = rectangle.size().getValue(com.lottie4j.core.model.AnimatedValueType.HEIGHT, frame);
+        double width = rectangle.size().getValue(AnimatedValueType.WIDTH, frame);
+        double height = rectangle.size().getValue(AnimatedValueType.HEIGHT, frame);
 
         // Get position (center point) from animated property, default to 0,0 if null
         double centerX = 0;
         double centerY = 0;
         if (rectangle.position() != null) {
-            centerX = rectangle.position().getValue(com.lottie4j.core.model.AnimatedValueType.X, frame);
-            centerY = rectangle.position().getValue(com.lottie4j.core.model.AnimatedValueType.Y, frame);
+            centerX = rectangle.position().getValue(AnimatedValueType.X, frame);
+            centerY = rectangle.position().getValue(AnimatedValueType.Y, frame);
         }
 
         // Convert from center-based to top-left for JavaFX rectangle rendering
