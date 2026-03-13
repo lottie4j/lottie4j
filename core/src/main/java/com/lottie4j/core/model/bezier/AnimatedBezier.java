@@ -26,6 +26,7 @@ import java.util.List;
  *
  * @param animated flag indicating whether this Bezier curve is animated
  * @param beziers  list of keyframes defining the Bezier curve at different time points
+ * @param ix       property index for identification purposes
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

@@ -26,6 +26,7 @@ import com.lottie4j.core.info.PropertyListingList;
  *
  * @param animated flag indicating the animation state of this Bezier curve
  * @param bezier   the static Bezier curve definition containing vertices and control points
+ * @param ix       property index for identification purposes
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

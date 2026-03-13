@@ -17,8 +17,6 @@ import java.util.Arrays;
  * This enum implements DefinitionWithLabel to provide both programmatic access via numeric values
  * and user-friendly display names. JSON deserialization is supported through the fromValue method,
  * which handles both integer and decimal string representations of effect type values.
- *
- * @throws LottieModelDefinitionException when attempting to deserialize an unrecognized effect type value
  */
 public enum EffectType implements DefinitionWithLabel {
     NORMAL(5, "Old-style Effect"),
