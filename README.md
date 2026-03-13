@@ -79,6 +79,8 @@ public class DemoApplication extends Application {
 * `core`
     * Java objects for the Lottie data model.
     * Reading and writing of Lottie files.
+    * Based on the info of the Lottie JSON format
+      on [lottie-docs](https://lottiefiles.github.io/lottie-docs/composition/).
 * `fxplayer`
     * JavaFX component to play Lottie animations.
     * Uses the `core` library.
