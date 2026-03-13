@@ -36,6 +36,18 @@ import java.util.List;
  * <p>
  * This class implements PropertyListing to provide structured inspection of asset
  * properties for debugging and analysis purposes.
+ *
+ * @param id the unique identifier for the asset
+ * @param name the display name of the asset
+ * @param shapeType the shape type or path reference
+ * @param fileName the file name (Boolean or String URI)
+ * @param embedded flag indicating if the asset is embedded
+ * @param width the width in pixels (for images)
+ * @param height the height in pixels (for images)
+ * @param layers the layer hierarchy (for precompositions)
+ * @param frameRate the frame rate (for precompositions)
+ * @param extraComposition extra composition settings (for precompositions)
+ * @param type the asset type identifier
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -34,6 +34,14 @@ import java.util.List;
  * This record implements both Keyframe and PropertyListing interfaces to participate in the
  * animation keyframe hierarchy and provide structured introspection of its configuration.
  *
+ * @param time the time in frames (can be fractional)
+ * @param values the keyframe values at this time
+ * @param unknown_e undefined property for future use
+ * @param easingIn the easing handle for incoming interpolation
+ * @param easingOut the easing handle for outgoing interpolation
+ * @param tangentOut the outgoing tangent for spatial interpolation
+ * @param tangentIn the incoming tangent for spatial interpolation
+ * @param holdFrame flag indicating a hold frame (no interpolation)
  * @see Keyframe
  * @see EasingHandle
  * @see PropertyListing

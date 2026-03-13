@@ -23,6 +23,10 @@ import java.util.Map;
  * <p>
  * JSON properties are mapped using short property names for compact serialization:
  * "d" for document, "a" for animators, and "p" for path.
+ *
+ * @param document the text document with content and styling
+ * @param animators the list of text animator configurations
+ * @param path the path data for text-on-path effects
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

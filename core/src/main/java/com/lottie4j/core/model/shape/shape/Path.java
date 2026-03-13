@@ -30,6 +30,18 @@ import com.lottie4j.core.model.shape.BaseShape;
  * Paths can be combined with other shapes in a Group and modified by path operations like Merge,
  * TrimPath, or RoundedCorners to create complex vector graphics. They form the basis for most
  * custom vector artwork in Lottie animations.
+ *
+ * @param name the display name of the shape
+ * @param matchName the match name for referencing
+ * @param hidden whether the shape is hidden from rendering
+ * @param blendMode the blend mode for compositing
+ * @param index the layer ordering index
+ * @param clazz the CSS class identifier
+ * @param id the unique identifier for the shape
+ * @param d undefined property for future use
+ * @param cix undefined property for future use
+ * @param ind undefined property for future use
+ * @param bezier the Bezier curve defining the path geometry
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

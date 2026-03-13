@@ -23,6 +23,10 @@ import com.lottie4j.core.model.animation.Animated;
  * <p>
  * Implements the PropertyListing interface to provide a human-readable representation
  * of the position data structure for debugging and inspection purposes.
+ *
+ * @param value flag indicating if position is enabled
+ * @param x the animated x coordinate value
+ * @param y the animated y coordinate value
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

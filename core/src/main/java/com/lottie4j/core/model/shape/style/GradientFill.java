@@ -34,6 +34,24 @@ import com.lottie4j.core.model.shape.BaseShape;
  * The class includes standard shape properties inherited from BaseShape such as name, match name,
  * blend mode, visibility, and layer ordering index. These properties control how the gradient fill
  * interacts with other shapes and layers in the animation.
+ *
+ * @param name the display name of the shape
+ * @param matchName the match name for referencing
+ * @param hidden whether the shape is hidden from rendering
+ * @param blendMode the blend mode for compositing
+ * @param index the layer ordering index
+ * @param clazz the CSS class identifier
+ * @param id the unique identifier for the shape
+ * @param d undefined property for future use
+ * @param cix undefined property for future use
+ * @param fillRule the rule determining fill behavior for paths
+ * @param opacity the animated opacity value
+ * @param startingPoint the animated gradient starting point
+ * @param endPoint the animated gradient ending point
+ * @param gradientType the type of gradient (linear or radial)
+ * @param colors the gradient color stops and positions
+ * @param highlightLength the animated highlight length for radial gradients
+ * @param highlightAngle the animated highlight angle for radial gradients
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -91,6 +109,12 @@ public record GradientFill(
         return ShapeType.GRADIENT_FILL;
     }
 
+    /**
+     * Represents gradient color data with color stops and positions.
+     *
+     * @param numberOfColors the number of color stops in the gradient
+     * @param colors the animated color values and positions
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record GradientColor(

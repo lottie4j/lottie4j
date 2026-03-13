@@ -77,11 +77,26 @@ public interface BaseShape {
     Integer d = 0;
     Integer cix = 0;
 
+    /**
+     * Returns a property listing describing the shape structure.
+     *
+     * @return the property listing for this shape
+     */
     PropertyListingList getList();
 
+    /**
+     * Returns the name of the shape.
+     *
+     * @return the shape name
+     */
     default String name() {
         return name;
     }
 
+    /**
+     * Returns the specific type of this shape.
+     *
+     * @return the shape type
+     */
     ShapeType shapeType();
 }

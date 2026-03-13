@@ -18,6 +18,11 @@ import com.lottie4j.core.info.PropertyListingList;
  * to define smooth, scalable curves through control points.
  */
 public interface Bezier {
+    /**
+     * Returns a property listing describing the Bezier curve structure.
+     *
+     * @return the property listing for this Bezier curve
+     */
     @JsonIgnore
     PropertyListingList getList();
 }

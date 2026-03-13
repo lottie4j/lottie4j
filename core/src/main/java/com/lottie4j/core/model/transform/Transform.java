@@ -22,6 +22,18 @@ import com.lottie4j.core.model.animation.Animated;
  * <p>
  * All transformation properties are optional and may be null if not specified in the
  * animation data.
+ *
+ * @param anchor the animated anchor point position
+ * @param position the animated position coordinates
+ * @param scale the animated scale factors
+ * @param rotation the animated 2D rotation angle
+ * @param rx the animated x-axis rotation (3D)
+ * @param ry the animated y-axis rotation (3D)
+ * @param rz the animated z-axis rotation (3D)
+ * @param skew the animated skew angle
+ * @param skewAxis the animated skew axis angle
+ * @param opacity the animated opacity value
+ * @param unknown undefined property for future use
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)

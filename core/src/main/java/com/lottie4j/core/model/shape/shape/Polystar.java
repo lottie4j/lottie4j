@@ -28,6 +28,24 @@ import com.lottie4j.core.model.shape.BaseShape;
  * <p>
  * Roundness properties control the Bezier curve smoothing applied to the vertices and edges,
  * allowing for everything from sharp geometric shapes to smooth, rounded forms.
+ *
+ * @param name the display name of the shape
+ * @param matchName the match name for referencing
+ * @param hidden whether the shape is hidden from rendering
+ * @param blendMode the blend mode for compositing
+ * @param index the layer ordering index
+ * @param clazz the CSS class identifier
+ * @param id the unique identifier for the shape
+ * @param d undefined property for future use
+ * @param cix undefined property for future use
+ * @param starType the type of polystar (star or polygon)
+ * @param position the animated center position of the shape
+ * @param outerRadius the animated outer radius value
+ * @param outerRoundness the animated outer vertex roundness value
+ * @param rotation the animated rotation angle in degrees
+ * @param points the animated number of points or vertices
+ * @param innerRadius the animated inner radius for stars
+ * @param innerRoundness the animated inner vertex roundness value
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

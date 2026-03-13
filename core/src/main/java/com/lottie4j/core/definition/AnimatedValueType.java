@@ -16,14 +16,23 @@ package com.lottie4j.core.definition;
  * multi-dimensional property values by accessing their individual components through their respective indices.
  */
 public enum AnimatedValueType {
+    /** X coordinate position component (index 0) */
     X(0),
+    /** Y coordinate position component (index 1) */
     Y(1),
+    /** Width dimension component (index 0) */
     WIDTH(0),
+    /** Height dimension component (index 1) */
     HEIGHT(1),
+    /** Red color channel component (index 0) */
     RED(0),
+    /** Green color channel component (index 1) */
     GREEN(1),
+    /** Blue color channel component (index 2) */
     BLUE(2),
+    /** Opacity/alpha channel component (index 3) */
     OPACITY(3),
+    /** Composite color property (index 0) */
     COLOR(0) // TODO
     ;
 
