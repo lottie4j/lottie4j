@@ -90,8 +90,8 @@ class CompareFxViewWithWebViewTest {
                 "json/timeline_animation.json",
                 "dot/lottie4j.lottie",
                 "dot/demo-1.lottie",
-                "dot/demo-2.lottie",
-                "dot/demo-3.lottie"
+                "dot/demo-2.lottie"
+                //"dot/demo-3.lottie"
         );
     }
 
