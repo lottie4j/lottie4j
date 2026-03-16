@@ -34,7 +34,7 @@ public class BezierDeserializer extends ValueDeserializer {
      * @param jsonParser             the JSON parser
      * @param deserializationContext the deserialization context
      * @return an AnimatedBezier if animated flag is set, otherwise a FixedBezier
-     * @throws IOException if parsing fails
+     * @throws JacksonException if parsing fails
      */
     @Override
     public Bezier deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {

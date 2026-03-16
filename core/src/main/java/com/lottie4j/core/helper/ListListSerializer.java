@@ -29,7 +29,7 @@ public class ListListSerializer extends ValueSerializer {
      * @param o                  the object to serialize (expected to be a List of List of Doubles)
      * @param jsonGenerator      the JSON generator
      * @param serializerProvider the serializer provider
-     * @throws IOException if serialization fails
+     * @throws JacksonException if serialization fails
      */
     @Override
     public void serialize(Object o, JsonGenerator jsonGenerator, SerializationContext serializerProvider) throws JacksonException {

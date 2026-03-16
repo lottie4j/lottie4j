@@ -31,7 +31,7 @@ public class ListDoubleDeserializer extends ValueDeserializer {
      * @param jsonParser the JSON parser
      * @param deserializationContext the deserialization context
      * @return list of double values
-     * @throws IOException if parsing fails
+     * @throws JacksonException if parsing fails
      */
     @Override
     public List<Double> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {

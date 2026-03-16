@@ -38,7 +38,7 @@ public class KeyframeDeserializer extends ValueDeserializer {
      * @param jsonParser the JSON parser
      * @param deserializationContext the deserialization context
      * @return list of deserialized keyframes
-     * @throws IOException if parsing fails
+     * @throws JacksonException if parsing fails
      */
     @Override
     public List<Keyframe> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {
