@@ -40,7 +40,9 @@ public class ObjectMapperFactory {
 
         // Configure to only serialize fields marked with @JsonProperty
         // This prevents serialization of helper methods like getList()
-        mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+        // Note: SORT_PROPERTIES_ALPHABETICALLY is disabled to preserve the original property order
+        // from the Lottie JSON, which is critical for features like track mattes that depend on
+        // layer adjacency and property ordering
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 

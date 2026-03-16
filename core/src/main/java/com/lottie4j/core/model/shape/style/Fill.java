@@ -1,9 +1,6 @@
 package com.lottie4j.core.model.shape.style;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.FillRule;
 import com.lottie4j.core.definition.ShapeType;
@@ -41,6 +38,7 @@ import com.lottie4j.core.model.shape.BaseShape;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({"ty", "c", "o", "r", "bm", "nm", "mn", "hd", "ix", "d", "cix", "cl", "ln"})
 public record Fill(
         // Generic for all Shapes
         @JsonProperty("nm") String name,

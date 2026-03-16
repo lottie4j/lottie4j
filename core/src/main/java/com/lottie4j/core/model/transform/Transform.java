@@ -1,10 +1,7 @@
 package com.lottie4j.core.model.transform;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.animation.Animated;
@@ -37,6 +34,7 @@ import com.lottie4j.core.model.animation.Animated;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
+@JsonPropertyOrder({"a", "p", "s", "r", "rx", "ry", "rz", "sk", "sa", "o", "or"})
 public record Transform(
         @JsonProperty("a") Animated anchor,
         @JsonProperty("p") Animated position,

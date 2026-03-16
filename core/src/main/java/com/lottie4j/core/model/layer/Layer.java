@@ -1,9 +1,6 @@
 package com.lottie4j.core.model.layer;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.definition.MatteMode;
@@ -69,6 +66,11 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({
+    "ddd", "ind", "ty", "nm", "mn", "tt", "td", "sr", "ks", "ao",
+    "masksProperties", "ef", "shapes", "ip", "op", "st", "bm",
+    "refId", "w", "h", "tm", "sc", "t", "parent", "cl", "ln", "tg", "hix", "hd"
+})
 public record Layer(
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
@@ -78,7 +80,7 @@ public record Layer(
         @JsonProperty("ind") Integer indexLayer,
         @JsonProperty("parent") Integer indexParent,
         @JsonProperty("sr") Integer timeStretch,
-        @JsonProperty("ip") Double inPoint,
+        @JsonProperty("ip") Integer inPoint,
         @JsonProperty("op") Integer outPoint,
         @JsonProperty("st") Integer startTime,
         @JsonProperty("bm") BlendMode blendMode,
