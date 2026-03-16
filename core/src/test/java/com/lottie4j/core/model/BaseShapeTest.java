@@ -1,6 +1,6 @@
 package com.lottie4j.core.model;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.shape.BaseShape;

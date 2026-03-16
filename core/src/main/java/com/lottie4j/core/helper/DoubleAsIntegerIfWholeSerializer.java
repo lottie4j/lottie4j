@@ -1,10 +1,11 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import tools.jackson.core.JacksonException;
 
-import java.io.IOException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.SerializationContext;
+
 
 /**
  * Jackson serializer that outputs Double values as integers when they represent whole numbers,
@@ -14,10 +15,10 @@ import java.io.IOException;
  * (e.g., "t": 0) rather than floating point (e.g., "t": 0.0), while still supporting fractional
  * frames when needed.
  */
-public class DoubleAsIntegerIfWholeSerializer extends JsonSerializer<Double> {
+public class DoubleAsIntegerIfWholeSerializer extends ValueSerializer<Double> {
 
     @Override
-    public void serialize(Double value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(Double value, JsonGenerator gen, SerializationContext serializers) throws JacksonException {
         if (value == null) {
             gen.writeNull();
             return;

@@ -1,11 +1,9 @@
 package com.lottie4j.core.helper;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import tools.jackson.core.json.JsonReadFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Factory class that provides a properly configured ObjectMapper instance
@@ -22,7 +20,7 @@ public class ObjectMapperFactory {
     /**
      * Returns a shared, thread-safe ObjectMapper instance configured with:
      * <ul>
-     *     <li>Jdk8Module for Optional, OptionalInt, etc. support</li>
+     *     <li>Built-in JDK8 support (Optional, OptionalInt, etc.) provided by Jackson 3</li>
      *     <li>Proper handling of Java records with @JsonProperty annotations</li>
      *     <li>Ignores non-annotated methods</li>
      * </ul>
@@ -34,18 +32,12 @@ public class ObjectMapperFactory {
     }
 
     private static ObjectMapper createObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new Jdk8Module());
-        mapper.configure(JsonParser.Feature.ALLOW_NUMERIC_LEADING_ZEROS, true);
-
-        // Configure to only serialize fields marked with @JsonProperty
-        // This prevents serialization of helper methods like getList()
-        // Note: SORT_PROPERTIES_ALPHABETICALLY is disabled to preserve the original property order
-        // from the Lottie JSON, which is critical for features like track mattes that depend on
-        // layer adjacency and property ordering
-        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-        return mapper;
+        return JsonMapper.builder()
+                .enable(JsonReadFeature.ALLOW_LEADING_ZEROS_FOR_NUMBERS)
+                // Note: SORT_PROPERTIES_ALPHABETICALLY is disabled to preserve the original property order
+                // from the Lottie JSON, which is critical for features like track mattes that depend on
+                // layer adjacency and property ordering
+                .changeDefaultPropertyInclusion(i -> i.withValueInclusion(JsonInclude.Include.NON_NULL))
+                .build();
     }
 }

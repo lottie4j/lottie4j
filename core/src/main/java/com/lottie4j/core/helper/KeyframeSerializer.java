@@ -1,15 +1,14 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationContext;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,7 +21,7 @@ import java.util.stream.Collectors;
  *     <li>Zero value must be written as 0 and not 0.0</li>
  * </ul>
  */
-public class KeyframeSerializer extends JsonSerializer {
+public class KeyframeSerializer extends ValueSerializer {
 
     private final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
@@ -42,7 +41,7 @@ public class KeyframeSerializer extends JsonSerializer {
      * @throws IOException if serialization fails
      */
     @Override
-    public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(Object o, JsonGenerator jsonGenerator, SerializationContext serializerProvider) throws JacksonException {
         if (o instanceof List<?> list) {
             if (list.size() == 1 && list.get(0) instanceof NumberKeyframe keyframe) {
                 jsonGenerator.writeRawValue(keyframe.doubleValue() == 0 ? "0" : keyframe.toString());
@@ -69,7 +68,7 @@ public class KeyframeSerializer extends JsonSerializer {
         } else if (keyframe instanceof TimedKeyframe timedKeyframe) {
             try {
                 return mapper.writeValueAsString(timedKeyframe);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 return "";
             }
         }

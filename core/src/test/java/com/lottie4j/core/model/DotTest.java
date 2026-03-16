@@ -1,7 +1,7 @@
 package com.lottie4j.core.model;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.dot.Manifest;
 import org.junit.jupiter.api.Test;
@@ -12,7 +12,7 @@ class DotTest {
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Test
-    void shouldParseManifest() throws JsonProcessingException {
+    void shouldParseManifest() throws JacksonException {
         var json = """
                 {
                     "version":"2",

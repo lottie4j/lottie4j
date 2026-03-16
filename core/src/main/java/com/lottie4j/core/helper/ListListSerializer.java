@@ -1,10 +1,11 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import tools.jackson.core.JacksonException;
 
-import java.io.IOException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.SerializationContext;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
  * Custom serializer for nested lists of Double values (List of List of Double).
  * Formats numbers as integers when appropriate and handles coordinate pairs.
  */
-public class ListListSerializer extends JsonSerializer {
+public class ListListSerializer extends ValueSerializer {
 
     /**
      * Default constructor for ListListSerializer.
@@ -31,7 +32,7 @@ public class ListListSerializer extends JsonSerializer {
      * @throws IOException if serialization fails
      */
     @Override
-    public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(Object o, JsonGenerator jsonGenerator, SerializationContext serializerProvider) throws JacksonException {
         String rt = "[" +
                 ((List<List<Double>>) o).stream()
                         .map(v -> "[" + getValue(v.getFirst()) + "," + getValue(v.get(1)) + "]")
