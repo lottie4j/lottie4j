@@ -83,7 +83,7 @@ public class TransformApplier {
             double opacity = layer.transform().opacity().getValue(0, frame);
             double previousAlpha = gc.getGlobalAlpha();
             double normalizedOpacity = opacity / 100.0;
-            logger.info("TransformApplier: Layer '{}' at frame {} - opacity raw={}, normalized={}, previousAlpha={}, newAlpha={}",
+            logger.debug("TransformApplier: Layer '{}' at frame {} - opacity raw={}, normalized={}, previousAlpha={}, newAlpha={}",
                     layer.name(), frame, opacity, normalizedOpacity, previousAlpha, previousAlpha * normalizedOpacity);
             if (opacity > 0) {
                 gc.setGlobalAlpha(gc.getGlobalAlpha() * (opacity / 100.0));

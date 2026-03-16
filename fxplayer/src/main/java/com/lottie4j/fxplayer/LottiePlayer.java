@@ -702,7 +702,7 @@ public class LottiePlayer extends Canvas {
         boolean hasAnimatedOpacity = false;
         if (layer.transform() != null && layer.transform().opacity() != null) {
             layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
-            logger.info("LottiePlayer: Layer '{}' at frame {}: opacity raw value = {}, normalized = {}, current globalAlpha = {}",
+            logger.debug("LottiePlayer: Layer '{}' at frame {}: opacity raw value = {}, normalized = {}, current globalAlpha = {}",
                     layer.name(), frame, layer.transform().opacity().getValue(0, frame), layerOpacity, gc.getGlobalAlpha());
             if (layerOpacity <= 0) {
                 logger.debug("Skipping layer {} - opacity is {}", layer.name(), layerOpacity);
