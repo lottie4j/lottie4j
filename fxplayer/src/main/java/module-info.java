@@ -3,8 +3,6 @@
  * Provides renderers for layers, shapes, and effects using JavaFX Canvas API.
  */
 module com.lottie4j.fxplayer {
-    requires com.fasterxml.jackson.databind;
-    requires com.fasterxml.jackson.core;
     requires com.lottie4j.core;
     requires javafx.graphics;
     requires javafx.controls;

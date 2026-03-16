@@ -1,6 +1,6 @@
 package com.lottie4j.fxfileviewer.component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.animation.Animation;
 import javafx.application.Platform;
