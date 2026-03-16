@@ -3,7 +3,7 @@
  * Provides both simple and debug viewers with playback controls and layer inspection.
  */
 module com.lottie4j.fxfileviewer {
-    requires com.fasterxml.jackson.databind;
+    requires tools.jackson.databind;
     requires com.lottie4j.core;
     requires javafx.graphics;
     requires javafx.controls;
@@ -14,7 +14,7 @@ module com.lottie4j.fxfileviewer {
     requires java.desktop;
 
     exports com.lottie4j.fxfileviewer to javafx.scene, javafx.graphics, javafx.application;
-    exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene, com.fasterxml.jackson.databind;
+    exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene, tools.jackson.databind;
 
     opens com.lottie4j.fxfileviewer to org.junit.platform.commons;
 }

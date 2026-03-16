@@ -1,7 +1,7 @@
 package com.lottie4j.core.model.shape.shape;
 
 import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonDeserialize;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.helper.BezierDeserializer;

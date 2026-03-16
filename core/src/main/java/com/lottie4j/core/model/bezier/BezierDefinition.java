@@ -2,7 +2,7 @@ package com.lottie4j.core.model.bezier;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 import com.lottie4j.core.helper.ListListSerializer;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;

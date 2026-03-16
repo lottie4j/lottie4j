@@ -1,6 +1,6 @@
 package com.lottie4j.fxfileviewer.component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.animation.Animation;
 import javafx.application.Platform;
@@ -11,7 +11,6 @@ import javafx.scene.web.WebView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
@@ -686,7 +685,7 @@ public class LottieWebView extends Pane {
                     """.formatted(width, height, width, height, showDebugInfo, encodedJson);
 
             webEngine.loadContent(html);
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Failed to load Lottie file in WebView: {}", e.getMessage());
         }
     }

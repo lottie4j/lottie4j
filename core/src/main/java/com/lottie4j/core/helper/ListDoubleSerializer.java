@@ -1,10 +1,11 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import tools.jackson.core.JacksonException;
 
-import java.io.IOException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.SerializationContext;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
  * Custom serializer for lists of Double values.
  * Serializes the list as a JSON array.
  */
-public class ListDoubleSerializer extends JsonSerializer {
+public class ListDoubleSerializer extends ValueSerializer {
 
     /**
      * Default constructor for ListDoubleSerializer.
@@ -27,10 +28,10 @@ public class ListDoubleSerializer extends JsonSerializer {
      * @param o                  the object to serialize (expected to be a List of Doubles)
      * @param jsonGenerator      the JSON generator
      * @param serializerProvider the serializer provider
-     * @throws IOException if serialization fails
+     * @throws JacksonException if serialization fails
      */
     @Override
-    public void serialize(Object o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(Object o, JsonGenerator jsonGenerator, SerializationContext serializerProvider) throws JacksonException {
         String rt = "[" +
                 ((List<Double>) o).stream()
                         .map(String::valueOf)

@@ -1,26 +1,26 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.IntNode;
+import tools.jackson.core.JacksonException;
+
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.IntNode;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
  * Custom deserializer for Keyframe objects that handles both single values and arrays.
  * Determines whether to create TimedKeyframe or NumberKeyframe based on JSON structure.
  */
-public class KeyframeDeserializer extends JsonDeserializer {
+public class KeyframeDeserializer extends ValueDeserializer {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
@@ -38,17 +38,16 @@ public class KeyframeDeserializer extends JsonDeserializer {
      * @param jsonParser the JSON parser
      * @param deserializationContext the deserialization context
      * @return list of deserialized keyframes
-     * @throws IOException if parsing fails
+     * @throws JacksonException if parsing fails
      */
     @Override
-    public List<Keyframe> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public List<Keyframe> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {
         List<Keyframe> rt = new ArrayList<>();
 
-        JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+        JsonNode node = (jsonParser.readValueAsTree());
 
         if (node instanceof ArrayNode array) {
-            for (Iterator<JsonNode> it = array.elements(); it.hasNext(); ) {
-                JsonNode childNode = it.next();
+            for (JsonNode childNode : array.elements()) {
                 rt.add(getKeyframe(childNode));
             }
         } else {

@@ -1,21 +1,21 @@
 package com.lottie4j.core.helper;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.core.JacksonException;
 
-import java.io.IOException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
  * Custom deserializer for Double lists that handles both single values and arrays.
  * Normalizes single double values into a list for consistent handling.
  */
-public class ListDoubleDeserializer extends JsonDeserializer {
+public class ListDoubleDeserializer extends ValueDeserializer {
 
     /**
      * Default constructor for ListDoubleDeserializer.
@@ -31,17 +31,16 @@ public class ListDoubleDeserializer extends JsonDeserializer {
      * @param jsonParser the JSON parser
      * @param deserializationContext the deserialization context
      * @return list of double values
-     * @throws IOException if parsing fails
+     * @throws JacksonException if parsing fails
      */
     @Override
-    public List<Double> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public List<Double> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {
         List<Double> rt = new ArrayList<>();
 
-        JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+        JsonNode node = (jsonParser.readValueAsTree());
 
         if (node instanceof ArrayNode array) {
-            for (Iterator<JsonNode> it = array.elements(); it.hasNext(); ) {
-                JsonNode childNode = it.next();
+            for (JsonNode childNode : array.elements()) {
                 rt.add(childNode.doubleValue());
             }
         } else {

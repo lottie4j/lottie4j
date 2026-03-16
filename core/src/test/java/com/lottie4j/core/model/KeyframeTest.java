@@ -1,7 +1,7 @@
 package com.lottie4j.core.model;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
@@ -16,7 +16,7 @@ class KeyframeTest {
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Test
-    void testSingleValue() throws JsonProcessingException {
+    void testSingleValue() throws JacksonException {
         var json = """
                 {
                     "k": 123
@@ -34,7 +34,7 @@ class KeyframeTest {
     }
 
     @Test
-    void testInteger() throws JsonProcessingException {
+    void testInteger() throws JacksonException {
         var json = """
                 {
                     "k": [
@@ -55,7 +55,7 @@ class KeyframeTest {
     }
 
     @Test
-    void testDouble() throws JsonProcessingException {
+    void testDouble() throws JacksonException {
         var json = """
                 {
                     "k": [
@@ -76,7 +76,7 @@ class KeyframeTest {
     }
 
     @Test
-    void testTimed() throws JsonProcessingException {
+    void testTimed() throws JacksonException {
         var json = """
                 {
                     "k": [
