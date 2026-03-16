@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.lottie4j.core.helper.DoubleAsIntegerIfWholeSerializer;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.animation.EasingHandle;
@@ -49,7 +51,9 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TimedKeyframe(
-        @JsonProperty("t") Double time, // in frames (can be fractional)
+        @JsonProperty("t")
+        @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class)
+        Double time, // in frames (can be fractional)
         // Use BigDecimal here to be able to handle both Integer and Double
         // https://stackoverflow.com/questions/40885065/jackson-mapper-integer-from-json-parsed-as-double-with-drong-precision
         @JsonProperty("s") List<BigDecimal> values,

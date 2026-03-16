@@ -243,6 +243,15 @@ public class LottieWebView extends Pane {
         try {
             setSize(width, height);
             var lottieJson = OBJECT_MAPPER.writeValueAsString(animation);
+
+            // Debug: write JSON to file
+            try {
+                java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/lottie-webview-actual.json"), lottieJson);
+                logger.info("Debug: Wrote JSON to /tmp/lottie-webview-actual.json");
+            } catch (Exception e) {
+                logger.warn("Failed to write debug JSON: {}", e.getMessage());
+            }
+
             var encodedJson = Base64.getEncoder().encodeToString(lottieJson.getBytes(StandardCharsets.UTF_8));
 
             var html = """
