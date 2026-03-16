@@ -113,7 +113,7 @@ public class RectangleRenderer implements ShapeRenderer {
             if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
                 double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
                 gc.save();
-                gc.setStroke(gradientStrokeStyle.get().getPaint(frame));
+                gc.setStroke(gradientStrokeStyle.get().getPaint(frame, renderX, renderY, width, height));
                 gc.setLineWidth(compensatedWidth);
                 double opacity = gradientStrokeStyle.get().getOpacity(frame);
                 if (opacity < 1.0) {

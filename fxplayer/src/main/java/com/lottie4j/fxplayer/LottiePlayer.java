@@ -20,6 +20,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import org.slf4j.Logger;
@@ -688,6 +689,12 @@ public class LottiePlayer extends Canvas {
      * @param frame animation frame
      */
     private void renderLayerInternal(GraphicsContext gc, Layer layer, double frame) {
+        // If layer has a non-normal blend mode, render using offscreen buffer approach
+        if (layer.blendMode() != null && layer.blendMode() != com.lottie4j.core.definition.BlendMode.NORMAL) {
+            renderLayerWithBlendModeOffscreen(gc, layer, frame);
+            return;
+        }
+
         gc.save();
 
         // Check layer opacity - skip rendering if transparent
@@ -695,6 +702,8 @@ public class LottiePlayer extends Canvas {
         boolean hasAnimatedOpacity = false;
         if (layer.transform() != null && layer.transform().opacity() != null) {
             layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
+            logger.info("LottiePlayer: Layer '{}' at frame {}: opacity raw value = {}, normalized = {}, current globalAlpha = {}",
+                    layer.name(), frame, layer.transform().opacity().getValue(0, frame), layerOpacity, gc.getGlobalAlpha());
             if (layerOpacity <= 0) {
                 logger.debug("Skipping layer {} - opacity is {}", layer.name(), layerOpacity);
                 gc.restore();
@@ -997,7 +1006,7 @@ public class LottiePlayer extends Canvas {
         logger.debug("Rendering layer {} to off-screen buffer ({}x{}, scale={})",
                 layer.name(), offscreenWidth, offscreenHeight, renderResolutionScale);
 
-        javafx.scene.image.WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
+        WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
             offscreenGc.save();
             offscreenGc.scale(renderResolutionScale, renderResolutionScale);
 
@@ -1100,6 +1109,147 @@ public class LottiePlayer extends Canvas {
     public void setDebugInfoVisible(boolean debug) {
         this.debug = debug;
         seekToFrame(getCurrentFrame());
+    }
+
+    /**
+     * Renders a layer with a blend mode using offscreen buffer.
+     * This matches HTML/CSS blend mode behavior.
+     */
+    private void renderLayerWithBlendModeOffscreen(GraphicsContext gc, Layer layer, double frame) {
+        javafx.scene.effect.BlendMode fxBlendMode = convertToFxBlendMode(layer.blendMode());
+        if (fxBlendMode == null) {
+            // Unsupported blend mode - render normally
+            logger.debug("Unsupported blend mode {} for layer {}, rendering normally", layer.blendMode(), layer.name());
+            renderLayerInternalWithoutBlendMode(gc, layer, frame);
+            return;
+        }
+
+        if (frame == 0.0) {
+            logger.info("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
+        }
+
+        // Use animation dimensions for buffer
+        double bufferWidth = Math.max(100, getAnimationWidth());
+        double bufferHeight = Math.max(100, getAnimationHeight());
+
+        // Render layer to offscreen buffer
+        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
+            renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame);
+        });
+
+        // Composite with blend mode
+        gc.save();
+        gc.setGlobalBlendMode(fxBlendMode);
+        gc.drawImage(layerImage, 0, 0);
+        gc.restore();
+    }
+
+    /**
+     * Renders a layer without checking/applying blend modes (used internally for offscreen rendering).
+     */
+    private void renderLayerInternalWithoutBlendMode(GraphicsContext gc, Layer layer, double frame) {
+        gc.save();
+
+        // Check layer opacity - skip rendering if transparent
+        double layerOpacity = 1.0;
+        boolean hasAnimatedOpacity = false;
+        if (layer.transform() != null && layer.transform().opacity() != null) {
+            layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
+            if (layerOpacity <= 0) {
+                logger.debug("Skipping layer {} - opacity is {}", layer.name(), layerOpacity);
+                gc.restore();
+                return;
+            }
+            hasAnimatedOpacity = layer.transform().opacity().animated() != null && layer.transform().opacity().animated() > 0;
+        }
+
+        // For layers with animated opacity containing shapes, use off-screen rendering
+        if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
+                layer.shapes() != null && !layer.shapes().isEmpty()) {
+            logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
+            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity);
+            gc.restore();
+            return;
+        }
+
+        // Apply parent transforms recursively
+        applyParentTransforms(gc, layer, frame);
+
+        // Apply this layer's transform (with opacity)
+        applyLayerTransform(gc, layer, frame);
+
+        // Handle precomposition layers
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            renderPrecompositionLayer(gc, layer, frame);
+        }
+        // Handle image layers
+        else if (layer.layerType() == LayerType.IMAGE) {
+            imageRenderer.render(gc, layer, animation);
+        }
+        // Handle solid color layers
+        else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            solidColorRenderer.render(gc, layer, getAnimationWidth(), getAnimationHeight());
+        }
+        // Handle text layers
+        else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
+        }
+        // Skip rendering shapes for NULL layers (type 3), but transforms are still applied
+        else if (layer.layerType() != LayerType.NULL) {
+            // Render layer shapes
+            if (layer.shapes() != null && !layer.shapes().isEmpty()) {
+                TrimPath layerTrimPath = layerTrimPathCache.getOrDefault(layer, null);
+
+                // Render shapes in REVERSE order (bottom-to-top: last shape renders first)
+                for (int i = layer.shapes().size() - 1; i >= 0; i--) {
+                    BaseShape shape = layer.shapes().get(i);
+
+                    // Skip modifiers and styles - they're applied within groups/shapes
+                    if (shape instanceof TrimPath) {
+                        continue;
+                    }
+
+                    switch (shape.shapeType().shapeGroup()) {
+                        case GROUP -> shapeGroupRenderer.renderShapeTypeGroup(gc, shape, frame, layerTrimPath);
+                        case SHAPE -> renderShapeTypeShape(shape, null, frame);
+                        case STYLE -> logger.debug("Styles should be applied within groups");
+                        case MODIFIER -> logger.debug("Modifiers should be applied within groups");
+                        default -> logger.warn("Unknown shape group: {}", shape.shapeType().shapeGroup());
+                    }
+                }
+            }
+        } else {
+            logger.debug("Rendering NULL layer: {}", layer.name());
+        }
+
+        gc.restore();
+    }
+
+    /**
+     * Converts Lottie blend mode to JavaFX blend mode.
+     *
+     * @param lottieBlendMode Lottie blend mode
+     * @return JavaFX blend mode, or null if not supported
+     */
+    private javafx.scene.effect.BlendMode convertToFxBlendMode(com.lottie4j.core.definition.BlendMode lottieBlendMode) {
+        return switch (lottieBlendMode) {
+            case NORMAL -> javafx.scene.effect.BlendMode.SRC_OVER;
+            case MULTIPLY -> javafx.scene.effect.BlendMode.MULTIPLY;
+            case SCREEN -> javafx.scene.effect.BlendMode.SCREEN;
+            case OVERLAY -> javafx.scene.effect.BlendMode.OVERLAY;
+            case DARKEN -> javafx.scene.effect.BlendMode.DARKEN;
+            case LIGHTEN -> javafx.scene.effect.BlendMode.LIGHTEN;
+            case COLOR_DODGE -> javafx.scene.effect.BlendMode.COLOR_DODGE;
+            case COLOR_BURN -> javafx.scene.effect.BlendMode.COLOR_BURN;
+            case HARD_LIGHT -> null; // Not supported in JavaFX
+            case SOFT_LIGHT -> null; // Not supported in JavaFX
+            case DIFFERENCE -> javafx.scene.effect.BlendMode.DIFFERENCE;
+            case EXCLUSION -> javafx.scene.effect.BlendMode.EXCLUSION;
+            case HUE -> null; // Not supported in JavaFX
+            case SATURATION -> null; // Not supported in JavaFX
+            case COLOR -> null; // Not supported in JavaFX
+            case LUMINOSITY -> null; // Not supported in JavaFX
+        };
     }
 }
 

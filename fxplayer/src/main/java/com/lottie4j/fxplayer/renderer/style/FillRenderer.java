@@ -28,9 +28,10 @@ public class FillRenderer {
     public void render(GraphicsContext gc, Fill fill, double frame) {
         if (fill.color() != null) {
             // Get RGB components individually
-            double r = fill.color().getValue(AnimatedValueType.RED, frame) / 255.0;
-            double g = fill.color().getValue(AnimatedValueType.GREEN, frame) / 255.0;
-            double b = fill.color().getValue(AnimatedValueType.BLUE, frame) / 255.0;
+            // Lottie color values are already normalized to 0-1 range, no need to divide by 255
+            double r = fill.color().getValue(AnimatedValueType.RED, frame);
+            double g = fill.color().getValue(AnimatedValueType.GREEN, frame);
+            double b = fill.color().getValue(AnimatedValueType.BLUE, frame);
 
             // Get opacity
             double opacity = fill.opacity() != null ?

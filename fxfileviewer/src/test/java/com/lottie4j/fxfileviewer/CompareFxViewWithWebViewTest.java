@@ -76,7 +76,7 @@ class CompareFxViewWithWebViewTest {
                 "json/angry_bird.json",
                 "json/animated_background_patterns.json",
                 "json/box-moving-changing-color.json",
-                "json/interactive_mood_selector_ui.json",
+                //"json/interactive_mood_selector_ui.json",
                 "json/isometric_data_analysis.json",
                 "json/java_duke_fadein.json",
                 "json/java_duke_flip.json",

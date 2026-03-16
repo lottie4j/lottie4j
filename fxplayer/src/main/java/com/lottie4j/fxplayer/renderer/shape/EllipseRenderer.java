@@ -266,7 +266,7 @@ public class EllipseRenderer implements ShapeRenderer {
         // Fill the entire ellipse (not affected by trim path)
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
-            Paint gradientPaint = gradientFillStyle.get().getPaint(frame);
+            Paint gradientPaint = gradientFillStyle.get().getPaint(frame, x, y, width, height);
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
             if (opacity < 1.0) {

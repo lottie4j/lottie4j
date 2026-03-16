@@ -186,12 +186,13 @@ public class PathRenderer implements ShapeRenderer {
             gc.setFill(gradientPaint);
             double opacity = gradientFillStyle.get().getOpacity(frame);
             logger.debug("  Applying gradient fill, opacity: {}", opacity);
+            double currentAlpha = gc.getGlobalAlpha();
             if (opacity < 1.0) {
-                double currentAlpha = gc.getGlobalAlpha();
                 gc.setGlobalAlpha(currentAlpha * opacity);
             }
             gc.fill();
-            gc.setGlobalAlpha(1.0);
+            // Restore previous alpha
+            gc.setGlobalAlpha(currentAlpha);
             return;
         }
 

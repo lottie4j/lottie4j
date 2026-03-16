@@ -28,12 +28,16 @@ public class GradientStrokeStyle {
     }
 
     /**
-     * Builds the JavaFX paint for the stroke gradient at a specific frame.
+     * Builds the JavaFX paint for the stroke gradient at a specific frame with shape bounds.
      *
-     * @param frame animation frame to sample
-     * @return linear/radial gradient paint, or black when gradient data is unavailable
+     * @param frame       animation frame to sample
+     * @param shapeX      shape bounding box x position
+     * @param shapeY      shape bounding box y position
+     * @param shapeWidth  shape bounding box width
+     * @param shapeHeight shape bounding box height
+     * @return linear/radial gradient paint using proportional coordinates
      */
-    public Paint getPaint(double frame) {
+    public Paint getPaint(double frame, double shapeX, double shapeY, double shapeWidth, double shapeHeight) {
         if (gradientStroke == null || gradientStroke.colors() == null) {
             return Color.BLACK;
         }
@@ -51,6 +55,85 @@ public class GradientStrokeStyle {
             endY = gradientStroke.endPoint().getValue(AnimatedValueType.Y, frame);
         }
 
+        List<Stop> stops = buildGradientStops(frame);
+
+        if (stops.isEmpty()) {
+            return Color.BLACK;
+        }
+
+        // Transform to proportional coordinates
+        boolean hasShapeBounds = (shapeWidth > 0 && shapeHeight > 0);
+
+        if (gradientStroke.gradientType() == GradientType.RADIAL) {
+            if (hasShapeBounds) {
+                double centerX = (startX - shapeX) / shapeWidth;
+                double centerY = (startY - shapeY) / shapeHeight;
+                double radiusX = (endX - startX) / shapeWidth;
+                double radiusY = (endY - startY) / shapeHeight;
+                double radius = Math.sqrt(radiusX * radiusX + radiusY * radiusY);
+                return new RadialGradient(
+                        0, 0,
+                        centerX, centerY,
+                        radius,
+                        true, // proportional
+                        CycleMethod.NO_CYCLE,
+                        stops
+                );
+            } else {
+                double centerX = startX;
+                double centerY = startY;
+                double radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                return new RadialGradient(
+                        0, 0,
+                        centerX, centerY,
+                        radius,
+                        false, // absolute
+                        CycleMethod.NO_CYCLE,
+                        stops
+                );
+            }
+        } else {
+            // Linear gradient
+            if (hasShapeBounds) {
+                double propStartX = (startX - shapeX) / shapeWidth;
+                double propStartY = (startY - shapeY) / shapeHeight;
+                double propEndX = (endX - shapeX) / shapeWidth;
+                double propEndY = (endY - shapeY) / shapeHeight;
+
+                return new LinearGradient(
+                        propStartX, propStartY, propEndX, propEndY,
+                        true, // proportional
+                        CycleMethod.NO_CYCLE,
+                        stops
+                );
+            } else {
+                return new LinearGradient(
+                        startX, startY, endX, endY,
+                        false, // absolute
+                        CycleMethod.NO_CYCLE,
+                        stops
+                );
+            }
+        }
+    }
+
+    /**
+     * Builds the JavaFX paint for the stroke gradient at a specific frame.
+     *
+     * @param frame animation frame to sample
+     * @return linear/radial gradient paint, or black when gradient data is unavailable
+     */
+    public Paint getPaint(double frame) {
+        return getPaint(frame, 0, 0, 0, 0);
+    }
+
+    /**
+     * Builds the list of gradient stops from the stroke color data.
+     *
+     * @param frame animation frame to sample
+     * @return list of gradient stops
+     */
+    private List<Stop> buildGradientStops(double frame) {
         List<Stop> stops = new ArrayList<>();
         if (gradientStroke.colors().colors() != null) {
             int numColors = gradientStroke.colors().numberOfColors();
@@ -80,36 +163,7 @@ public class GradientStrokeStyle {
                 stops.add(new Stop(offset, Color.color(r, g, b, alpha)));
             }
         }
-
-        if (stops.isEmpty()) {
-            return Color.BLACK;
-        }
-
-        if (gradientStroke.gradientType() == GradientType.RADIAL) {
-            double centerX = startX;
-            double centerY = startY;
-            double radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-            return new RadialGradient(
-                    0,
-                    0,
-                    centerX,
-                    centerY,
-                    radius,
-                    false,
-                    CycleMethod.NO_CYCLE,
-                    stops
-            );
-        }
-
-        return new LinearGradient(
-                startX,
-                startY,
-                endX,
-                endY,
-                false,
-                CycleMethod.NO_CYCLE,
-                stops
-        );
+        return stops;
     }
 
     /**

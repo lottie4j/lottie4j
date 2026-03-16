@@ -31,9 +31,13 @@ public class FillStyle {
 
         // Lottie colors should be in 0-1.0 range, but clamp to handle edge cases
         // (e.g., values like "004" parsed as 4 due to leading zeros)
-        double r = LottieValueHelper.clamp(fill.color().getValue(AnimatedValueType.RED, frame));
-        double g = LottieValueHelper.clamp(fill.color().getValue(AnimatedValueType.GREEN, frame));
-        double b = LottieValueHelper.clamp(fill.color().getValue(AnimatedValueType.BLUE, frame));
+        double rRaw = fill.color().getValue(AnimatedValueType.RED, frame);
+        double gRaw = fill.color().getValue(AnimatedValueType.GREEN, frame);
+        double bRaw = fill.color().getValue(AnimatedValueType.BLUE, frame);
+
+        double r = LottieValueHelper.clamp(rRaw);
+        double g = LottieValueHelper.clamp(gRaw);
+        double b = LottieValueHelper.clamp(bRaw);
 
         // Get opacity and normalize from 0-100 to 0-1.0 range
         // Opacity is a single value, so use index 0 with frame for animation

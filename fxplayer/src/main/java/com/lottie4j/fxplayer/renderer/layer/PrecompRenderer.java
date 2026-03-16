@@ -8,7 +8,9 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.util.FrameTiming;
+import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -377,47 +379,29 @@ public class PrecompRenderer {
                                             SolidColorLayerRenderer solidColorLayerRenderer,
                                             ShapeGroupRenderer shapeGroupRenderer,
                                             ShapeRendererDelegate shapeRendererDelegate) {
-        gc.save();
-
-        // Check layer opacity - skip rendering if transparent
+        // Check layer opacity first - skip rendering if transparent
+        double layerOpacity = 1.0;
         if (layer.transform() != null && layer.transform().opacity() != null) {
-            double opacity = layer.transform().opacity().getValue(0, frame);
-            if (opacity <= 0) {
-                logger.debug("Skipping precomp layer {} - opacity is {}", layer.name(), opacity);
-                gc.restore();
+            layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
+            if (layerOpacity <= 0) {
+                logger.debug("Skipping precomp layer {} - opacity is {}", layer.name(), layerOpacity);
                 return;
             }
         }
 
-        applyPrecompParentTransforms(gc, layer, frame, precompRenderCache);
-        transformApplier.applyLayerTransform(gc, layer, frame);
-
-        if (layer.layerType() == LayerType.PRECOMPOSITION) {
-            renderPrecompositionLayer(gc,
-                    layer,
-                    frame,
-                    assetsById,
-                    animation,
-                    parentPrecompWidth,
-                    parentPrecompHeight,
-                    renderResolutionScale,
-                    layerActivityEvaluator,
-                    solidColorLayerRenderer,
-                    shapeGroupRenderer,
-                    shapeRendererDelegate);
-        } else if (layer.layerType() == LayerType.IMAGE) {
-            imageRenderer.render(gc, layer, animation);
-        } else if (layer.layerType() == LayerType.SOLD_COLOR) {
-            solidColorLayerRenderer.render(gc, layer);
-        } else if (layer.layerType() == LayerType.TEXT) {
-            textRenderer.render(gc, layer, frame);
-        } else if (layer.layerType() != LayerType.NULL) {
-            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate, precompRenderCache);
-        } else {
-            logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
+        // If layer has a non-normal blend mode, we need to render to offscreen buffer first
+        // then composite with the blend mode (matching HTML/CSS behavior)
+        if (layer.blendMode() != null && layer.blendMode() != com.lottie4j.core.definition.BlendMode.NORMAL) {
+            renderLayerWithBlendMode(gc, layer, frame, precompRenderCache, assetsById, animation,
+                    parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
+                    layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+            return;
         }
 
-        gc.restore();
+        // Delegate to internal method that does actual rendering
+        renderPrecompLayerWithoutBlendMode(gc, layer, frame, precompRenderCache, assetsById, animation,
+                parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
+                layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
     }
 
     /**
@@ -780,6 +764,145 @@ public class PrecompRenderer {
          * @param frame       frame to sample
          */
         void render(BaseShape shape, Group parentGroup, double frame);
+    }
+
+    /**
+     * Internal method that renders a precomp layer without checking/applying blend modes.
+     * This is used both for normal rendering and for rendering to offscreen buffers.
+     */
+    private void renderPrecompLayerWithoutBlendMode(GraphicsContext gc,
+                                                     Layer layer,
+                                                     double frame,
+                                                     PrecompRenderCache precompRenderCache,
+                                                     Map<String, Asset> assetsById,
+                                                     Animation animation,
+                                                     double parentPrecompWidth,
+                                                     double parentPrecompHeight,
+                                                     double renderResolutionScale,
+                                                     LayerActivityEvaluator layerActivityEvaluator,
+                                                     SolidColorLayerRenderer solidColorLayerRenderer,
+                                                     ShapeGroupRenderer shapeGroupRenderer,
+                                                     ShapeRendererDelegate shapeRendererDelegate) {
+        gc.save();
+
+        // Check layer opacity - skip rendering if transparent
+        if (layer.transform() != null && layer.transform().opacity() != null) {
+            double opacity = layer.transform().opacity().getValue(0, frame);
+            if (opacity <= 0) {
+                logger.debug("Skipping precomp layer {} - opacity is {}", layer.name(), opacity);
+                gc.restore();
+                return;
+            }
+        }
+
+        applyPrecompParentTransforms(gc, layer, frame, precompRenderCache);
+        transformApplier.applyLayerTransform(gc, layer, frame);
+
+        if (layer.layerType() == LayerType.PRECOMPOSITION) {
+            renderPrecompositionLayer(gc,
+                    layer,
+                    frame,
+                    assetsById,
+                    animation,
+                    parentPrecompWidth,
+                    parentPrecompHeight,
+                    renderResolutionScale,
+                    layerActivityEvaluator,
+                    solidColorLayerRenderer,
+                    shapeGroupRenderer,
+                    shapeRendererDelegate);
+        } else if (layer.layerType() == LayerType.IMAGE) {
+            imageRenderer.render(gc, layer, animation);
+        } else if (layer.layerType() == LayerType.SOLD_COLOR) {
+            solidColorLayerRenderer.render(gc, layer);
+        } else if (layer.layerType() == LayerType.TEXT) {
+            textRenderer.render(gc, layer, frame);
+        } else if (layer.layerType() != LayerType.NULL) {
+            renderPrecompShapes(gc, layer, frame, shapeGroupRenderer, shapeRendererDelegate, precompRenderCache);
+        } else {
+            logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
+        }
+
+        gc.restore();
+    }
+
+    /**
+     * Renders a layer with a blend mode using offscreen buffer approach.
+     * This matches HTML/CSS blend mode behavior where the layer is rendered first,
+     * then composited with the blend mode.
+     */
+    private void renderLayerWithBlendMode(GraphicsContext gc,
+                                          Layer layer,
+                                          double frame,
+                                          PrecompRenderCache precompRenderCache,
+                                          Map<String, Asset> assetsById,
+                                          Animation animation,
+                                          double parentPrecompWidth,
+                                          double parentPrecompHeight,
+                                          double renderResolutionScale,
+                                          LayerActivityEvaluator layerActivityEvaluator,
+                                          SolidColorLayerRenderer solidColorLayerRenderer,
+                                          ShapeGroupRenderer shapeGroupRenderer,
+                                          ShapeRendererDelegate shapeRendererDelegate) {
+        // Get blend mode
+        javafx.scene.effect.BlendMode fxBlendMode = convertToFxBlendMode(layer.blendMode());
+        if (fxBlendMode == null) {
+            // Unsupported blend mode - render normally
+            logger.debug("Unsupported blend mode {} for layer {}, rendering normally", layer.blendMode(), layer.name());
+            renderPrecompLayerWithoutBlendMode(gc, layer, frame, precompRenderCache, assetsById, animation,
+                    parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
+                    layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+            return;
+        }
+
+        if (frame == 0.0) {
+            logger.info("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
+        }
+
+        // Calculate bounds for offscreen buffer - use precomp bounds if available
+        double bufferWidth = Math.max(100, parentPrecompWidth > 0 ? parentPrecompWidth : 400);
+        double bufferHeight = Math.max(100, parentPrecompHeight > 0 ? parentPrecompHeight : 400);
+
+        // Render layer to offscreen buffer
+        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
+            // Render the layer normally to the offscreen buffer
+            renderPrecompLayerWithoutBlendMode(offscreenGc, layer, frame, precompRenderCache, assetsById, animation,
+                    parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
+                    layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
+        });
+
+        // Composite the offscreen image with blend mode
+        gc.save();
+        gc.setGlobalBlendMode(fxBlendMode);
+        gc.drawImage(layerImage, 0, 0);
+        gc.restore();
+    }
+
+    /**
+     * Converts Lottie blend mode to JavaFX blend mode.
+     *
+     * @param lottieBlendMode Lottie blend mode
+     * @return JavaFX blend mode, or null if not supported
+     */
+    private javafx.scene.effect.BlendMode convertToFxBlendMode(com.lottie4j.core.definition.BlendMode lottieBlendMode) {
+        return switch (lottieBlendMode) {
+            case NORMAL -> javafx.scene.effect.BlendMode.SRC_OVER;
+            case MULTIPLY -> javafx.scene.effect.BlendMode.MULTIPLY;
+            case SCREEN -> javafx.scene.effect.BlendMode.SCREEN;
+            case OVERLAY -> javafx.scene.effect.BlendMode.OVERLAY;
+            case DARKEN -> javafx.scene.effect.BlendMode.DARKEN;
+            case LIGHTEN -> javafx.scene.effect.BlendMode.LIGHTEN;
+            case COLOR_DODGE -> javafx.scene.effect.BlendMode.COLOR_DODGE;
+            case COLOR_BURN -> javafx.scene.effect.BlendMode.COLOR_BURN;
+            case HARD_LIGHT -> null; // Not supported in JavaFX
+            case SOFT_LIGHT -> null; // Not supported in JavaFX
+            case DIFFERENCE -> javafx.scene.effect.BlendMode.DIFFERENCE;
+            case EXCLUSION -> javafx.scene.effect.BlendMode.EXCLUSION;
+            case HUE -> null; // Not supported in JavaFX
+            case SATURATION -> null; // Not supported in JavaFX
+            case COLOR -> null; // Not supported in JavaFX
+            case LUMINOSITY -> null; // Not supported in JavaFX
+        };
     }
 
     private record PrecompRenderCache(

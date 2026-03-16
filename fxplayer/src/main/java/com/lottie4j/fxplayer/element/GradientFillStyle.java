@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 public class GradientFillStyle {
-
     private final GradientFill gradientFill;
 
     /**
@@ -97,14 +96,19 @@ public class GradientFillStyle {
             for (int i = 0; i < numColors; i++) {
                 int baseIdx = i * 4;
                 double offset = colorAnimated.getValue(baseIdx);
-                double r = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 1));
-                double g = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 2));
-                double b = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 3));
+                double rRaw = colorAnimated.getValue(baseIdx + 1);
+                double gRaw = colorAnimated.getValue(baseIdx + 2);
+                double bRaw = colorAnimated.getValue(baseIdx + 3);
+
+                double r = LottieValueHelper.clamp(rRaw);
+                double g = LottieValueHelper.clamp(gRaw);
+                double b = LottieValueHelper.clamp(bRaw);
 
                 // Get alpha for this offset, default to 1.0 if not specified
                 double alpha = alphaByOffset.getOrDefault(offset, 1.0);
 
-                stops.add(new Stop(offset, Color.color(r, g, b, alpha)));
+                Color stopColor = Color.color(r, g, b, alpha);
+                stops.add(new Stop(offset, stopColor));
             }
         }
 
@@ -112,7 +116,8 @@ public class GradientFillStyle {
             return Color.BLACK;
         }
 
-        // Determine if we have shape bounds information
+        // ALWAYS use proportional mode when bounds are provided
+        // Proportional mode ensures gradient is shape-relative and works with transforms
         boolean hasShapeBounds = (shapeWidth > 0 && shapeHeight > 0);
 
         // Check gradient type and create appropriate gradient
