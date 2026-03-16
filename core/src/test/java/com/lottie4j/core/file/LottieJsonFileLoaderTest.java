@@ -102,7 +102,7 @@ class LottieJsonFileLoaderTest {
 
         if (expected.isObject()) {
             // Check all fields in expected
-            expected.fieldNames().forEachRemaining(fieldName -> {
+            expected.propertyNames().forEach(fieldName -> {
                 String fieldPath = path.isEmpty() ? fieldName : path + "." + fieldName;
                 JsonNode expectedField = expected.get(fieldName);
                 JsonNode actualField = actual.get(fieldName);
@@ -110,7 +110,7 @@ class LottieJsonFileLoaderTest {
             });
 
             // Check for extra fields in actual
-            actual.fieldNames().forEachRemaining(fieldName -> {
+            actual.propertyNames().forEach(fieldName -> {
                 if (!expected.has(fieldName)) {
                     String fieldPath = path.isEmpty() ? fieldName : path + "." + fieldName;
                     differences.add(fieldPath + ": unexpected field with value " + actual.get(fieldName));
@@ -141,9 +141,9 @@ class LottieJsonFileLoaderTest {
         }
 
         if (node.isObject()) {
-            ObjectNode normalized = node.deepCopy();
+            ObjectNode normalized = (ObjectNode) node.deepCopy();
             List<String> fieldNames = new ArrayList<>();
-            normalized.fieldNames().forEachRemaining(fieldNames::add);
+            normalized.propertyNames().forEach(fieldNames::add);
             for (String fieldName : fieldNames) {
                 normalized.set(fieldName, normalizeOptionalFields(normalized.get(fieldName)));
             }
