@@ -100,6 +100,7 @@ public record Animated(
                 if (timedKeyframe.time() <= frame) {
                     prevKeyframe = timedKeyframe;
                     // Look for the next keyframe
+                    nextKeyframe = null; // Reset to null before checking for next keyframe
                     if (i + 1 < keyframes.size() && keyframes.get(i + 1) instanceof TimedKeyframe next) {
                         nextKeyframe = next;
                     }
@@ -195,6 +196,7 @@ public record Animated(
                 if (timedKeyframe.time() <= frame) {
                     prevKeyframe = timedKeyframe;
                     // Look for the next keyframe
+                    nextKeyframe = null; // Reset to null before checking for next keyframe
                     if (i + 1 < keyframes.size() && keyframes.get(i + 1) instanceof TimedKeyframe next) {
                         nextKeyframe = next;
                     }
