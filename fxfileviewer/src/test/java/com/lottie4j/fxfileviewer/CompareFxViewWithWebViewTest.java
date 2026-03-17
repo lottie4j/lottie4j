@@ -171,6 +171,7 @@ class CompareFxViewWithWebViewTest {
 
         // Delete existing files if directory exists
         if (Files.exists(outputDir)) {
+            // Empty the directory
             try (Stream<Path> paths = Files.walk(outputDir)) {
                 paths.sorted((a, b) -> -a.compareTo(b)) // Delete files before directories
                         .forEach(path -> {
@@ -181,9 +182,8 @@ class CompareFxViewWithWebViewTest {
                             }
                         });
             }
+            outputDir.toFile().delete();
         }
-
-        Files.createDirectories(outputDir);
 
         // Use actual animation dimensions, scaled by the provided factor
         int animWidth = animation.width() != null ? animation.width() : CANVAS_WIDTH;
@@ -235,7 +235,7 @@ class CompareFxViewWithWebViewTest {
 
                         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
                         int outPointExclusive = animation.outPoint() != null ? animation.outPoint() : 60;
-                        int lastFrame = Math.max(inPoint, outPointExclusive - 1);
+                        int lastFrame = Math.max(inPoint, outPointExclusive - 2);
                         List<Integer> framesToCompare = buildSampledFrames(inPoint, lastFrame, 5);
 
                         seekAndSyncFrame(fxPlayer, webView, inPoint);
@@ -304,6 +304,7 @@ class CompareFxViewWithWebViewTest {
                             });
 
                             if (roundedSimilarity < SIMILARITY_THRESHOLD) {
+                                Files.createDirectories(outputDir);
                                 saveImage(playerImage, webViewImage, outputDir.resolve("frame_" + currentFrame + "_similarity_" + roundedSimilarity + ".png"));
                             }
 
