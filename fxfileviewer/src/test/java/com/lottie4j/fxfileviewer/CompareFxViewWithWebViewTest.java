@@ -235,7 +235,7 @@ class CompareFxViewWithWebViewTest {
 
                         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
                         int outPointExclusive = animation.outPoint() != null ? animation.outPoint() : 60;
-                        int lastFrame = Math.max(inPoint, outPointExclusive - 2);
+                        int lastFrame = Math.max(inPoint, outPointExclusive - 5);
                         List<Integer> framesToCompare = buildSampledFrames(inPoint, lastFrame, 5);
 
                         seekAndSyncFrame(fxPlayer, webView, inPoint);

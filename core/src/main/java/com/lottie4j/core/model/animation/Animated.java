@@ -149,14 +149,20 @@ public record Animated(
         // Clamp progress to [0, 1]
         progress = Math.max(0, Math.min(1, progress));
 
-        // Apply Bezier easing if available
+        double startValue = getValueFromKeyframe(prevKeyframe, index);
+        double endValue = getValueFromKeyframe(nextKeyframe, index);
+
+        // Check for spatial bezier interpolation (for position animations)
+        // Spatial bezier uses linear progress for path shape, temporal easing controls speed
+        if (hasSpatialBezier(prevKeyframe, nextKeyframe, index)) {
+            return applySpatialBezier(prevKeyframe, nextKeyframe, index, progress);
+        }
+
+        // Apply Bezier easing if available (for non-spatial interpolation)
         double easedProgress = progress;
         if (prevKeyframe.easingOut() != null && prevKeyframe.easingIn() != null) {
             easedProgress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
         }
-
-        double startValue = getValueFromKeyframe(prevKeyframe, index);
-        double endValue = getValueFromKeyframe(nextKeyframe, index);
 
         return startValue + (endValue - startValue) * easedProgress;
     }
@@ -246,13 +252,19 @@ public record Animated(
         // Clamp progress to [0, 1]
         progress = Math.max(0, Math.min(1, progress));
 
-        // Apply Bezier easing if available
+        double startValue = getValueFromKeyframe(prevKeyframe, valueType.getIndex());
+        double endValue = getValueFromKeyframe(nextKeyframe, valueType.getIndex());
+
+        // Check for spatial bezier interpolation (for position animations)
+        // Spatial bezier uses linear progress for path shape, temporal easing controls speed
+        if (hasSpatialBezier(prevKeyframe, nextKeyframe, valueType.getIndex())) {
+            return applySpatialBezier(prevKeyframe, nextKeyframe, valueType.getIndex(), progress);
+        }
+
+        // Apply Bezier easing if available (for non-spatial interpolation)
         if (prevKeyframe.easingOut() != null && prevKeyframe.easingIn() != null) {
             progress = applyBezierEasing(progress, prevKeyframe.easingOut(), prevKeyframe.easingIn());
         }
-
-        double startValue = getValueFromKeyframe(prevKeyframe, valueType.getIndex());
-        double endValue = getValueFromKeyframe(nextKeyframe, valueType.getIndex());
 
         return startValue + (endValue - startValue) * progress;
     }
@@ -359,5 +371,80 @@ public record Animated(
         double mt2 = mt * mt;
 
         return 3 * mt2 * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t2 * (p3 - p2);
+    }
+
+    /**
+     * Checks if spatial bezier interpolation should be used for the given keyframes and value index.
+     * Spatial bezier is used when tangent values (ti/to) are present and non-zero.
+     *
+     * @param prevKeyframe the starting keyframe
+     * @param nextKeyframe the ending keyframe
+     * @param index        the value index to check
+     * @return true if spatial bezier should be applied
+     */
+    private boolean hasSpatialBezier(TimedKeyframe prevKeyframe, TimedKeyframe nextKeyframe, int index) {
+        // Spatial bezier requires both tangentOut and tangentIn to be present
+        if (prevKeyframe.tangentOut() == null || nextKeyframe.tangentIn() == null) {
+            return false;
+        }
+
+        // Check if the tangents have values at the specified index
+        if (prevKeyframe.tangentOut().isEmpty() || nextKeyframe.tangentIn().isEmpty()) {
+            return false;
+        }
+
+        // Check if index is within bounds
+        if (index >= prevKeyframe.tangentOut().size() || index >= nextKeyframe.tangentIn().size()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Applies spatial bezier interpolation using tangent control points.
+     * This creates curved paths for position animations instead of linear interpolation.
+     *
+     * Formula: P(t) = (1-t)³·P0 + 3(1-t)²t·P1 + 3(1-t)t²·P2 + t³·P3
+     * Where:
+     * - P0 = start value
+     * - P1 = P0 + tangentOut
+     * - P2 = P3 + tangentIn
+     * - P3 = end value
+     *
+     * @param prevKeyframe the starting keyframe
+     * @param nextKeyframe the ending keyframe
+     * @param index        the value index to interpolate
+     * @param progress     the interpolation progress (0-1), already eased
+     * @return the interpolated value using spatial bezier curve
+     */
+    private double applySpatialBezier(TimedKeyframe prevKeyframe, TimedKeyframe nextKeyframe, int index, double progress) {
+        double startValue = getValueFromKeyframe(prevKeyframe, index);
+        double endValue = getValueFromKeyframe(nextKeyframe, index);
+
+        // Get tangent values, defaulting to 0 if not available
+        double tangentOut = 0.0;
+        double tangentIn = 0.0;
+
+        if (prevKeyframe.tangentOut() != null && index < prevKeyframe.tangentOut().size()) {
+            tangentOut = prevKeyframe.tangentOut().get(index).doubleValue();
+        }
+
+        if (nextKeyframe.tangentIn() != null && index < nextKeyframe.tangentIn().size()) {
+            tangentIn = nextKeyframe.tangentIn().get(index).doubleValue();
+        }
+
+        // Calculate control points for cubic bezier
+        // P0 = startValue
+        // P1 = startValue + tangentOut
+        // P2 = endValue + tangentIn
+        // P3 = endValue
+        double p0 = startValue;
+        double p1 = startValue + tangentOut;
+        double p2 = endValue + tangentIn;
+        double p3 = endValue;
+
+        // Apply cubic bezier formula
+        return cubicBezier(progress, p0, p1, p2, p3);
     }
 }
