@@ -548,9 +548,8 @@ public class PrecompRenderer {
         // Asset height is currently modeled as String; parse when numeric.
         if (asset.height() != null) {
             try {
-                double parsed = Double.parseDouble(asset.height());
-                if (parsed > 0) {
-                    return parsed;
+                if (asset.height() > 0) {
+                    return asset.height();
                 }
             } catch (NumberFormatException ex) {
                 logger.debug("Unable to parse precomp asset height '{}' for {}", asset.height(), asset.id());

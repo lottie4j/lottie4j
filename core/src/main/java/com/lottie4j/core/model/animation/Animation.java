@@ -36,6 +36,7 @@ import java.util.List;
  * @param assets          collection of reusable assets referenced by layers (images, precompositions, etc.)
  * @param layers          ordered collection of layers that compose the visual hierarchy of the animation
  * @param markers         collection of named markers for identifying specific points in the timeline
+ * @param props           additional properties object
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
@@ -51,7 +52,8 @@ public record Animation(
         @JsonProperty("h") Integer height,
         @JsonProperty("assets") List<Asset> assets,
         @JsonProperty("layers") List<Layer> layers,
-        @JsonProperty("markers") List<Marker> markers
+        @JsonProperty("markers") List<Marker> markers,
+        @JsonProperty("props") Object props
 ) implements PropertyListing {
     @Override
     @JsonIgnore

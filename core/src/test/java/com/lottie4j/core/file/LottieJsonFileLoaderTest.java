@@ -54,6 +54,7 @@ class LottieJsonFileLoaderTest {
                 Arguments.of("/json/java_duke_layer_5.json", Animation.class),
                 Arguments.of("/json/java_duke_single_layer.json", Layer.class),
                 Arguments.of("/json/java_duke_single_layer_no_shapes.json", Layer.class),
+                Arguments.of("/json/melodymatrix.json", Animation.class),
                 Arguments.of("/json/timeline_single_shape_reduced.json", Animation.class),
                 Arguments.of("/dot/demo-3-animation.json", Animation.class)
         );

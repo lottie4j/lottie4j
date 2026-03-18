@@ -63,7 +63,7 @@ public record Asset(
 
         // Image
         @JsonProperty("w") Integer width,
-        @JsonProperty("h") String height,
+        @JsonProperty("h") Integer height,
 
         // Precomposition
         @JsonProperty("layers") List<Layer> layers,

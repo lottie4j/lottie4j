@@ -20,12 +20,20 @@ import com.lottie4j.core.info.PropertyListingList;
  * @param name      the display name of the mask
  * @param matchName the match name used for identification and referencing
  * @param inverted  indicates whether the mask effect is inverted (true) or normal (false)
+ * @param mode      the mask mode
+ * @param pt        the mask path
+ * @param o         the mask opacity
+ * @param x         the mask expansion
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Mask(
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
-        @JsonProperty("inv") Boolean inverted
+        @JsonProperty("inv") Boolean inverted,
+        @JsonProperty("mode") String mode,
+        @JsonProperty("pt") Object pt,
+        @JsonProperty("o") Object o,
+        @JsonProperty("x") Object x
         // TODO EXTEND FURTHER
 ) implements PropertyListing {
     @Override

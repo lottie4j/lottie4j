@@ -57,7 +57,8 @@ public class LottieFileSaver {
                     animation.height() != null ? animation.height() : 720,
                     requiredAssets,
                     List.of(layer),
-                    null
+                    null,
+                    animation.props()
             );
 
             // Write to file using Jackson - Animation record handles serialization
