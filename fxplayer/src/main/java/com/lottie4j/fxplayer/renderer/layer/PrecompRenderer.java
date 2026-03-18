@@ -545,15 +545,9 @@ public class PrecompRenderer {
             return layer.height();
         }
 
-        // Asset height is currently modeled as String; parse when numeric.
-        if (asset.height() != null) {
-            try {
-                if (asset.height() > 0) {
-                    return asset.height();
-                }
-            } catch (NumberFormatException ex) {
-                logger.debug("Unable to parse precomp asset height '{}' for {}", asset.height(), asset.id());
-            }
+        // Asset height is now modeled as Integer
+        if (asset.height() != null && asset.height() > 0) {
+            return asset.height();
         }
 
         if (inheritedHeight > 0) {

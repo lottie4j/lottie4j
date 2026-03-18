@@ -98,6 +98,8 @@ public class PathStrokeRenderer {
 
             double trimStart = segStart != null ? getTrimSampledValue(segStart, frame) : 0;
             double trimEnd = segEnd != null ? getTrimSampledValue(segEnd, frame) : 100;
+
+            logger.debug("  Frame {}: trimStart={}, trimEnd={}", frame, trimStart, trimEnd);
             double trimOffsetDegrees = offset != null ? offset.getValue(0, frame) : 0;
 
             if (segEnd != null && segEnd.animated() != null && segEnd.animated() > 0) {
@@ -139,7 +141,10 @@ public class PathStrokeRenderer {
             return;
         }
 
-        if (visibleWindow >= 100) {
+        // When visible window is 100%, we can use the existing path geometry for stroke.
+        // However, for open paths, we should use renderTrimmedPath to ensure consistent rendering
+        // regardless of trim percentage (avoids visual discontinuity at 100%).
+        if (visibleWindow >= 100 && isClosedPath) {
             var strokeColor = strokeStyle.get().getColor(frame);
             double compensatedWidth = StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth);
             gc.setStroke(strokeColor);
@@ -323,22 +328,33 @@ public class PathStrokeRenderer {
         List<Double> segmentLengths = new ArrayList<>();
         double totalLength = 0;
 
+        logger.debug("  Calculating segment lengths for {} vertices, closed={}", vertices.size(), closed);
         for (int i = 0; i < vertices.size(); i++) {
             int nextIdx = (i + 1) % vertices.size();
             if (!Boolean.TRUE.equals(closed) && nextIdx == 0) break;
             double segmentLength = calculateSegmentLength(vertices, tangentsIn, tangentsOut, i, nextIdx);
             segmentLengths.add(segmentLength);
             totalLength += segmentLength;
+            List<Double> v1 = vertices.get(i);
+            List<Double> v2 = vertices.get(nextIdx);
+            logger.debug("    Segment {}->{}: length={}, v[{}]=({},{}), v[{}]=({},{})",
+                    i, nextIdx, segmentLength,
+                    i, v1.get(0), v1.get(1),
+                    nextIdx, v2.get(0), v2.get(1));
         }
 
+        logger.debug("  Total path length: {}", totalLength);
         if (totalLength == 0) return;
 
         double startLength = (trimStart / 100.0) * totalLength;
         double endLength = (trimEnd / 100.0) * totalLength;
 
+        logger.debug("  Trim: start={}% ({}), end={}% ({})", trimStart, startLength, trimEnd, endLength);
+
         // Lottie open paths expect a direct segment between start/end values.
         // Normalize reversed ranges (e.g. start=100, end=0) to avoid rendering nothing.
         if (!Boolean.TRUE.equals(closed) && startLength > endLength) {
+            logger.debug("  Swapping start/end for open path with reversed range");
             double tmp = startLength;
             startLength = endLength;
             endLength = tmp;
@@ -390,14 +406,23 @@ public class PathStrokeRenderer {
                     List<Double> currentTangentIn = tangentsIn.get(nextIdx);
 
                     if (prevTangentOut.size() >= 2 && currentTangentIn.size() >= 2) {
-                        double[] subdividedCP = subdivideBezierCurve(
-                                vertex.get(0), vertex.get(1),
-                                vertex.get(0) + prevTangentOut.get(0), vertex.get(1) + prevTangentOut.get(1),
-                                nextVertex.get(0) + currentTangentIn.get(0), nextVertex.get(1) + currentTangentIn.get(1),
-                                nextVertex.get(0), nextVertex.get(1),
-                                t0, t1
-                        );
-                        gc.bezierCurveTo(subdividedCP[0], subdividedCP[1], subdividedCP[2], subdividedCP[3], point1[0], point1[1]);
+                        // Check if this is a straight line (zero tangents)
+                        boolean isZeroTangent = (Math.abs(prevTangentOut.get(0)) < 0.001 && Math.abs(prevTangentOut.get(1)) < 0.001
+                                && Math.abs(currentTangentIn.get(0)) < 0.001 && Math.abs(currentTangentIn.get(1)) < 0.001);
+
+                        if (isZeroTangent) {
+                            // For straight lines, just use lineTo
+                            gc.lineTo(point1[0], point1[1]);
+                        } else {
+                            double[] subdividedCP = subdivideBezierCurve(
+                                    vertex.get(0), vertex.get(1),
+                                    vertex.get(0) + prevTangentOut.get(0), vertex.get(1) + prevTangentOut.get(1),
+                                    nextVertex.get(0) + currentTangentIn.get(0), nextVertex.get(1) + currentTangentIn.get(1),
+                                    nextVertex.get(0), nextVertex.get(1),
+                                    t0, t1
+                            );
+                            gc.bezierCurveTo(subdividedCP[0], subdividedCP[1], subdividedCP[2], subdividedCP[3], point1[0], point1[1]);
+                        }
                     } else {
                         gc.lineTo(point1[0], point1[1]);
                     }
