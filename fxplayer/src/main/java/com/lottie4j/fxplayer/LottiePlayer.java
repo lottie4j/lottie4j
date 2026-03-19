@@ -2,6 +2,7 @@ package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.animation.Marker;
 import com.lottie4j.core.model.asset.Asset;
 import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.core.model.shape.BaseShape;
@@ -64,6 +65,12 @@ public class LottiePlayer extends Canvas {
     private long startTime;
     private boolean isPlaying = false;
     private boolean debug = false;
+    private Marker loopStart = null;
+    private Marker loopEnd = null;
+    private int cropTop = 0;
+    private int cropRight = 0;
+    private int cropBottom = 0;
+    private int cropLeft = 0;
     private Color backgroundColor = Color.WHITE;
     private Set<Integer> visibleLayerIndices = null;  // null means all layers visible
     private long lastDebugRenderNanos = 0L;
@@ -252,6 +259,65 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Returns the effective frame at which the loop restarts.
+     * Uses the {@code loopStart} marker when set, otherwise falls back to {@link #getInPoint()}.
+     *
+     * @return loop-restart frame number
+     */
+    private double getEffectiveLoopStartFrame() {
+        if (loopStart != null && loopStart.time() != null) {
+            return loopStart.time();  // tm is stored as a frame number, not seconds
+        }
+        return getInPoint();
+    }
+
+    /**
+     * Returns the effective frame at which the loop boundary lies.
+     * Uses the {@code loopEnd} marker when set, otherwise falls back to {@link #getOutPointExclusive()}.
+     *
+     * @return loop-end frame number (exclusive boundary)
+     */
+    private double getEffectiveLoopEndFrame() {
+        if (loopEnd != null && loopEnd.time() != null) {
+            return loopEnd.time();  // tm is stored as a frame number, not seconds
+        }
+        return getOutPointExclusive();
+    }
+
+    /**
+     * Sets the loop markers that control the loop region during playback.
+     * <p>
+     * When the animation reaches {@code loopEnd} it will restart from {@code loopStart}
+     * instead of frame 0. Pass {@code null} for either marker to use the default
+     * in-point / out-point boundary.
+     *
+     * @param loopStart marker for the restart frame (null = use animation in-point)
+     * @param loopEnd   marker for the loop boundary frame (null = use animation out-point)
+     */
+    public void setLoopMarkers(Marker loopStart, Marker loopEnd) {
+        this.loopStart = loopStart;
+        this.loopEnd = loopEnd;
+    }
+
+    /**
+     * Returns the current loop-start marker, or {@code null} if none is set.
+     *
+     * @return loop-start {@link Marker}
+     */
+    public Marker getLoopStart() {
+        return loopStart;
+    }
+
+    /**
+     * Returns the current loop-end marker, or {@code null} if none is set.
+     *
+     * @return loop-end {@link Marker}
+     */
+    public Marker getLoopEnd() {
+        return loopEnd;
+    }
+
+    /**
      * Gets the animation composition width.
      *
      * @return animation width in pixels
@@ -267,6 +333,114 @@ public class LottiePlayer extends Canvas {
      */
     private int getAnimationHeight() {
         return FrameTiming.getAnimationHeight(animation);
+    }
+
+    /**
+     * Returns the cropped viewport width in composition coordinates.
+     */
+    private int getViewportWidth() {
+        return Math.max(1, getAnimationWidth() - cropLeft - cropRight);
+    }
+
+    /**
+     * Returns the cropped viewport height in composition coordinates.
+     */
+    private int getViewportHeight() {
+        return Math.max(1, getAnimationHeight() - cropTop - cropBottom);
+    }
+
+    /**
+     * Returns the current viewport horizontal origin in composition coordinates.
+     */
+    private int getViewportX() {
+        return cropLeft;
+    }
+
+    /**
+     * Returns the current viewport vertical origin in composition coordinates.
+     */
+    private int getViewportY() {
+        return cropTop;
+    }
+
+    /**
+     * Returns the current fit scale between the canvas and cropped viewport.
+     */
+    private double getCurrentViewportFitScale() {
+        double sx = getWidth() / Math.max(1.0, getViewportWidth());
+        double sy = getHeight() / Math.max(1.0, getViewportHeight());
+        return Math.max(0.01, Math.min(sx, sy));
+    }
+
+    /**
+     * Applies a canvas size matching the cropped viewport at the provided scale.
+     */
+    private void resizeCanvasToViewport(double fitScale) {
+        int targetWidth = Math.max(1, (int) Math.round(getViewportWidth() * fitScale));
+        int targetHeight = Math.max(1, (int) Math.round(getViewportHeight() * fitScale));
+        setWidth(targetWidth);
+        setHeight(targetHeight);
+    }
+
+    /**
+     * Crops the rendered view by insets from the composition edges.
+     * Rendering still uses full composition coordinates; only the final viewport is clipped.
+     * The canvas is resized to the resulting cropped viewport.
+     * <p>
+     * Insets are ordered as {@code top, right, bottom, left}.
+     * Values are clamped to keep at least a 1x1 visible viewport.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * LottiePlayer player = new LottiePlayer(animation);
+     * player.crop(40, 20, 0, 10); // hide 40px top, 20px right, 0px bottom, 10px left
+     * player.play();
+     * }</pre>
+     *
+     * @param top    pixels to hide from the top edge
+     * @param right  pixels to hide from the right edge
+     * @param bottom pixels to hide from the bottom edge
+     * @param left   pixels to hide from the left edge
+     */
+    public void crop(int top, int right, int bottom, int left) {
+        double fitScale = getCurrentViewportFitScale();
+
+        int maxHorizontalInset = Math.max(0, getAnimationWidth() - 1);
+        int maxVerticalInset = Math.max(0, getAnimationHeight() - 1);
+
+        int clampedLeft = Math.clamp(left, 0, maxHorizontalInset);
+        int clampedRight = Math.clamp(right, 0, maxHorizontalInset - clampedLeft);
+        int clampedTop = Math.clamp(top, 0, maxVerticalInset);
+        int clampedBottom = Math.clamp(bottom, 0, maxVerticalInset - clampedTop);
+
+        this.cropTop = clampedTop;
+        this.cropRight = clampedRight;
+        this.cropBottom = clampedBottom;
+        this.cropLeft = clampedLeft;
+
+        resizeCanvasToViewport(fitScale);
+        render(currentFrameProperty.get(), visibleLayerIndices);
+    }
+
+    /**
+     * Clears any active crop and restores full composition viewport.
+     * <p>
+     * Use this after {@link #crop(int, int, int, int)} to return to full-frame rendering.
+     */
+    public void clearCrop() {
+        crop(0, 0, 0, 0);
+    }
+
+    /**
+     * Sets loop markers and starts playing the animation.
+     * When the animation reaches {@code loopEnd} it restarts from {@code loopStart}.
+     *
+     * @param loopStart marker for the restart frame (null = use animation in-point)
+     * @param loopEnd   marker for the loop boundary frame (null = use animation out-point)
+     */
+    public void play(Marker loopStart, Marker loopEnd) {
+        setLoopMarkers(loopStart, loopEnd);
+        play();
     }
 
     /**
@@ -290,13 +464,16 @@ public class LottiePlayer extends Canvas {
             @Override
             public void handle(long now) {
                 double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
-                double totalFrames = getOutPointExclusive() - getInPoint();
+                double loopEndFrame = getEffectiveLoopEndFrame();
+                double loopStartFrame = getEffectiveLoopStartFrame();
+                double totalFrames = loopEndFrame - getInPoint();
                 double animationDuration = totalFrames / getFramesPerSecond();
 
                 if (elapsedSeconds >= animationDuration) {
-                    // Loop animation
-                    startTime = now;
-                    elapsedSeconds = 0;
+                    // Loop: restart from loopStartFrame (= inPoint when no loopStart marker is set)
+                    double loopElapsedSeconds = (loopStartFrame - getInPoint()) / (double) getFramesPerSecond();
+                    startTime = now - (long) (loopElapsedSeconds * 1_000_000_000.0);
+                    elapsedSeconds = loopElapsedSeconds;
                 }
 
                 double newFrame = getInPoint() + (elapsedSeconds * getFramesPerSecond());
@@ -308,6 +485,7 @@ public class LottiePlayer extends Canvas {
 
         animationTimer.start();
     }
+
 
     /**
      * Plays the animation once from the beginning and stops.
@@ -446,11 +624,16 @@ public class LottiePlayer extends Canvas {
         logger.debug("Animation has {} layers", animation.layers().size());
 
         // Calculate scaling to fit canvas while maintaining aspect ratio
-        double scaleX = gc.getCanvas().getWidth() / getAnimationWidth();
-        double scaleY = gc.getCanvas().getHeight() / getAnimationHeight();
+        double viewportWidth = getViewportWidth();
+        double viewportHeight = getViewportHeight();
+        double viewportX = getViewportX();
+        double viewportY = getViewportY();
+
+        double scaleX = gc.getCanvas().getWidth() / viewportWidth;
+        double scaleY = gc.getCanvas().getHeight() / viewportHeight;
         double scale = Math.min(scaleX, scaleY);
-        double offsetX = (gc.getCanvas().getWidth() - getAnimationWidth() * scale) / 2;
-        double offsetY = (gc.getCanvas().getHeight() - getAnimationHeight() * scale) / 2;
+        double offsetX = (gc.getCanvas().getWidth() - viewportWidth * scale) / 2;
+        double offsetY = (gc.getCanvas().getHeight() - viewportHeight * scale) / 2;
         double renderResolutionScale = resolveRenderResolutionScale(gc);
         logger.debug("Animation/Canvas size: {}x{}/{}x{}, Scale: {}, Offset: {}/{}, renderResolutionScale={}",
                 getAnimationWidth(), getAnimationHeight(),
@@ -460,11 +643,12 @@ public class LottiePlayer extends Canvas {
         gc.save();
         gc.translate(offsetX, offsetY);
         gc.scale(scale, scale);
+        gc.translate(-viewportX, -viewportY);
 
         // Clip to animation bounds - ensures blur and other effects don't extend beyond composition
         // This matches JavaScript/Lottie-web behavior where effects are clipped to canvas bounds
         gc.beginPath();
-        gc.rect(0, 0, getAnimationWidth(), getAnimationHeight());
+        gc.rect(viewportX, viewportY, viewportWidth, viewportHeight);
         gc.clip();
 
         // Set default colors for debugging
@@ -1031,8 +1215,8 @@ public class LottiePlayer extends Canvas {
      * Resolves the off-screen render resolution scale from current canvas-to-composition fit.
      */
     private double resolveRenderResolutionScale(GraphicsContext graphicsContext) {
-        double sx = graphicsContext.getCanvas().getWidth() / Math.max(1.0, getAnimationWidth());
-        double sy = graphicsContext.getCanvas().getHeight() / Math.max(1.0, getAnimationHeight());
+        double sx = graphicsContext.getCanvas().getWidth() / Math.max(1.0, getViewportWidth());
+        double sy = graphicsContext.getCanvas().getHeight() / Math.max(1.0, getViewportHeight());
         double fitScale = Math.clamp(Math.min(sx, sy), 0.1, 1.0);
         return Math.clamp(Math.min(fitScale, adaptiveOffscreenScale), 0.1, 1.0);
     }

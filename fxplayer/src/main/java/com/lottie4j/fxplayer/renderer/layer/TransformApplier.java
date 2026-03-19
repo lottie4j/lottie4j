@@ -123,9 +123,6 @@ public class TransformApplier {
                 }
             } else {
                 logger.debug("Translating by position (without opacity): {}, {}", x, y);
-                if (Math.abs(x) > 1000 || Math.abs(y) > 1000) {
-                    logger.warn("WARNING: Large translation values detected! x={}, y={}", x, y);
-                }
             }
             gc.translate(x, y);
         } else {
