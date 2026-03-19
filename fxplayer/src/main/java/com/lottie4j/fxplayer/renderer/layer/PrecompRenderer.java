@@ -43,6 +43,7 @@ public class PrecompRenderer {
     private final ImageRenderer imageRenderer;
     private final EffectsRenderer effectsRenderer;
     private final MatteRenderer matteRenderer;
+    private final MaskRenderer maskRenderer;
     private final Map<String, PrecompRenderCache> precompRenderCacheByAssetId = new HashMap<>();
 
     /**
@@ -58,6 +59,7 @@ public class PrecompRenderer {
         this.imageRenderer = imageRenderer;
         this.effectsRenderer = new EffectsRenderer();
         this.matteRenderer = new MatteRenderer();
+        this.maskRenderer = new MaskRenderer(new com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator());
     }
 
     /**
@@ -426,6 +428,9 @@ public class PrecompRenderer {
 
         logger.debug("Layer has {} shapes", layer.shapes().size());
 
+        // Apply masks if layer has any
+        boolean maskApplied = maskRenderer.applyMasks(gc, layer, frame);
+
         TrimPath layerTrimPath = precompRenderCache.layerTrimPathByLayer().get(layer);
 
         List<BaseShape> shapes = layer.shapes();
@@ -446,6 +451,11 @@ public class PrecompRenderer {
                 }
                 default -> logger.debug("Unsupported shape type: {}", shape.shapeType().shapeGroup());
             }
+        }
+
+        // Restore graphics context after mask rendering
+        if (maskApplied) {
+            maskRenderer.restoreMasks(gc);
         }
     }
 
