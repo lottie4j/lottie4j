@@ -30,6 +30,7 @@ public class ViewerMenuBar extends MenuBar {
 
     private final Consumer<File> onFileSelected;
     private final CheckMenuItem debugInfoMenuItem;
+    private final CheckMenuItem adaptiveOffscreenMenuItem;
 
     /**
      * Creates a menu bar for the viewer application.
@@ -72,6 +73,27 @@ public class ViewerMenuBar extends MenuBar {
                          boolean debugInfoSelected,
                          DoubleConsumer onScalePercentChanged,
                          double initialScalePercent) {
+        this(stage,
+                onFileSelected,
+                onDebugInfoChanged,
+                debugInfoSelected,
+                onScalePercentChanged,
+                initialScalePercent,
+                null,
+                false);
+    }
+
+    /**
+     * Creates a menu bar with optional debug, scaling, and adaptive offscreen controls in the View menu.
+     */
+    public ViewerMenuBar(Stage stage,
+                         Consumer<File> onFileSelected,
+                         Consumer<Boolean> onDebugInfoChanged,
+                         boolean debugInfoSelected,
+                         DoubleConsumer onScalePercentChanged,
+                         double initialScalePercent,
+                         Consumer<Boolean> onAdaptiveOffscreenChanged,
+                         boolean adaptiveOffscreenSelected) {
         this.onFileSelected = onFileSelected;
 
         var fileMenu = new Menu("File");
@@ -87,6 +109,15 @@ public class ViewerMenuBar extends MenuBar {
             viewMenu.getItems().add(debugInfoMenuItem);
         } else {
             debugInfoMenuItem.setDisable(true);
+        }
+
+        adaptiveOffscreenMenuItem = new CheckMenuItem("Adaptive Offscreen");
+        adaptiveOffscreenMenuItem.setSelected(adaptiveOffscreenSelected);
+        if (onAdaptiveOffscreenChanged != null) {
+            adaptiveOffscreenMenuItem.setOnAction(e -> onAdaptiveOffscreenChanged.accept(adaptiveOffscreenMenuItem.isSelected()));
+            viewMenu.getItems().add(adaptiveOffscreenMenuItem);
+        } else {
+            adaptiveOffscreenMenuItem.setDisable(true);
         }
 
         if (onScalePercentChanged != null) {
@@ -137,6 +168,13 @@ public class ViewerMenuBar extends MenuBar {
      */
     public boolean isDebugInfoSelected() {
         return debugInfoMenuItem != null && debugInfoMenuItem.isSelected();
+    }
+
+    /**
+     * Returns whether adaptive offscreen rendering is currently selected.
+     */
+    public boolean isAdaptiveOffscreenSelected() {
+        return adaptiveOffscreenMenuItem != null && adaptiveOffscreenMenuItem.isSelected();
     }
 
     /**

@@ -60,6 +60,8 @@ public class LottieFileMarkerViewer extends Application {
         var animation = LottieFileLoader.load(new File(getClass().getResource("/melodymatrix.json").getFile()));
         var player = new LottiePlayer(animation);
         player.setBackgroundColor(Color.LIGHTBLUE);
+        // Keep off-screen passes at full fit scale in this fidelity-oriented viewer.
+        player.setAdaptiveOffscreenScalingEnabled(false);
 
         if (cropTop > 0 || cropRight > 0 || cropBottom > 0 || cropLeft > 0) {
             player.crop(cropTop, cropRight, cropBottom, cropLeft);

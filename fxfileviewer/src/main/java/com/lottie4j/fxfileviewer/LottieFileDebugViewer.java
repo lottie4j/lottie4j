@@ -65,6 +65,7 @@ public class LottieFileDebugViewer extends Application {
     private Button screenshotButton;
     private Button screenshotAllButton;
     private CheckBox debugInfoCheckBox;
+    private CheckBox adaptiveOffscreenScalingCheckBox;
     private LayerTreeView layerTreeView;
     private LayerTileView layerTileView;
 
@@ -258,10 +259,24 @@ public class LottieFileDebugViewer extends Application {
             webView.setDebugInfoVisible(debugInfoCheckBox.isSelected());
         });
 
+        adaptiveOffscreenScalingCheckBox = new CheckBox("Adaptive Offscreen");
+        adaptiveOffscreenScalingCheckBox.setSelected(false);
+        adaptiveOffscreenScalingCheckBox.setTooltip(new Tooltip(
+                "Adaptive off-screen scaling can improve FPS but may soften some overlay edges."
+        ));
+        adaptiveOffscreenScalingCheckBox.setOnAction(e -> {
+            if (lottiePlayer != null) {
+                lottiePlayer.setAdaptiveOffscreenScalingEnabled(adaptiveOffscreenScalingCheckBox.isSelected());
+                // Re-render the current frame immediately so quality/perf changes are visible.
+                lottiePlayer.seekToFrame(currentFrame);
+            }
+        });
+
         controlPanel.getChildren().addAll(
                 playbackControls,
                 colorPicker,
                 debugInfoCheckBox,
+                adaptiveOffscreenScalingCheckBox,
                 screenshotButton,
                 screenshotAllButton,
                 fpsLabel,
@@ -346,6 +361,9 @@ public class LottieFileDebugViewer extends Application {
 
             // Show new LottiePlayer with scaled size
             lottiePlayer = new LottiePlayer(animation, width, height);
+            lottiePlayer.setAdaptiveOffscreenScalingEnabled(
+                    adaptiveOffscreenScalingCheckBox != null && adaptiveOffscreenScalingCheckBox.isSelected()
+            );
             lottiePlayer.setBackgroundColor(backgroundColor);
 
             // Create and add LayerTreeView tab

@@ -77,6 +77,7 @@ public class LottiePlayer extends Canvas {
     private double measuredPlaybackFps = 0.0;
     private double adaptiveOffscreenScale = 1.0;
     private double smoothedRenderMillis = 16.67;
+    private boolean adaptiveOffscreenScalingEnabled = true;
 
     /**
      * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
@@ -824,7 +825,11 @@ public class LottiePlayer extends Canvas {
                         Math.max(1, getAnimationWidth()),
                         Math.max(1, getAnimationHeight()),
                         effectiveResolutionScale,
-                        this::renderLayerInternal
+                        (targetGc, targetLayer, targetFrame) -> renderLayerInternal(
+                                targetGc,
+                                targetLayer,
+                                targetFrame,
+                                effectiveResolutionScale)
                 );
             } else {
                 effectsRenderer.renderLayerWithGaussianBlur(
@@ -835,13 +840,17 @@ public class LottiePlayer extends Canvas {
                         Math.max(1, getAnimationWidth()),
                         Math.max(1, getAnimationHeight()),
                         effectiveResolutionScale,
-                        this::renderLayerInternal
+                        (targetGc, targetLayer, targetFrame) -> renderLayerInternal(
+                                targetGc,
+                                targetLayer,
+                                targetFrame,
+                                effectiveResolutionScale)
                 );
             }
             return;
         }
 
-        renderLayerInternal(gc, layer, frame);
+        renderLayerInternal(gc, layer, frame, effectiveResolutionScale);
     }
 
     private boolean shouldUseStaticBlurLayerCache(Layer layer, double blurRadius) {
@@ -872,10 +881,10 @@ public class LottiePlayer extends Canvas {
      * @param layer layer to render
      * @param frame animation frame
      */
-    private void renderLayerInternal(GraphicsContext gc, Layer layer, double frame) {
+    private void renderLayerInternal(GraphicsContext gc, Layer layer, double frame, double renderResolutionScale) {
         // If layer has a non-normal blend mode, render using offscreen buffer approach
         if (layer.blendMode() != null && layer.blendMode() != com.lottie4j.core.definition.BlendMode.NORMAL) {
-            renderLayerWithBlendModeOffscreen(gc, layer, frame);
+            renderLayerWithBlendModeOffscreen(gc, layer, frame, renderResolutionScale);
             return;
         }
 
@@ -902,7 +911,7 @@ public class LottiePlayer extends Canvas {
                 layer.shapes() != null && !layer.shapes().isEmpty()) {
             logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
             // Off-screen rendering handles parent transforms internally
-            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity);
+            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity, renderResolutionScale);
             gc.restore();
             return;
         }
@@ -1181,18 +1190,22 @@ public class LottiePlayer extends Canvas {
      * @param frame        current frame
      * @param layerOpacity opacity to apply to the final composite
      */
-    private void renderLayerWithOffscreenBuffer(GraphicsContext gc, Layer layer, double frame, double layerOpacity) {
-        double renderResolutionScale = resolveRenderResolutionScale(gc);
+    private void renderLayerWithOffscreenBuffer(GraphicsContext gc,
+                                                Layer layer,
+                                                double frame,
+                                                double layerOpacity,
+                                                double renderResolutionScale) {
+        double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
 
-        int offscreenWidth = Math.max(1, (int) Math.round(getAnimationWidth() * renderResolutionScale));
-        int offscreenHeight = Math.max(1, (int) Math.round(getAnimationHeight() * renderResolutionScale));
+        int offscreenWidth = Math.max(1, (int) Math.round(getAnimationWidth() * effectiveScale));
+        int offscreenHeight = Math.max(1, (int) Math.round(getAnimationHeight() * effectiveScale));
 
         logger.debug("Rendering layer {} to off-screen buffer ({}x{}, scale={})",
-                layer.name(), offscreenWidth, offscreenHeight, renderResolutionScale);
+                layer.name(), offscreenWidth, offscreenHeight, effectiveScale);
 
         WritableImage offscreenImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
             offscreenGc.save();
-            offscreenGc.scale(renderResolutionScale, renderResolutionScale);
+            offscreenGc.scale(effectiveScale, effectiveScale);
 
             applyParentTransforms(offscreenGc, layer, frame);
             applyLayerTransformWithoutOpacity(offscreenGc, layer, frame);
@@ -1218,7 +1231,35 @@ public class LottiePlayer extends Canvas {
         double sx = graphicsContext.getCanvas().getWidth() / Math.max(1.0, getViewportWidth());
         double sy = graphicsContext.getCanvas().getHeight() / Math.max(1.0, getViewportHeight());
         double fitScale = Math.clamp(Math.min(sx, sy), 0.1, 1.0);
+        if (!adaptiveOffscreenScalingEnabled) {
+            return fitScale;
+        }
         return Math.clamp(Math.min(fitScale, adaptiveOffscreenScale), 0.1, 1.0);
+    }
+
+    /**
+     * Enables or disables adaptive off-screen resolution scaling.
+     * <p>
+     * When enabled, the renderer may lower the resolution of selected off-screen passes
+     * (such as opacity/blend/effect compositing) on heavy frames to improve frame-time stability.
+     * This usually helps maintain smoother playback on large or complex animations.
+     * <p>
+     * When disabled, those passes render at fit-scale quality instead of adaptively downscaling.
+     * This can improve edge fidelity (for example, reducing selective softness on thin overlays),
+     * but can also increase render cost and therefore reduce frames per second on demanding scenes.
+     *
+     * @param enabled true to allow adaptive downscaling, false to render off-screen passes at fit scale
+     */
+    public void setAdaptiveOffscreenScalingEnabled(boolean enabled) {
+        this.adaptiveOffscreenScalingEnabled = enabled;
+        this.adaptiveOffscreenScale = 1.0;
+    }
+
+    /**
+     * Returns whether adaptive off-screen resolution scaling is enabled.
+     */
+    public boolean isAdaptiveOffscreenScalingEnabled() {
+        return adaptiveOffscreenScalingEnabled;
     }
 
     /**
@@ -1299,12 +1340,15 @@ public class LottiePlayer extends Canvas {
      * Renders a layer with a blend mode using offscreen buffer.
      * This matches HTML/CSS blend mode behavior.
      */
-    private void renderLayerWithBlendModeOffscreen(GraphicsContext gc, Layer layer, double frame) {
+    private void renderLayerWithBlendModeOffscreen(GraphicsContext gc,
+                                                   Layer layer,
+                                                   double frame,
+                                                   double renderResolutionScale) {
         javafx.scene.effect.BlendMode fxBlendMode = convertToFxBlendMode(layer.blendMode());
         if (fxBlendMode == null) {
             // Unsupported blend mode - render normally
             logger.debug("Unsupported blend mode {} for layer {}, rendering normally", layer.blendMode(), layer.name());
-            renderLayerInternalWithoutBlendMode(gc, layer, frame);
+            renderLayerInternalWithoutBlendMode(gc, layer, frame, renderResolutionScale);
             return;
         }
 
@@ -1318,7 +1362,7 @@ public class LottiePlayer extends Canvas {
 
         // Render layer to offscreen buffer
         WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
-            renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame);
+            renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame, renderResolutionScale);
         });
 
         // Composite with blend mode
@@ -1331,7 +1375,10 @@ public class LottiePlayer extends Canvas {
     /**
      * Renders a layer without checking/applying blend modes (used internally for offscreen rendering).
      */
-    private void renderLayerInternalWithoutBlendMode(GraphicsContext gc, Layer layer, double frame) {
+    private void renderLayerInternalWithoutBlendMode(GraphicsContext gc,
+                                                     Layer layer,
+                                                     double frame,
+                                                     double renderResolutionScale) {
         gc.save();
 
         // Check layer opacity - skip rendering if transparent
@@ -1351,7 +1398,7 @@ public class LottiePlayer extends Canvas {
         if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
                 layer.shapes() != null && !layer.shapes().isEmpty()) {
             logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
-            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity);
+            renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity, renderResolutionScale);
             gc.restore();
             return;
         }
