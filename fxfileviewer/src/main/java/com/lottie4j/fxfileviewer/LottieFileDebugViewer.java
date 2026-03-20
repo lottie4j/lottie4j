@@ -65,6 +65,7 @@ public class LottieFileDebugViewer extends Application {
     private Button screenshotButton;
     private Button screenshotAllButton;
     private CheckBox debugInfoCheckBox;
+    private CheckBox invertColorsCheckBox;
     private CheckBox adaptiveOffscreenScalingCheckBox;
     private LayerTreeView layerTreeView;
     private LayerTileView layerTileView;
@@ -239,6 +240,7 @@ public class LottieFileDebugViewer extends Application {
 
         // Background color picker
         var colorPicker = new ColorPicker(backgroundColor);
+        colorPicker.getCustomColors().add(Color.TRANSPARENT);
         colorPicker.setOnAction(e -> {
             backgroundColor = colorPicker.getValue();
             updateBackgroundColor();
@@ -259,6 +261,13 @@ public class LottieFileDebugViewer extends Application {
             webView.setDebugInfoVisible(debugInfoCheckBox.isSelected());
         });
 
+        invertColorsCheckBox = new CheckBox("Invert Colors");
+        invertColorsCheckBox.setOnAction(e -> {
+            if (lottiePlayer != null) {
+                lottiePlayer.setInvertColorsEnabled(invertColorsCheckBox.isSelected());
+            }
+        });
+
         adaptiveOffscreenScalingCheckBox = new CheckBox("Adaptive Offscreen");
         adaptiveOffscreenScalingCheckBox.setSelected(false);
         adaptiveOffscreenScalingCheckBox.setTooltip(new Tooltip(
@@ -276,6 +285,7 @@ public class LottieFileDebugViewer extends Application {
                 playbackControls,
                 colorPicker,
                 debugInfoCheckBox,
+                invertColorsCheckBox,
                 adaptiveOffscreenScalingCheckBox,
                 screenshotButton,
                 screenshotAllButton,
@@ -363,6 +373,9 @@ public class LottieFileDebugViewer extends Application {
             lottiePlayer = new LottiePlayer(animation, width, height);
             lottiePlayer.setAdaptiveOffscreenScalingEnabled(
                     adaptiveOffscreenScalingCheckBox != null && adaptiveOffscreenScalingCheckBox.isSelected()
+            );
+            lottiePlayer.setInvertColorsEnabled(
+                    invertColorsCheckBox != null && invertColorsCheckBox.isSelected()
             );
             lottiePlayer.setBackgroundColor(backgroundColor);
 

@@ -29,6 +29,7 @@ public class LottieFileSimpleViewer extends Application {
     private ViewerMenuBar viewerMenuBar;
     private double currentScalePercent = 100.0;
     private boolean adaptiveOffscreenScalingEnabled = false;
+    private boolean invertColorsEnabled = false;
 
     /**
      * Creates a new LottieFileDebugViewer.
@@ -71,7 +72,14 @@ public class LottieFileSimpleViewer extends Application {
                         lottiePlayer.seekToFrame(lottiePlayer.getCurrentFrame());
                     }
                 },
-                adaptiveOffscreenScalingEnabled
+                adaptiveOffscreenScalingEnabled,
+                enabled -> {
+                    invertColorsEnabled = enabled;
+                    if (lottiePlayer != null) {
+                        lottiePlayer.setInvertColorsEnabled(enabled);
+                    }
+                },
+                invertColorsEnabled
         );
         root.setTop(viewerMenuBar);
 
@@ -103,6 +111,7 @@ public class LottieFileSimpleViewer extends Application {
         try {
             lottiePlayer = new LottiePlayer(LottieFileLoader.load(file));
             lottiePlayer.setAdaptiveOffscreenScalingEnabled(adaptiveOffscreenScalingEnabled);
+            lottiePlayer.setInvertColorsEnabled(invertColorsEnabled);
             lottiePlayer.setDebugInfoVisible(viewerMenuBar != null && viewerMenuBar.isDebugInfoSelected());
             applyScaleToPlayer();
             root.setCenter(lottiePlayer);

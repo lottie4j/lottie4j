@@ -31,6 +31,7 @@ public class ViewerMenuBar extends MenuBar {
     private final Consumer<File> onFileSelected;
     private final CheckMenuItem debugInfoMenuItem;
     private final CheckMenuItem adaptiveOffscreenMenuItem;
+    private final CheckMenuItem invertColorsMenuItem;
 
     /**
      * Creates a menu bar for the viewer application.
@@ -94,6 +95,31 @@ public class ViewerMenuBar extends MenuBar {
                          double initialScalePercent,
                          Consumer<Boolean> onAdaptiveOffscreenChanged,
                          boolean adaptiveOffscreenSelected) {
+        this(stage,
+                onFileSelected,
+                onDebugInfoChanged,
+                debugInfoSelected,
+                onScalePercentChanged,
+                initialScalePercent,
+                onAdaptiveOffscreenChanged,
+                adaptiveOffscreenSelected,
+                null,
+                false);
+    }
+
+    /**
+     * Creates a menu bar with optional debug, scaling, adaptive offscreen, and invert-color controls in the View menu.
+     */
+    public ViewerMenuBar(Stage stage,
+                         Consumer<File> onFileSelected,
+                         Consumer<Boolean> onDebugInfoChanged,
+                         boolean debugInfoSelected,
+                         DoubleConsumer onScalePercentChanged,
+                         double initialScalePercent,
+                         Consumer<Boolean> onAdaptiveOffscreenChanged,
+                         boolean adaptiveOffscreenSelected,
+                         Consumer<Boolean> onInvertColorsChanged,
+                         boolean invertColorsSelected) {
         this.onFileSelected = onFileSelected;
 
         var fileMenu = new Menu("File");
@@ -118,6 +144,15 @@ public class ViewerMenuBar extends MenuBar {
             viewMenu.getItems().add(adaptiveOffscreenMenuItem);
         } else {
             adaptiveOffscreenMenuItem.setDisable(true);
+        }
+
+        invertColorsMenuItem = new CheckMenuItem("Invert Colors");
+        invertColorsMenuItem.setSelected(invertColorsSelected);
+        if (onInvertColorsChanged != null) {
+            invertColorsMenuItem.setOnAction(e -> onInvertColorsChanged.accept(invertColorsMenuItem.isSelected()));
+            viewMenu.getItems().add(invertColorsMenuItem);
+        } else {
+            invertColorsMenuItem.setDisable(true);
         }
 
         if (onScalePercentChanged != null) {
@@ -175,6 +210,13 @@ public class ViewerMenuBar extends MenuBar {
      */
     public boolean isAdaptiveOffscreenSelected() {
         return adaptiveOffscreenMenuItem != null && adaptiveOffscreenMenuItem.isSelected();
+    }
+
+    /**
+     * Returns whether invert colors rendering is currently selected.
+     */
+    public boolean isInvertColorsSelected() {
+        return invertColorsMenuItem != null && invertColorsMenuItem.isSelected();
     }
 
     /**

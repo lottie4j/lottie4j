@@ -21,6 +21,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.BlendMode;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -78,6 +79,7 @@ public class LottiePlayer extends Canvas {
     private double adaptiveOffscreenScale = 1.0;
     private double smoothedRenderMillis = 16.67;
     private boolean adaptiveOffscreenScalingEnabled = true;
+    private boolean invertColorsEnabled = false;
 
     /**
      * Creates a player with the dimensions as defined in the animation (or 500 as width and height if no size is defined).
@@ -731,6 +733,21 @@ public class LottiePlayer extends Canvas {
 
             drawDebugOverlay(gc, frame, scale);
         }
+
+        if (invertColorsEnabled) {
+            invertCanvasColors(gc);
+        }
+    }
+
+    /**
+     * Inverts all rendered pixels with a difference blend pass.
+     */
+    private void invertCanvasColors(GraphicsContext graphicsContext) {
+        graphicsContext.save();
+        graphicsContext.setGlobalBlendMode(BlendMode.DIFFERENCE);
+        graphicsContext.setFill(Color.WHITE);
+        graphicsContext.fillRect(0, 0, graphicsContext.getCanvas().getWidth(), graphicsContext.getCanvas().getHeight());
+        graphicsContext.restore();
     }
 
     private void updateAdaptiveOffscreenScale(double renderMillis) {
@@ -1334,6 +1351,21 @@ public class LottiePlayer extends Canvas {
     public void setDebugInfoVisible(boolean debug) {
         this.debug = debug;
         seekToFrame(getCurrentFrame());
+    }
+
+    /**
+     * Enables or disables global color inversion for rendered output.
+     */
+    public void setInvertColorsEnabled(boolean enabled) {
+        this.invertColorsEnabled = enabled;
+        seekToFrame(getCurrentFrame());
+    }
+
+    /**
+     * Returns whether global color inversion is enabled.
+     */
+    public boolean isInvertColorsEnabled() {
+        return invertColorsEnabled;
     }
 
     /**
