@@ -21,7 +21,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.effect.BlendMode;
+import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -609,8 +609,7 @@ public class LottiePlayer extends Canvas {
         long renderStartNanos = System.nanoTime();
 
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-        gc.setFill(backgroundColor);
-        gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+        fillBackground(gc);
 
         if (animation == null) {
             logger.warn("No animation to render");
@@ -643,19 +642,77 @@ public class LottiePlayer extends Canvas {
                 gc.getCanvas().getWidth(), gc.getCanvas().getHeight(),
                 scale, offsetX, offsetY, renderResolutionScale);
 
-        gc.save();
-        gc.translate(offsetX, offsetY);
-        gc.scale(scale, scale);
-        gc.translate(-viewportX, -viewportY);
+        if (invertColorsEnabled) {
+            renderInvertedAnimationContent(gc, frame, visibleLayerIndices,
+                    viewportX, viewportY, viewportWidth, viewportHeight,
+                    scale, offsetX, offsetY, renderResolutionScale);
+        } else {
+            renderAnimationContent(gc, frame, visibleLayerIndices,
+                    viewportX, viewportY, viewportWidth, viewportHeight,
+                    scale, offsetX, offsetY, renderResolutionScale);
+        }
+
+        long renderEndNanos = System.nanoTime();
+        updateAdaptiveOffscreenScale((renderEndNanos - renderStartNanos) / 1_000_000.0);
+
+        if (debug) {
+            long nowNanos = System.nanoTime();
+            if (lastDebugRenderNanos > 0L) {
+                double seconds = (nowNanos - lastDebugRenderNanos) / 1_000_000_000.0;
+                if (seconds > 0.0) {
+                    double instantaneousFps = 1.0 / seconds;
+                    if (measuredPlaybackFps == 0.0) {
+                        measuredPlaybackFps = instantaneousFps;
+                    } else {
+                        measuredPlaybackFps = measuredPlaybackFps * (1.0 - DEBUG_FPS_SMOOTHING)
+                                + instantaneousFps * DEBUG_FPS_SMOOTHING;
+                    }
+                }
+            }
+            lastDebugRenderNanos = nowNanos;
+
+            drawDebugOverlay(gc, frame, scale);
+        }
+
+    }
+
+    /**
+     * Paints the player background without affecting later layer compositing.
+     */
+    private void fillBackground(GraphicsContext graphicsContext) {
+        graphicsContext.save();
+        graphicsContext.setFill(backgroundColor);
+        graphicsContext.fillRect(0, 0, graphicsContext.getCanvas().getWidth(), graphicsContext.getCanvas().getHeight());
+        graphicsContext.restore();
+    }
+
+    /**
+     * Renders animation content to the target graphics context without painting the background.
+     */
+    private void renderAnimationContent(GraphicsContext graphicsContext,
+                                        double frame,
+                                        Set<Integer> visibleLayerIndices,
+                                        double viewportX,
+                                        double viewportY,
+                                        double viewportWidth,
+                                        double viewportHeight,
+                                        double scale,
+                                        double offsetX,
+                                        double offsetY,
+                                        double renderResolutionScale) {
+        graphicsContext.save();
+        graphicsContext.translate(offsetX, offsetY);
+        graphicsContext.scale(scale, scale);
+        graphicsContext.translate(-viewportX, -viewportY);
 
         // Clip to animation bounds - ensures blur and other effects don't extend beyond composition
         // This matches JavaScript/Lottie-web behavior where effects are clipped to canvas bounds
-        gc.beginPath();
-        gc.rect(viewportX, viewportY, viewportWidth, viewportHeight);
-        gc.clip();
+        graphicsContext.beginPath();
+        graphicsContext.rect(viewportX, viewportY, viewportWidth, viewportHeight);
+        graphicsContext.clip();
 
         // Set default colors for debugging
-        gc.setFill(Color.BLUE);
+        graphicsContext.setFill(Color.BLUE);
 
         // Render layers in reverse order with track matte support
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
@@ -679,7 +736,7 @@ public class LottiePlayer extends Canvas {
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
                             logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
-                            matteRenderer.renderLayerWithMatte(gc,
+                            matteRenderer.renderLayerWithMatte(graphicsContext,
                                     layer,
                                     matteSource,
                                     frame,
@@ -706,48 +763,76 @@ public class LottiePlayer extends Canvas {
                 }
 
                 logger.debug("Rendering layer: {}", layer.name());
-                renderLayer(gc, layer, frame, renderResolutionScale);
+                renderLayer(graphicsContext, layer, frame, renderResolutionScale);
             }
         }
 
-        gc.restore();
-
-        long renderEndNanos = System.nanoTime();
-        updateAdaptiveOffscreenScale((renderEndNanos - renderStartNanos) / 1_000_000.0);
-
-        if (debug) {
-            long nowNanos = System.nanoTime();
-            if (lastDebugRenderNanos > 0L) {
-                double seconds = (nowNanos - lastDebugRenderNanos) / 1_000_000_000.0;
-                if (seconds > 0.0) {
-                    double instantaneousFps = 1.0 / seconds;
-                    if (measuredPlaybackFps == 0.0) {
-                        measuredPlaybackFps = instantaneousFps;
-                    } else {
-                        measuredPlaybackFps = measuredPlaybackFps * (1.0 - DEBUG_FPS_SMOOTHING)
-                                + instantaneousFps * DEBUG_FPS_SMOOTHING;
-                    }
-                }
-            }
-            lastDebugRenderNanos = nowNanos;
-
-            drawDebugOverlay(gc, frame, scale);
-        }
-
-        if (invertColorsEnabled) {
-            invertCanvasColors(gc);
-        }
+        graphicsContext.restore();
     }
 
     /**
-     * Inverts all rendered pixels with a difference blend pass.
+     * Renders animation content to a transparent buffer, inverts only non-transparent pixels,
+     * and composites the result over the unchanged player background.
      */
-    private void invertCanvasColors(GraphicsContext graphicsContext) {
-        graphicsContext.save();
-        graphicsContext.setGlobalBlendMode(BlendMode.DIFFERENCE);
-        graphicsContext.setFill(Color.WHITE);
-        graphicsContext.fillRect(0, 0, graphicsContext.getCanvas().getWidth(), graphicsContext.getCanvas().getHeight());
-        graphicsContext.restore();
+    private void renderInvertedAnimationContent(GraphicsContext graphicsContext,
+                                                double frame,
+                                                Set<Integer> visibleLayerIndices,
+                                                double viewportX,
+                                                double viewportY,
+                                                double viewportWidth,
+                                                double viewportHeight,
+                                                double scale,
+                                                double offsetX,
+                                                double offsetY,
+                                                double renderResolutionScale) {
+        double bufferWidth = Math.max(1, graphicsContext.getCanvas().getWidth());
+        double bufferHeight = Math.max(1, graphicsContext.getCanvas().getHeight());
+
+        WritableImage animationImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc ->
+                renderAnimationContent(offscreenGc, frame, visibleLayerIndices,
+                        viewportX, viewportY, viewportWidth, viewportHeight,
+                        scale, offsetX, offsetY, renderResolutionScale));
+
+        graphicsContext.drawImage(invertImageColors(animationImage), 0, 0);
+    }
+
+    /**
+     * Returns a copy of the provided image with RGB channels inverted while preserving alpha.
+     */
+    private WritableImage invertImageColors(WritableImage sourceImage) {
+        int width = (int) sourceImage.getWidth();
+        int height = (int) sourceImage.getHeight();
+
+        WritableImage invertedImage = new WritableImage(width, height);
+        PixelReader pixelReader = sourceImage.getPixelReader();
+
+        if (pixelReader == null) {
+            return sourceImage;
+        }
+
+        var pixelWriter = invertedImage.getPixelWriter();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int argb = pixelReader.getArgb(x, y);
+                int alpha = (argb >>> 24) & 0xFF;
+                if (alpha == 0) {
+                    pixelWriter.setArgb(x, y, 0x00000000);
+                    continue;
+                }
+
+                int red = (argb >>> 16) & 0xFF;
+                int green = (argb >>> 8) & 0xFF;
+                int blue = argb & 0xFF;
+
+                int invertedArgb = (alpha << 24)
+                        | ((0xFF - red) << 16)
+                        | ((0xFF - green) << 8)
+                        | (0xFF - blue);
+                pixelWriter.setArgb(x, y, invertedArgb);
+            }
+        }
+
+        return invertedImage;
     }
 
     private void updateAdaptiveOffscreenScale(double renderMillis) {
