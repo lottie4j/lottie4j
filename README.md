@@ -15,7 +15,7 @@ Further technical information about this project can be found on [lottie4j.com](
 
 Lottie4J requires **Java 21** or higher.
 
-[![Watch the video](https://img.youtube.com/vi/_zZ1q6zbRgM/maxresdefault.jpg)](https://www.youtube.com/watch?v=_zZ1q6zbRgM)
+[![Watch the video](https://img.youtube.com/vi/9lE6UO8XNpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=9lE6UO8XNpU)
 
 ## What is Lottie?
 
