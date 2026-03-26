@@ -9,6 +9,7 @@ module com.lottie4j.core {
 
     exports com.lottie4j.core.model.bezier;
     exports com.lottie4j.core.model.dot;
+    opens com.lottie4j.core.model.dot to tools.jackson.databind;
     exports com.lottie4j.core.definition;
     exports com.lottie4j.core.exception;
     exports com.lottie4j.core.file;
