@@ -45,6 +45,9 @@
 
         <!-- Test dependencies -->
         <junit.version>5.9.2</junit.version>
+
+        <!-- Headless JVM flags for CI; overridden by the headless-tests profile -->
+        <surefire.argLine.headless></surefire.argLine.headless>
     </properties>
 
     <modules>
@@ -135,6 +138,7 @@
             <properties>
                 <java.version>25</java.version>
                 <javafx.version>26</javafx.version>
+                <surefire.argLine.headless>-Dglass.platform=headless --enable-native-access=javafx.graphics</surefire.argLine.headless>
             </properties>
             <build>
                 <plugins>
