@@ -12,8 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -28,6 +31,19 @@ public class LottieFileLoader {
 
     private static final String JSON_EXTENSION = ".json";
     private static final String DOT_LOTTIE_EXTENSION = ".lottie";
+
+    /** Prefix for the animations directory (v2 spec). */
+    private static final String DIR_ANIMATIONS = "a/";
+    /** Prefix for the animations directory (v1 / legacy spec). */
+    private static final String DIR_ANIMATIONS_LEGACY = "animations/";
+    /** Prefix for the themes directory (v2). */
+    private static final String DIR_THEMES = "t/";
+    /** Prefix for the state machines directory (v2). */
+    private static final String DIR_STATE_MACHINES = "s/";
+    /** Prefix for the image assets directory (v2). */
+    private static final String DIR_IMAGES = "i/";
+    /** Prefix for the font assets directory (v2). */
+    private static final String DIR_FONTS = "f/";
 
     /**
      * Prevents instantiation of this utility class.
@@ -140,12 +156,12 @@ public class LottieFileLoader {
     }
 
     /**
-     * Loads a dotLottie archive, parses {@code manifest.json}, and resolves all animations listed in the manifest.
+     * Loads a dotLottie archive, parses {@code manifest.json}, resolves all animations listed
+     * in the manifest, and collects any optional theme, state-machine, image, and font assets.
      *
-     * @param file `.lottie` zip archive
-     * @return populated dotLottie object containing the parsed manifest and animations
-     * @throws LottieFileException if the archive is invalid, required entries are missing,
-     *                             or manifest/animation content cannot be parsed
+     * @param file {@code .lottie} zip archive
+     * @return populated dotLottie object
+     * @throws LottieFileException if the archive is invalid or required entries are missing
      */
     private static DotLottie loadFromDottieFile(File file) throws LottieFileException {
         try (ZipFile zipFile = new ZipFile(file)) {
@@ -163,6 +179,7 @@ public class LottieFileLoader {
                 throw new LottieFileException("manifest has no animations");
             }
 
+            // --- animations (a/ or animations/) ---
             List<Animation> parsedAnimations = new ArrayList<>();
             for (var manifestAnimation : manifest.animations()) {
                 String animationId = manifestAnimation == null ? null : manifestAnimation.id();
@@ -178,12 +195,59 @@ public class LottieFileLoader {
                 parsedAnimations.add(parseJsonString(zipFile.getInputStream(animationEntry)));
             }
 
-            return new DotLottie(manifest, parsedAnimations);
+            // --- themes (t/) ---
+            Map<String, byte[]> themes = loadDirectoryEntries(zipFile, DIR_THEMES, true);
+
+            // --- state machines (s/) ---
+            Map<String, byte[]> stateMachines = loadDirectoryEntries(zipFile, DIR_STATE_MACHINES, true);
+
+            // --- image assets (i/) ---
+            Map<String, byte[]> imageAssets = loadDirectoryEntries(zipFile, DIR_IMAGES, false);
+
+            // --- font assets (f/) ---
+            Map<String, byte[]> fontAssets = loadDirectoryEntries(zipFile, DIR_FONTS, false);
+
+            return new DotLottie(manifest, parsedAnimations, themes, stateMachines, imageAssets, fontAssets);
         } catch (ZipException e) {
             throw new LottieFileException("zip error: " + e.getMessage());
         } catch (IOException e) {
             throw new LottieFileException("I/O error: " + e.getMessage());
         }
+    }
+
+    /**
+     * Reads all entries under {@code prefix} from the zip into a map.
+     * For JSON-only directories ({@code stripExtension=true}) the key is the base filename
+     * without the {@code .json} suffix (i.e. the asset id). For binary directories the key
+     * is the plain filename including its extension.
+     *
+     * @param zipFile         opened archive
+     * @param prefix          directory prefix including trailing slash (e.g. {@code "t/"})
+     * @param stripExtension  when {@code true}, strip the {@code .json} suffix from the key
+     * @return map of id/filename → raw bytes; empty when the directory is absent
+     */
+    private static Map<String, byte[]> loadDirectoryEntries(ZipFile zipFile, String prefix,
+                                                            boolean stripExtension) throws IOException {
+        Map<String, byte[]> result = new LinkedHashMap<>();
+        var entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            String name = entry.getName();
+            if (entry.isDirectory() || !name.startsWith(prefix)) {
+                continue;
+            }
+            String filename = name.substring(prefix.length());
+            if (filename.isEmpty()) {
+                continue;
+            }
+            String key = (stripExtension && filename.endsWith(JSON_EXTENSION))
+                    ? filename.substring(0, filename.length() - JSON_EXTENSION.length())
+                    : filename;
+            try (InputStream in = zipFile.getInputStream(entry)) {
+                result.put(key, in.readAllBytes());
+            }
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     /**
@@ -194,9 +258,9 @@ public class LottieFileLoader {
      * @return matching zip entry, or {@code null} when no supported path exists
      */
     private static ZipEntry resolveAnimationEntry(ZipFile zipFile, String animationId) {
-        ZipEntry animationEntry = zipFile.getEntry("a/" + animationId + JSON_EXTENSION);
+        ZipEntry animationEntry = zipFile.getEntry(DIR_ANIMATIONS + animationId + JSON_EXTENSION);
         if (animationEntry == null) {
-            animationEntry = zipFile.getEntry("animations/" + animationId + JSON_EXTENSION);
+            animationEntry = zipFile.getEntry(DIR_ANIMATIONS_LEGACY + animationId + JSON_EXTENSION);
         }
         return animationEntry;
     }
