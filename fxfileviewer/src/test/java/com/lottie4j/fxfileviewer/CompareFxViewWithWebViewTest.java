@@ -18,7 +18,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>This is useful for debugging, but it is not an authoritative validator for FX correctness
  * because the embedded WebView/player path can diverge from the official Lottie Web rendering.</p>
  */
-@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 class CompareFxViewWithWebViewTest {
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
     private static final double SIMILARITY_THRESHOLD = 98;
