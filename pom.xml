@@ -138,7 +138,7 @@
             <properties>
                 <java.version>25</java.version>
                 <javafx.version>26</javafx.version>
-                <surefire.argLine.headless>-Dglass.platform=headless --enable-native-access=javafx.graphics</surefire.argLine.headless>
+                <surefire.argLine.headless>-Dglass.platform=headless --enable-native-access=javafx.graphics,javafx.web</surefire.argLine.headless>
             </properties>
             <build>
                 <plugins>
