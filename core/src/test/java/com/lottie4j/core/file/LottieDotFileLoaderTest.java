@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LottieDotFileLoaderTest {
+public class LottieDotFileLoaderTest {
 
     private static Stream<Arguments> provideLottieFiles() {
         return Stream.of(

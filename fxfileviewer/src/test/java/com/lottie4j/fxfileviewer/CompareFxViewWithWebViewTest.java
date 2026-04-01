@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * because the embedded WebView/player path can diverge from the official Lottie Web rendering.</p>
  */
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
-class CompareFxViewWithWebViewTest {
+public class CompareFxViewWithWebViewTest {
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
     private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
@@ -57,7 +57,7 @@ class CompareFxViewWithWebViewTest {
      * Initializes JavaFX runtime and creates a primary stage used by all test cases.
      */
     @BeforeAll
-    static void initJavaFX() throws InterruptedException {
+    public static void initJavaFX() throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
 
         Platform.startup(() -> {
