@@ -25,6 +25,14 @@ jobs:
       - name: Run the tests
         run: mvn -ntp -B test -Pheadless-tests
 
+      - name: Upload test comparison images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-comparison-images
+          retention-days: 1
+          path: fxfileviewer/target/test-output/
+
   build:
     name: Build validation
     needs: test
