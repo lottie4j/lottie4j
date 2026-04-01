@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for PathStrokeRenderer.
  */
-class PathStrokeRendererTest {
+public class PathStrokeRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

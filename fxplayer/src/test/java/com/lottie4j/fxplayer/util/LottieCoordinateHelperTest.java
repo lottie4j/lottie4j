@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-class LottieCoordinateHelperTest {
+public class LottieCoordinateHelperTest {
 
     @Test
     void convertsCenterToTopLeftCoordinates() {

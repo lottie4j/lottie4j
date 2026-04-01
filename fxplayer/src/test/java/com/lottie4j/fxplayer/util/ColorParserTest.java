@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class ColorParserTest {
+public class ColorParserTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ColorParserTest.class);
 

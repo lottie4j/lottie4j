@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for FillRenderer.
  */
-class FillRendererTest {
+public class FillRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

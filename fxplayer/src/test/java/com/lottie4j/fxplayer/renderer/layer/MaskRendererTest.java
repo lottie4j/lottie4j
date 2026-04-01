@@ -14,10 +14,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for MaskRenderer.
  * Validates mask application behavior and early returns for missing masks.
  */
-class MaskRendererTest {
+public class MaskRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

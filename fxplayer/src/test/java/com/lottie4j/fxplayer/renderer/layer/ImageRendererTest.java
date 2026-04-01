@@ -20,10 +20,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ImageRendererTest {
+public class ImageRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

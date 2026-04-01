@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LottieJsonFileLoaderTest {
+public class LottieJsonFileLoaderTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
     private static final Comparator<JsonNode> JSON_NODE_COMPARATOR = (left, right) -> {

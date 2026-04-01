@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for EllipseRenderer.
  * Validates ellipse rendering behavior and shape validation.
  */
-class EllipseRendererTest {
+public class EllipseRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

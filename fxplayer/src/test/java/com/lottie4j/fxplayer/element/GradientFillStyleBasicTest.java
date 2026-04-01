@@ -14,10 +14,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for GradientFillStyle.
  * Validates gradient paint generation and coordinate transformations.
  */
-class GradientFillStyleBasicTest {
+public class GradientFillStyleBasicTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for EffectsRenderer.
  * Validates effects rendering behavior and state management.
  */
-class EffectsRendererTest {
+public class EffectsRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

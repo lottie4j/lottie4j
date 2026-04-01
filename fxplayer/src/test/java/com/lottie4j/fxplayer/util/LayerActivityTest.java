@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class LayerActivityTest {
+public class LayerActivityTest {
 
     @Test
     void evaluatesLayerAsActiveWithinInclusiveExclusiveBounds() {

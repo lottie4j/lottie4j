@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for TextRenderer.
  * Validates text rendering behavior and early returns for missing text data.
  */
-class TextRendererTest {
+public class TextRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

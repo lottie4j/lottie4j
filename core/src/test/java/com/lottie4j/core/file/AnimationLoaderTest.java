@@ -12,7 +12,8 @@ import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AnimationLoaderTest {
+public class AnimationLoaderTest {
+
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
     @Test

@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for GradientStrokeStyle.
  * Validates basic functionality without creating complex test data.
  */
-class GradientStrokeStyleSimpleTest {
+public class GradientStrokeStyleSimpleTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
