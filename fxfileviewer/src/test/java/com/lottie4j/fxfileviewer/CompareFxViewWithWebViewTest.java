@@ -217,10 +217,12 @@ public class CompareFxViewWithWebViewTest {
 
                 Scene scene = new Scene(rootPane, scaledWidth * 2 + 10, scaledHeight);
                 primaryStage.setScene(scene);
-                primaryStage.setAlwaysOnTop(true);
-                primaryStage.toFront();
-                primaryStage.show();
-                primaryStage.requestFocus();
+                if (!java.awt.GraphicsEnvironment.isHeadless() && !"headless".equalsIgnoreCase(System.getProperty("glass.platform"))) {
+                    primaryStage.setAlwaysOnTop(true);
+                    primaryStage.toFront();
+                    primaryStage.show();
+                    primaryStage.requestFocus();
+                }
 
                 webView.loadLottie(animation, scaledWidth, scaledHeight);
 
