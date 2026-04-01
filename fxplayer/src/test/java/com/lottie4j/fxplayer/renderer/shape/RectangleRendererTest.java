@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for RectangleRenderer.
  * Validates rectangle rendering behavior and shape validation.
  */
-class RectangleRendererTest {
+public class RectangleRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

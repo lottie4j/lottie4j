@@ -12,10 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for MatteRenderer.
  * Validates matte rendering behavior and layer state management.
  */
-class MatteRendererTest {
+public class MatteRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

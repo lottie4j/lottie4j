@@ -12,10 +12,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for FillStyle.
  * Validates fill color resolution and opacity handling.
  */
-class FillStyleBasicTest {
+public class FillStyleBasicTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

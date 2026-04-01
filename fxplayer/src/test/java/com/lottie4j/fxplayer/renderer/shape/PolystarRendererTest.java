@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for PolystarRenderer.
  * Validates polystar (polygon/star) rendering behavior and shape validation.
  */
-class PolystarRendererTest {
+public class PolystarRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

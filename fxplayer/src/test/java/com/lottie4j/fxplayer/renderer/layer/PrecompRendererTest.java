@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for PrecompRenderer.
  * Validates precomposition rendering and state management.
  */
-class PrecompRendererTest {
+public class PrecompRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

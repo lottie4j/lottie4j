@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for PathRenderer.
  * Validates path rendering behavior and type validation.
  */
-class PathRendererTest {
+public class PathRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

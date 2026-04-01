@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for ShapeGroupRenderer.
  */
-class ShapeGroupRendererTest {
+public class ShapeGroupRendererTest {
 
     @BeforeAll
-    static void initToolkit() {
+    public static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
