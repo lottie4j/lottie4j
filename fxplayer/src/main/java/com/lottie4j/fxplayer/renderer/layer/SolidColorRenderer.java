@@ -37,7 +37,7 @@ public class SolidColorRenderer {
         }
 
         // Parse the solid color (format: "RRGGBBAA" or similar hex string)
-        Color color = ColorParser.parse(layer.solidColor(), logger);
+        Color color = ColorParser.parse(layer.solidColor());
         if (color == null) {
             logger.warn("Could not parse solid color: {}", layer.solidColor());
             return;

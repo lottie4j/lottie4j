@@ -1,13 +1,18 @@
 package com.lottie4j.fxplayer.util;
 
+import com.lottie4j.fxplayer.renderer.layer.EffectsRenderer;
 import javafx.scene.paint.Color;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility for parsing hex color strings into JavaFX Color objects.
  * Supports both 6-character (RGB) and 8-character (RGBA) hex formats.
  */
 public final class ColorParser {
+
+    private static final Logger logger = LoggerFactory.getLogger(ColorParser.class);
+
 
     /**
      * Prevents instantiation of this utility class.
@@ -19,10 +24,9 @@ public final class ColorParser {
      * Parses hex color strings in {@code RRGGBB} or {@code RRGGBBAA} format.
      *
      * @param colorStr input color string with or without a leading '#'
-     * @param logger   logger used for parse error diagnostics
      * @return parsed JavaFX color, or {@code null} when parsing fails
      */
-    public static Color parse(String colorStr, Logger logger) {
+    public static Color parse(String colorStr) {
         try {
             String hex = colorStr.startsWith("#") ? colorStr.substring(1) : colorStr;
 
