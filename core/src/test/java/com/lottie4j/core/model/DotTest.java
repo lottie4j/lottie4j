@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DotTest {
+class DotTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 

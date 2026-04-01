@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BaseShapeTest {
+class BaseShapeTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 
