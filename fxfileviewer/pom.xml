@@ -93,7 +93,6 @@
                 <configuration>
                     <argLine>
                         --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
-                        -Dglass.platform=headless
                     </argLine>
                 </configuration>
             </plugin>
@@ -116,4 +115,30 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <!-- Activates JavaFX 26 headless windowing for unit tests in CI (requires Java 25+). -->
+            <!-- Usage: mvn test -Pheadless-tests -->
+            <id>headless-tests</id>
+            <properties>
+                <javafx.version>26</javafx.version>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.0.0-M5</version>
+                        <configuration>
+                            <argLine>
+                                --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
+                                -Dglass.platform=headless
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

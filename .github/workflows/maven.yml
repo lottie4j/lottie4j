@@ -23,7 +23,7 @@ jobs:
           cache: maven
 
       - name: Run the tests
-        run: mvn -ntp -B test
+        run: mvn -ntp -B test -Pheadless-tests
 
   build:
     name: Build validation
