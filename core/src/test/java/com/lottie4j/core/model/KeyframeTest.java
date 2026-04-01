@@ -11,7 +11,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class KeyframeTest {
+class KeyframeTest {
 
     private static final ObjectMapper mapper = ObjectMapperFactory.getInstance();
 

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class DefinitionTest {
+class DefinitionTest {
 
     @Test
     void shapeTypesTest() {
