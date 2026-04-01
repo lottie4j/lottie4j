@@ -19,6 +19,7 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class ImageRendererTest {
 
@@ -29,6 +30,8 @@ public class ImageRendererTest {
 
     @Test
     void rendersEmbeddedDataUriImage() {
+        assumeFalse("headless".equalsIgnoreCase(System.getProperty("glass.platform")),
+                "Pixel-level canvas rendering is not reliable in headless mode");
         ImageRenderer renderer = new ImageRenderer();
         Layer layer = imageLayer("asset-red", 3, 3);
         Animation animation = animationWithAssets(List.of(imageAsset("asset-red", dataUri(1, 1, 0xFFFF0000))));
@@ -47,6 +50,8 @@ public class ImageRendererTest {
 
     @Test
     void usesIntrinsicImageSizeWhenLayerDimensionsAreMissing() {
+        assumeFalse("headless".equalsIgnoreCase(System.getProperty("glass.platform")),
+                "Pixel-level canvas rendering is not reliable in headless mode");
         ImageRenderer renderer = new ImageRenderer();
         Layer layer = imageLayer("asset-green", null, null);
         Animation animation = animationWithAssets(List.of(imageAsset("asset-green", dataUri(2, 1, 0xFF00FF00))));

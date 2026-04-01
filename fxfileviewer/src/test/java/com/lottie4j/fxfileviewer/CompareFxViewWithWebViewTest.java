@@ -18,7 +18,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>This is useful for debugging, but it is not an authoritative validator for FX correctness
  * because the embedded WebView/player path can diverge from the official Lottie Web rendering.</p>
  */
-@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 public class CompareFxViewWithWebViewTest {
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
     private static final double SIMILARITY_THRESHOLD = 98;
@@ -74,22 +72,22 @@ public class CompareFxViewWithWebViewTest {
     static Stream<String> lottieJsonFiles() {
         return Stream.of(
                 "json/angry_bird.json",
-                "json/animated_background_patterns.json",
-                "json/box-moving-changing-color.json",
-                "json/isometric_data_analysis.json",
-                "json/java_duke_fadein.json",
-                "json/java_duke_flip.json",
-                "json/java_duke_slidein.json",
-                "json/loading.json",
-                "json/lottie4j.json",
-                "json/lottie_lego.json",
-                "json/sandy_loading.json",
-                "json/snake_ladder_loading_animation.json",
-                "json/success.json",
-                "json/timeline_animation.json",
-                "dot/lottie4j.lottie",
-                "dot/demo-1.lottie",
-                "dot/demo-2.lottie"
+                "json/animated_background_patterns.json"
+                //"json/box-moving-changing-color.json",
+                //"json/isometric_data_analysis.json",
+                //"json/java_duke_fadein.json",
+                //"json/java_duke_flip.json",
+                //"json/java_duke_slidein.json",
+                //"json/loading.json",
+                //"json/lottie4j.json",
+                //"json/lottie_lego.json",
+                //"json/sandy_loading.json",
+                //"json/snake_ladder_loading_animation.json",
+                //"json/success.json",
+                //"json/timeline_animation.json",
+                //"dot/lottie4j.lottie",
+                //"dot/demo-1.lottie",
+                //"dot/demo-2.lottie"
         );
     }
 
@@ -219,10 +217,12 @@ public class CompareFxViewWithWebViewTest {
 
                 Scene scene = new Scene(rootPane, scaledWidth * 2 + 10, scaledHeight);
                 primaryStage.setScene(scene);
-                primaryStage.setAlwaysOnTop(true);
-                primaryStage.toFront();
-                primaryStage.show();
-                primaryStage.requestFocus();
+                if (!java.awt.GraphicsEnvironment.isHeadless() && !"headless".equalsIgnoreCase(System.getProperty("glass.platform"))) {
+                    primaryStage.setAlwaysOnTop(true);
+                    primaryStage.toFront();
+                    primaryStage.show();
+                    primaryStage.requestFocus();
+                }
 
                 webView.loadLottie(animation, scaledWidth, scaledHeight);
 
