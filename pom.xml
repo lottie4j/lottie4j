@@ -133,7 +133,7 @@
             <!-- Usage: mvn test -Pheadless-tests -->
             <id>headless-tests</id>
             <properties>
-                <java.version>26</java.version>
+                <java.version>25</java.version>
                 <javafx.version>26</javafx.version>
             </properties>
             <build>
