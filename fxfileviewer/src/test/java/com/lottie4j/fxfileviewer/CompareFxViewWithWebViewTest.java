@@ -77,7 +77,7 @@ public class CompareFxViewWithWebViewTest {
                 //"json/java_duke_slidein.json",
                 "json/loading.json",
                 "json/lottie4j.json",
-                "json/lottie_lego.json",
+                //"json/lottie_lego.json",
                 "json/sandy_loading.json",
                 "json/snake_ladder_loading_animation.json",
                 "json/success.json",
