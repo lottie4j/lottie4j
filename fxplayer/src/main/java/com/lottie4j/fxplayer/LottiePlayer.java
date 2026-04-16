@@ -1359,6 +1359,8 @@ public class LottiePlayer extends Canvas {
 
     /**
      * Returns whether adaptive off-screen resolution scaling is enabled.
+     *
+     * @return true when adaptive off-screen scaling is enabled, false otherwise
      */
     public boolean isAdaptiveOffscreenScalingEnabled() {
         return adaptiveOffscreenScalingEnabled;
@@ -1440,6 +1442,8 @@ public class LottiePlayer extends Canvas {
 
     /**
      * Enables or disables global color inversion for rendered output.
+     *
+     * @param enabled true to invert rendered colors, false to keep original colors
      */
     public void setInvertColorsEnabled(boolean enabled) {
         this.invertColorsEnabled = enabled;
@@ -1448,6 +1452,8 @@ public class LottiePlayer extends Canvas {
 
     /**
      * Returns whether global color inversion is enabled.
+     *
+     * @return true when color inversion is enabled, false otherwise
      */
     public boolean isInvertColorsEnabled() {
         return invertColorsEnabled;

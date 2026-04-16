@@ -18,12 +18,12 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'zulu'
           cache: maven
 
       - name: Run the tests
-        run: mvn -ntp -B test
+        run: mvn -ntp -B test -Pheadless-tests
 
   build:
     name: Build validation
@@ -35,7 +35,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'zulu'
           cache: maven
 

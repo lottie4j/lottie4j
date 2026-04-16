@@ -93,6 +93,7 @@
                 <configuration>
                     <argLine>
                         --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
+                        ${surefire.argLine.headless}
                     </argLine>
                 </configuration>
             </plugin>

@@ -22,6 +22,11 @@ public class MaskRenderer {
     private static final Logger logger = LoggerFactory.getLogger(MaskRenderer.class);
     private final PathBezierInterpolator bezierInterpolator;
 
+    /**
+     * Creates a mask renderer that resolves animated bezier mask paths per frame.
+     *
+     * @param bezierInterpolator interpolator used to evaluate animated bezier paths
+     */
     public MaskRenderer(PathBezierInterpolator bezierInterpolator) {
         this.bezierInterpolator = bezierInterpolator;
     }

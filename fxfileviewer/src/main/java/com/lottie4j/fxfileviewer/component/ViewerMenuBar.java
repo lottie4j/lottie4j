@@ -86,6 +86,15 @@ public class ViewerMenuBar extends MenuBar {
 
     /**
      * Creates a menu bar with optional debug, scaling, and adaptive offscreen controls in the View menu.
+     *
+     * @param stage                      the primary stage for displaying file chooser dialogs
+     * @param onFileSelected             callback invoked when a Lottie file is selected
+     * @param onDebugInfoChanged         callback invoked when debug info visibility changes; null disables the toggle menu
+     * @param debugInfoSelected          initial debug toggle state
+     * @param onScalePercentChanged      callback invoked when the scale slider changes; null disables the slider
+     * @param initialScalePercent        initial scale percentage for the slider, clamped to [10, 100]
+     * @param onAdaptiveOffscreenChanged callback invoked when adaptive offscreen changes; null disables the toggle menu
+     * @param adaptiveOffscreenSelected  initial adaptive offscreen toggle state
      */
     public ViewerMenuBar(Stage stage,
                          Consumer<File> onFileSelected,
@@ -109,6 +118,17 @@ public class ViewerMenuBar extends MenuBar {
 
     /**
      * Creates a menu bar with optional debug, scaling, adaptive offscreen, and invert-color controls in the View menu.
+     *
+     * @param stage                      the primary stage for displaying file chooser dialogs
+     * @param onFileSelected             callback invoked when a Lottie file is selected
+     * @param onDebugInfoChanged         callback invoked when debug info visibility changes; null disables the toggle menu
+     * @param debugInfoSelected          initial debug toggle state
+     * @param onScalePercentChanged      callback invoked when the scale slider changes; null disables the slider
+     * @param initialScalePercent        initial scale percentage for the slider, clamped to [10, 100]
+     * @param onAdaptiveOffscreenChanged callback invoked when adaptive offscreen changes; null disables the toggle menu
+     * @param adaptiveOffscreenSelected  initial adaptive offscreen toggle state
+     * @param onInvertColorsChanged      callback invoked when invert colors changes; null disables the toggle menu
+     * @param invertColorsSelected       initial invert colors toggle state
      */
     public ViewerMenuBar(Stage stage,
                          Consumer<File> onFileSelected,
@@ -207,6 +227,8 @@ public class ViewerMenuBar extends MenuBar {
 
     /**
      * Returns whether adaptive offscreen rendering is currently selected.
+     *
+     * @return true if adaptive offscreen is selected, false otherwise
      */
     public boolean isAdaptiveOffscreenSelected() {
         return adaptiveOffscreenMenuItem != null && adaptiveOffscreenMenuItem.isSelected();
@@ -214,6 +236,8 @@ public class ViewerMenuBar extends MenuBar {
 
     /**
      * Returns whether invert colors rendering is currently selected.
+     *
+     * @return true if invert colors is selected, false otherwise
      */
     public boolean isInvertColorsSelected() {
         return invertColorsMenuItem != null && invertColorsMenuItem.isSelected();

@@ -45,6 +45,9 @@
 
         <!-- Test dependencies -->
         <junit.version>5.9.2</junit.version>
+
+        <!-- Headless JVM flags for CI; overridden by the headless-tests profile -->
+        <surefire.argLine.headless></surefire.argLine.headless>
     </properties>
 
     <modules>
@@ -126,7 +129,34 @@
         </plugins>
     </build>
 
+
     <profiles>
+        <profile>
+            <!-- Activates JavaFX 26 headless windowing for unit tests in CI (requires Java 25+). -->
+            <!-- Usage: mvn test -Pheadless-tests -->
+            <id>headless-tests</id>
+            <properties>
+                <java.version>25</java.version>
+                <javafx.version>26</javafx.version>
+                <surefire.argLine.headless>-Dglass.platform=headless --enable-native-access=javafx.graphics</surefire.argLine.headless>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.0.0-M5</version>
+                        <configuration>
+                            <argLine>
+                                --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
+                                -Dglass.platform=headless --enable-native-access=javafx.graphics
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <profile>
             <id>release</id>
             <build>
