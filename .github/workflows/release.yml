@@ -44,7 +44,7 @@ jobs:
           mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
 
       - name: Build and publish release
-        run: mvn -Prelease clean deploy
+        run: mvn -ntp -B -Dmaven.test.skip=true -Prelease clean deploy
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
