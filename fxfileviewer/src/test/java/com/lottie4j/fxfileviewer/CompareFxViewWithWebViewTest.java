@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>If no reference images exist for a file, the test is skipped.
  * Run {@link WebViewScreenshotGenerator} locally to create or refresh them.</p>
  */
-public class CompareFxViewWithWebViewTest {
+class CompareFxViewWithWebViewTest {
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
     private static final double SIMILARITY_THRESHOLD = 98;
     private static final int CANVAS_WIDTH = 800;
@@ -54,7 +54,7 @@ public class CompareFxViewWithWebViewTest {
     private static Stage primaryStage;
 
     @BeforeAll
-    public static void initJavaFX() throws InterruptedException {
+    static void initJavaFX() throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         Platform.startup(() -> {
             primaryStage = new Stage();
@@ -71,6 +71,7 @@ public class CompareFxViewWithWebViewTest {
                 "json/angry_bird.json",
                 "json/animated_background_patterns.json",
                 "json/box-moving-changing-color.json",
+                "json/face-exhaling.json",
                 "json/isometric_data_analysis.json",
                 "json/java_duke_fadein.json",
                 "json/java_duke_flip.json",
@@ -97,7 +98,7 @@ public class CompareFxViewWithWebViewTest {
     @Test
     void compareFxAndJsRenderingHalfSize() throws Exception {
         compareFxWithPreGeneratedImages(lottieJsonFiles().toList().getFirst(), 0.5);
-     }
+    }
 
     // ── Core comparison logic ─────────────────────────────────────────────────
 
@@ -290,7 +291,9 @@ public class CompareFxViewWithWebViewTest {
         return sum / ((long) pixels1.length * pixels1[0].length);
     }
 
-    /** Saves a side-by-side PNG (FX left, reference right) for failed frames. */
+    /**
+     * Saves a side-by-side PNG (FX left, reference right) for failed frames.
+     */
     private void saveImage(WritableImage fxImage, WritableImage refImage, Path path) throws IOException {
         int fxW = (int) fxImage.getWidth(), fxH = (int) fxImage.getHeight();
         int refW = (int) refImage.getWidth(), refH = (int) refImage.getHeight();

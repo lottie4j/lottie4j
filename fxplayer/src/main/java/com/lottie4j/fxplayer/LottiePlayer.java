@@ -10,6 +10,7 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.*;
+import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
 import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
@@ -60,9 +61,7 @@ public class LottiePlayer extends Canvas {
     private final SolidColorRenderer solidColorRenderer = new SolidColorRenderer();
     private final EffectsRenderer effectsRenderer = new EffectsRenderer();
     private final MatteRenderer matteRenderer = new MatteRenderer();
-    private final com.lottie4j.fxplayer.renderer.layer.MaskRenderer maskRenderer =
-            new com.lottie4j.fxplayer.renderer.layer.MaskRenderer(
-                    new com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator());
+    private final MaskRenderer maskRenderer = new MaskRenderer(new PathBezierInterpolator());
     private final int baseRenderWidth;
     private final int baseRenderHeight;
     private AnimationTimer animationTimer;
@@ -1355,6 +1354,15 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Returns whether adaptive off-screen resolution scaling is enabled.
+     *
+     * @return true when adaptive off-screen scaling is enabled, false otherwise
+     */
+    public boolean isAdaptiveOffscreenScalingEnabled() {
+        return adaptiveOffscreenScalingEnabled;
+    }
+
+    /**
      * Enables or disables adaptive off-screen resolution scaling.
      * <p>
      * When enabled, the renderer may lower the resolution of selected off-screen passes
@@ -1370,15 +1378,6 @@ public class LottiePlayer extends Canvas {
     public void setAdaptiveOffscreenScalingEnabled(boolean enabled) {
         this.adaptiveOffscreenScalingEnabled = enabled;
         this.adaptiveOffscreenScale = 1.0;
-    }
-
-    /**
-     * Returns whether adaptive off-screen resolution scaling is enabled.
-     *
-     * @return true when adaptive off-screen scaling is enabled, false otherwise
-     */
-    public boolean isAdaptiveOffscreenScalingEnabled() {
-        return adaptiveOffscreenScalingEnabled;
     }
 
     /**
@@ -1464,6 +1463,15 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Returns whether global color inversion is enabled.
+     *
+     * @return true when color inversion is enabled, false otherwise
+     */
+    public boolean isInvertColorsEnabled() {
+        return invertColorsEnabled;
+    }
+
+    /**
      * Enables or disables global color inversion for rendered output.
      *
      * @param enabled true to invert rendered colors, false to keep original colors
@@ -1471,15 +1479,6 @@ public class LottiePlayer extends Canvas {
     public void setInvertColorsEnabled(boolean enabled) {
         this.invertColorsEnabled = enabled;
         seekToFrame(getCurrentFrame());
-    }
-
-    /**
-     * Returns whether global color inversion is enabled.
-     *
-     * @return true when color inversion is enabled, false otherwise
-     */
-    public boolean isInvertColorsEnabled() {
-        return invertColorsEnabled;
     }
 
     /**

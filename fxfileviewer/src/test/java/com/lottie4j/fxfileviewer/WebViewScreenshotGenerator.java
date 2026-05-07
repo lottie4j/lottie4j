@@ -115,6 +115,10 @@ public class WebViewScreenshotGenerator extends Application {
         int animHeight = animation.height() != null ? animation.height() : CANVAS_HEIGHT;
 
         Path outputDir = testResourcesDir.resolve(webViewDirPath(fileName));
+        if (Files.isDirectory(outputDir) && hasScreenshots(outputDir)) {
+            logger.info("Skipping {} — screenshots already exist in {}", fileName, outputDir);
+            return;
+        }
         recreateDirectory(outputDir);
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
@@ -208,6 +212,12 @@ public class WebViewScreenshotGenerator extends Application {
     }
 
     // ── Private utilities ────────────────────────────────────────────────────
+
+    private static boolean hasScreenshots(Path dir) throws IOException {
+        try (Stream<Path> paths = Files.list(dir)) {
+            return paths.anyMatch(p -> p.toString().endsWith(".png"));
+        }
+    }
 
     private static void recreateDirectory(Path dir) throws IOException {
         if (Files.exists(dir)) {
