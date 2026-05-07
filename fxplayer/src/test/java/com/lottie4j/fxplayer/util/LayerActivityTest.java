@@ -6,7 +6,17 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class LayerActivityTest {
+class LayerActivityTest {
+
+    private static Layer layer(Double inPoint, Double outPoint) {
+        return new Layer(
+                null, null, null, null, null, null, null,
+                null, inPoint, outPoint, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
+    }
 
     @Test
     void evaluatesLayerAsActiveWithinInclusiveExclusiveBounds() {
@@ -55,15 +65,5 @@ public class LayerActivityTest {
         assertTrue(LayerActivity.isActiveAtFrame(layer, 230.0));
         assertTrue(LayerActivity.isActiveAtFrame(layer, 230.39));
         assertFalse(LayerActivity.isActiveAtFrame(layer, 230.4));
-    }
-
-    private static Layer layer(Double inPoint, Double outPoint) {
-        return new Layer(
-                null, null, null, null, null, null, null,
-                null, inPoint, outPoint, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, null, null, null, null, null
-        );
     }
 }

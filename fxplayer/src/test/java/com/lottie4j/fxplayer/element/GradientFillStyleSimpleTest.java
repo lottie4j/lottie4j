@@ -5,16 +5,17 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for GradientFillStyle.
  * Validates basic functionality without creating complex test data.
  */
-public class GradientFillStyleSimpleTest {
+class GradientFillStyleSimpleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
@@ -22,7 +23,7 @@ public class GradientFillStyleSimpleTest {
     void nullGradientFillReturnsBlack() {
         GradientFillStyle gradientStyle = new GradientFillStyle(null);
         Color paint = (Color) gradientStyle.getPaint(0.0);
-        
+
         assertEquals(Color.BLACK, paint);
     }
 
@@ -30,7 +31,7 @@ public class GradientFillStyleSimpleTest {
     void getPaintWithFrameReturnsNotNull() {
         GradientFillStyle gradientStyle = new GradientFillStyle(null);
         Object paint = gradientStyle.getPaint(0.0);
-        
+
         assertNotNull(paint);
     }
 
@@ -38,18 +39,18 @@ public class GradientFillStyleSimpleTest {
     void getPaintWithShapeBoundsReturnsNotNull() {
         GradientFillStyle gradientStyle = new GradientFillStyle(null);
         Object paint = gradientStyle.getPaint(0.0, 10.0, 20.0, 100.0, 100.0);
-        
+
         assertNotNull(paint);
     }
 
     @Test
     void multipleFramesReturnPaint() {
         GradientFillStyle gradientStyle = new GradientFillStyle(null);
-        
+
         Object paint1 = gradientStyle.getPaint(0.0);
         Object paint2 = gradientStyle.getPaint(10.0);
         Object paint3 = gradientStyle.getPaint(20.0);
-        
+
         assertNotNull(paint1);
         assertNotNull(paint2);
         assertNotNull(paint3);
@@ -65,7 +66,7 @@ public class GradientFillStyleSimpleTest {
     void zeroShapeBoundsReturnPaint() {
         GradientFillStyle gradientStyle = new GradientFillStyle(null);
         Object paint = gradientStyle.getPaint(0.0, 0.0, 0.0, 0.0, 0.0);
-        
+
         assertNotNull(paint);
     }
 }

@@ -22,11 +22,39 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
  * Unit tests for GradientStrokeStyle.
  * Validates gradient stroke paint generation, color stops, and coordinate transformations.
  */
-public class GradientStrokeStyleTest {
+class GradientStrokeStyleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static GradientStroke buildGradient(GradientType type) {
+        Animated colors = animated(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
+        GradientStroke.GradientColor gradientColor = new GradientStroke.GradientColor(2, colors);
+
+        Animated start = animated(0.0, 0.0);
+        Animated end = animated(100.0, 100.0);
+
+        return new GradientStroke(
+                null, null, null, null, null, null, null,
+                null,
+                null, null, null, null,
+                null, null,
+                start,
+                end,
+                type,
+                gradientColor,
+                null
+        );
+    }
+
+    private static Animated animated(double... values) {
+        List<Keyframe> frames = java.util.Arrays.stream(values)
+                .mapToObj(NumberKeyframe::new)
+                .map(Keyframe.class::cast)
+                .toList();
+        return new Animated(0, frames, null, null, null, null, null);
     }
 
     @Test
@@ -66,33 +94,5 @@ public class GradientStrokeStyleTest {
         Paint paint = new GradientStrokeStyle(buildGradient(GradientType.LINEAR))
                 .getPaint(0.0, 10.0, 20.0, 100.0, 100.0);
         assertInstanceOf(LinearGradient.class, paint);
-    }
-
-    private static GradientStroke buildGradient(GradientType type) {
-        Animated colors = animated(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
-        GradientStroke.GradientColor gradientColor = new GradientStroke.GradientColor(2, colors);
-
-        Animated start = animated(0.0, 0.0);
-        Animated end = animated(100.0, 100.0);
-
-        return new GradientStroke(
-                null, null, null, null, null, null, null,
-                null,
-                null, null, null, null,
-                null, null,
-                start,
-                end,
-                type,
-                gradientColor,
-                null
-        );
-    }
-
-    private static Animated animated(double... values) {
-        List<Keyframe> frames = java.util.Arrays.stream(values)
-                .mapToObj(NumberKeyframe::new)
-                .map(Keyframe.class::cast)
-                .toList();
-        return new Animated(0, frames, null, null, null, null, null);
     }
 }

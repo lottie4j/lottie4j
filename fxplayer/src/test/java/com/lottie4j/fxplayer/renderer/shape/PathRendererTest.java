@@ -16,11 +16,29 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for PathRenderer.
  * Validates path rendering behavior and type validation.
  */
-public class PathRendererTest {
+class PathRendererTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static Group createGroup() {
+        return new Group(null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    private static BaseShape createTestShape() {
+        return new BaseShape() {
+            @Override
+            public PropertyListingList getList() {
+                return null;
+            }
+
+            @Override
+            public ShapeType shapeType() {
+                return ShapeType.UNKNOWN;
+            }
+        };
     }
 
     @Test
@@ -37,13 +55,13 @@ public class PathRendererTest {
         PathRenderer renderer = new PathRenderer();
         BaseShape nonPathShape = createTestShape();
         Group parentGroup = createGroup();
-        
+
         FxTestHelper.callAndWait(() -> {
             Canvas canvas = new Canvas(100, 100);
             GraphicsContext gc = canvas.getGraphicsContext2D();
-            
+
             renderer.render(gc, nonPathShape, parentGroup, 0.0);
-            
+
             return true;
         });
     }
@@ -54,14 +72,14 @@ public class PathRendererTest {
         PathRenderer renderer2 = new PathRenderer();
         BaseShape shape = createTestShape();
         Group parentGroup = createGroup();
-        
+
         FxTestHelper.callAndWait(() -> {
             Canvas canvas = new Canvas(100, 100);
             GraphicsContext gc = canvas.getGraphicsContext2D();
-            
+
             renderer1.render(gc, shape, parentGroup, 0.0);
             renderer2.render(gc, shape, parentGroup, 1.0);
-            
+
             return true;
         });
     }
@@ -71,19 +89,19 @@ public class PathRendererTest {
         PathRenderer renderer = new PathRenderer();
         BaseShape shape = createTestShape();
         Group parentGroup = createGroup();
-        
+
         Boolean canDraw = FxTestHelper.callAndWait(() -> {
             Canvas canvas = new Canvas(100, 100);
             GraphicsContext gc = canvas.getGraphicsContext2D();
-            
+
             renderer.render(gc, shape, parentGroup, 0.0);
-            
+
             gc.setFill(javafx.scene.paint.Color.GREEN);
             gc.fillRect(10, 10, 20, 20);
-            
+
             return true;
         });
-        
+
         assertTrue(canDraw, "Graphics context should remain usable");
     }
 
@@ -92,30 +110,17 @@ public class PathRendererTest {
         PathRenderer renderer = new PathRenderer();
         BaseShape shape = createTestShape();
         Group parentGroup = createGroup();
-        
+
         FxTestHelper.callAndWait(() -> {
             Canvas canvas = new Canvas(100, 100);
             GraphicsContext gc = canvas.getGraphicsContext2D();
-            
+
             renderer.render(gc, shape, parentGroup, 0.0);
             renderer.render(gc, shape, parentGroup, 1.0);
             renderer.render(gc, shape, parentGroup, 2.0);
-            
+
             return true;
         });
-    }
-
-    private static Group createGroup() {
-        return new Group(null, null, null, null, null, null, null, null, null, null, null);
-    }
-
-    private static BaseShape createTestShape() {
-        return new BaseShape() {
-            @Override
-            public PropertyListingList getList() { return null; }
-            @Override
-            public ShapeType shapeType() { return ShapeType.UNKNOWN; }
-        };
     }
 }
 

@@ -6,7 +6,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class FrameTimingTest {
+class FrameTimingTest {
+
+    private static Layer layer(Double timeStretch, Double inPoint, Double outPoint, Double startTime) {
+        return new Layer(
+                null, null, null, null, null, null, null,
+                timeStretch, inPoint, outPoint, startTime,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
+    }
 
     @Test
     void usesSafeDefaultsWhenAnimationTimingIsMissing() {
@@ -55,15 +65,5 @@ public class FrameTimingTest {
         assertEquals(12, FrameTiming.getFramesPerSecond(animation));
         assertEquals(640, FrameTiming.getAnimationWidth(animation));
         assertEquals(360, FrameTiming.getAnimationHeight(animation));
-    }
-
-    private static Layer layer(Double timeStretch, Double inPoint, Double outPoint, Double startTime) {
-        return new Layer(
-                null, null, null, null, null, null, null,
-                timeStretch, inPoint, outPoint, startTime,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, null, null, null, null, null
-        );
     }
 }

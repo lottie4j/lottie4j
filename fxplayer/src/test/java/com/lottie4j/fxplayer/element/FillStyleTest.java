@@ -6,16 +6,17 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for FillStyle.
  * Validates fill color resolution, opacity handling, and edge cases.
  */
-public class FillStyleTest {
+class FillStyleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

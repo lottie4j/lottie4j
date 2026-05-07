@@ -6,16 +6,17 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for FillStyle.
  * Validates fill color resolution and opacity handling.
  */
-public class FillStyleBasicTest {
+class FillStyleBasicTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
@@ -45,11 +46,11 @@ public class FillStyleBasicTest {
     void multipleFramesReturnColors() {
         Fill fill = new Fill(null, null, null, null, null, null, null, null, null, null, null, null);
         FillStyle fillStyle = new FillStyle(fill);
-        
+
         Color color1 = fillStyle.getColor(0.0);
         Color color2 = fillStyle.getColor(10.0);
         Color color3 = fillStyle.getColor(20.0);
-        
+
         assertNotNull(color1);
         assertNotNull(color2);
         assertNotNull(color3);
@@ -59,9 +60,9 @@ public class FillStyleBasicTest {
     void getColorReturnsValidColor() {
         Fill fill = new Fill(null, null, null, null, null, null, null, null, null, null, null, null);
         FillStyle fillStyle = new FillStyle(fill);
-        
+
         Color color = fillStyle.getColor(0.0);
-        
+
         assertNotNull(color);
         assertEquals(Color.BLACK, color);
     }

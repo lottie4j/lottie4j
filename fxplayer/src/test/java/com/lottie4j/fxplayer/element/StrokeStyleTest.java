@@ -12,10 +12,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * Unit tests for StrokeStyle.
  * Validates stroke color resolution, stroke width, and opacity handling.
  */
-public class StrokeStyleTest {
+class StrokeStyleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 

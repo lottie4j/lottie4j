@@ -6,15 +6,14 @@ import javafx.scene.canvas.GraphicsContext;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class TransformApplierTest {
+class TransformApplierTest {
 
     private static final double EPS = 0.01;
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
@@ -82,7 +81,7 @@ public class TransformApplierTest {
         TransformApplier applier2 = new TransformApplier();
 
         // Two instances should not share state
-        assertTrue(applier1 != applier2);
+        assertNotSame(applier1, applier2);
     }
 }
 

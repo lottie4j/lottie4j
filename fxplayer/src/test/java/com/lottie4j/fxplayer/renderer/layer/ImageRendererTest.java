@@ -21,11 +21,75 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-public class ImageRendererTest {
+class ImageRendererTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static void assertUnchangedAfterRender(ImageRenderer renderer, Layer layer, Animation animation) {
+        Color[] pixels = FxTestHelper.callAndWait(() -> {
+            Canvas canvas = blackCanvas(6, 6);
+            Color before = samplePixel(canvas, 1, 1);
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            renderer.render(gc, layer, animation);
+            Color after = samplePixel(canvas, 1, 1);
+            return new Color[]{before, after};
+        });
+
+        assertTrue(Math.abs(pixels[1].getRed() - pixels[0].getRed()) < 0.001);
+        assertTrue(Math.abs(pixels[1].getGreen() - pixels[0].getGreen()) < 0.001);
+        assertTrue(Math.abs(pixels[1].getBlue() - pixels[0].getBlue()) < 0.001);
+        assertTrue(Math.abs(pixels[1].getOpacity() - pixels[0].getOpacity()) < 0.001);
+    }
+
+    private static Canvas blackCanvas(int width, int height) {
+        Canvas canvas = new Canvas(width, height);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.setFill(Color.BLACK);
+        gc.fillRect(0, 0, width, height);
+        return canvas;
+    }
+
+    private static Color samplePixel(Canvas canvas, int x, int y) {
+        WritableImage image = canvas.snapshot(new SnapshotParameters(), null);
+        return image.getPixelReader().getColor(x, y);
+    }
+
+    private static Animation animationWithAssets(List<Asset> assets) {
+        return new Animation(null, null, null, null, null, null, null, null, null,
+                assets, null, null, null);
+    }
+
+    private static Asset imageAsset(String id, String fileName) {
+        return new Asset(id, null, null, fileName, 1, null, null, null, null, null, null);
+    }
+
+    private static Layer imageLayer(String referenceId, Integer width, Integer height) {
+        return new Layer(
+                "image", null, null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, referenceId, width, height, null, null, null
+        );
+    }
+
+    private static String dataUri(int width, int height, int argb) {
+        try {
+            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    image.setRGB(x, y, argb);
+                }
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", output);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to create PNG data URI for test", e);
+        }
     }
 
     @Test
@@ -94,70 +158,6 @@ public class ImageRendererTest {
         Animation animation = animationWithAssets(List.of(imageAsset("asset-invalid", "data:image/png;base64,INVALID")));
 
         assertUnchangedAfterRender(renderer, layer, animation);
-    }
-
-    private static void assertUnchangedAfterRender(ImageRenderer renderer, Layer layer, Animation animation) {
-        Color[] pixels = FxTestHelper.callAndWait(() -> {
-            Canvas canvas = blackCanvas(6, 6);
-            Color before = samplePixel(canvas, 1, 1);
-            GraphicsContext gc = canvas.getGraphicsContext2D();
-            renderer.render(gc, layer, animation);
-            Color after = samplePixel(canvas, 1, 1);
-            return new Color[]{before, after};
-        });
-
-        assertTrue(Math.abs(pixels[1].getRed() - pixels[0].getRed()) < 0.001);
-        assertTrue(Math.abs(pixels[1].getGreen() - pixels[0].getGreen()) < 0.001);
-        assertTrue(Math.abs(pixels[1].getBlue() - pixels[0].getBlue()) < 0.001);
-        assertTrue(Math.abs(pixels[1].getOpacity() - pixels[0].getOpacity()) < 0.001);
-    }
-
-    private static Canvas blackCanvas(int width, int height) {
-        Canvas canvas = new Canvas(width, height);
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, width, height);
-        return canvas;
-    }
-
-    private static Color samplePixel(Canvas canvas, int x, int y) {
-        WritableImage image = canvas.snapshot(new SnapshotParameters(), null);
-        return image.getPixelReader().getColor(x, y);
-    }
-
-    private static Animation animationWithAssets(List<Asset> assets) {
-        return new Animation(null, null, null, null, null, null, null, null, null,
-                assets, null, null, null);
-    }
-
-    private static Asset imageAsset(String id, String fileName) {
-        return new Asset(id, null, null, fileName, 1, null, null, null, null, null, null);
-    }
-
-    private static Layer imageLayer(String referenceId, Integer width, Integer height) {
-        return new Layer(
-                "image", null, null, null, null, null, null,
-                null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, referenceId, width, height, null, null, null
-        );
-    }
-
-    private static String dataUri(int width, int height, int argb) {
-        try {
-            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    image.setRGB(x, y, argb);
-                }
-            }
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            ImageIO.write(image, "png", output);
-            return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray());
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to create PNG data URI for test", e);
-        }
     }
 }
 

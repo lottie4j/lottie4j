@@ -12,13 +12,41 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SolidColorRendererTest {
+class SolidColorRendererTest {
 
     private static final double EPS = 0.01;
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static Color renderAndSample(SolidColorRenderer renderer, Layer layer, Canvas canvas) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        renderer.render(gc, layer, 4, 4);
+        return samplePixel(canvas, 4, 4);
+    }
+
+    private static Color samplePixel(Canvas canvas, int x, int y) {
+        WritableImage image = canvas.snapshot(new SnapshotParameters(), null);
+        return image.getPixelReader().getColor(x, y);
+    }
+
+    private static void assertColor(Color actual, Color expected) {
+        assertEquals(expected.getRed(), actual.getRed(), EPS);
+        assertEquals(expected.getGreen(), actual.getGreen(), EPS);
+        assertEquals(expected.getBlue(), actual.getBlue(), EPS);
+        assertEquals(expected.getOpacity(), actual.getOpacity(), EPS);
+    }
+
+    private static Layer layer(String solidColor, Integer width, Integer height) {
+        return new Layer(
+                "solid", null, null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, width, height, null, solidColor, null
+        );
     }
 
     @Test
@@ -81,33 +109,5 @@ public class SolidColorRendererTest {
         });
 
         assertColor(colors[1], colors[0]);
-    }
-
-    private static Color renderAndSample(SolidColorRenderer renderer, Layer layer, Canvas canvas) {
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        renderer.render(gc, layer, 4, 4);
-        return samplePixel(canvas, 4, 4);
-    }
-
-    private static Color samplePixel(Canvas canvas, int x, int y) {
-        WritableImage image = canvas.snapshot(new SnapshotParameters(), null);
-        return image.getPixelReader().getColor(x, y);
-    }
-
-    private static void assertColor(Color actual, Color expected) {
-        assertEquals(expected.getRed(), actual.getRed(), EPS);
-        assertEquals(expected.getGreen(), actual.getGreen(), EPS);
-        assertEquals(expected.getBlue(), actual.getBlue(), EPS);
-        assertEquals(expected.getOpacity(), actual.getOpacity(), EPS);
-    }
-
-    private static Layer layer(String solidColor, Integer width, Integer height) {
-        return new Layer(
-                "solid", null, null, null, null, null, null,
-                null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, width, height, null, solidColor, null
-        );
     }
 }

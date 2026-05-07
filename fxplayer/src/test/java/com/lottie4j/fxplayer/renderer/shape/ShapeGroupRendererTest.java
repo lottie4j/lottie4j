@@ -10,16 +10,21 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for ShapeGroupRenderer.
  */
-public class ShapeGroupRendererTest {
+class ShapeGroupRendererTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static Group createGroup() {
+        return new Group(null, null, null, null, null, null, null, null, null, null, new ArrayList<>());
     }
 
     @Test
@@ -86,10 +91,6 @@ public class ShapeGroupRendererTest {
             new ShapeGroupRenderer(ta, srf).renderShapeTypeGroup(gc, emptyGroup, 0.0, null);
             return true;
         });
-    }
-
-    private static Group createGroup() {
-        return new Group(null, null, null, null, null, null, null, null, null, null, new ArrayList<>());
     }
 }
 

@@ -5,16 +5,17 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for GradientStrokeStyle.
  * Validates basic functionality without creating complex test data.
  */
-public class GradientStrokeStyleSimpleTest {
+class GradientStrokeStyleSimpleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
     }
 
@@ -22,7 +23,7 @@ public class GradientStrokeStyleSimpleTest {
     void nullGradientStrokeReturnsBlack() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
         Color paint = (Color) gradientStyle.getPaint(0.0);
-        
+
         assertEquals(Color.BLACK, paint);
     }
 
@@ -30,7 +31,7 @@ public class GradientStrokeStyleSimpleTest {
     void getPaintWithFrameReturnsNotNull() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
         Object paint = gradientStyle.getPaint(0.0);
-        
+
         assertNotNull(paint);
     }
 
@@ -38,18 +39,18 @@ public class GradientStrokeStyleSimpleTest {
     void getPaintWithShapeBoundsReturnsNotNull() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
         Object paint = gradientStyle.getPaint(0.0, 0.0, 0.0, 100.0, 100.0);
-        
+
         assertNotNull(paint);
     }
 
     @Test
     void multipleFramesReturnPaint() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
-        
+
         Object paint1 = gradientStyle.getPaint(0.0);
         Object paint2 = gradientStyle.getPaint(10.0);
         Object paint3 = gradientStyle.getPaint(20.0);
-        
+
         assertNotNull(paint1);
         assertNotNull(paint2);
         assertNotNull(paint3);
@@ -65,7 +66,7 @@ public class GradientStrokeStyleSimpleTest {
     void largeBoundsReturnPaint() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
         Object paint = gradientStyle.getPaint(0.0, 0.0, 0.0, 10000.0, 10000.0);
-        
+
         assertNotNull(paint);
     }
 
@@ -73,7 +74,7 @@ public class GradientStrokeStyleSimpleTest {
     void negativeBoundsReturnPaint() {
         GradientStrokeStyle gradientStyle = new GradientStrokeStyle(null);
         Object paint = gradientStyle.getPaint(0.0, -10.0, -20.0, -100.0, -100.0);
-        
+
         assertNotNull(paint);
     }
 }

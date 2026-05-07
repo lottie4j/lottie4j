@@ -18,11 +18,39 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-public class GradientFillStyleTest {
+class GradientFillStyleTest {
 
     @BeforeAll
-    public static void initToolkit() {
+    static void initToolkit() {
         FxTestHelper.initToolkit();
+    }
+
+    private static GradientFill buildGradient(GradientType type) {
+        // [offset, r, g, b, offset, r, g, b]
+        Animated colors = animated(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
+        GradientFill.GradientColor gradientColor = new GradientFill.GradientColor(2, colors);
+
+        Animated start = animated(0.0, 0.0);
+        Animated end = animated(100.0, 100.0);
+
+        return new GradientFill(
+                null, null, null, null, null, null, null,
+                null, null,
+                null, null,
+                start,
+                end,
+                type,
+                gradientColor,
+                null, null
+        );
+    }
+
+    private static Animated animated(double... values) {
+        List<Keyframe> frames = java.util.Arrays.stream(values)
+                .mapToObj(NumberKeyframe::new)
+                .map(Keyframe.class::cast)
+                .toList();
+        return new Animated(0, frames, null, null, null, null, null);
     }
 
     @Test
@@ -56,34 +84,6 @@ public class GradientFillStyleTest {
         Paint paint = new GradientFillStyle(buildGradient(GradientType.LINEAR))
                 .getPaint(0.0, 10.0, 20.0, 100.0, 100.0);
         assertInstanceOf(LinearGradient.class, paint);
-    }
-
-    private static GradientFill buildGradient(GradientType type) {
-        // [offset, r, g, b, offset, r, g, b]
-        Animated colors = animated(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0);
-        GradientFill.GradientColor gradientColor = new GradientFill.GradientColor(2, colors);
-
-        Animated start = animated(0.0, 0.0);
-        Animated end = animated(100.0, 100.0);
-
-        return new GradientFill(
-                null, null, null, null, null, null, null,
-                null, null,
-                null, null,
-                start,
-                end,
-                type,
-                gradientColor,
-                null, null
-        );
-    }
-
-    private static Animated animated(double... values) {
-        List<Keyframe> frames = java.util.Arrays.stream(values)
-                .mapToObj(NumberKeyframe::new)
-                .map(Keyframe.class::cast)
-                .toList();
-        return new Animated(0, frames, null, null, null, null, null);
     }
 }
 

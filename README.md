@@ -94,6 +94,18 @@ public class DemoApplication extends Application {
     * This repo contains test files in `src/main/resources`, of which some were downloaded
       as [free samples from lottiefiles.com](https://lottiefiles.com/featured-free-animations).
 
+## Internal Info
+
+### Making a Release
+
+* Define the release version number based on the latest release.
+* Go to https://github.com/lottie4j/lottie4j/actions/workflows/release.yml
+* Click on "Run workflow" and fill in the new version number.
+* Update the website `index.md` and `releases.md`.
+* Go https://github.com/lottie4j/lottie4j/tags
+* Create a release from the new tag.
+* Copy the release notes as published on the website in the GitHub release description.
+
 ## More Info About Lottie Files
 
 https://lottiefiles.github.io/lottie-docs/
