@@ -32,14 +32,14 @@ public class FrameTimingTest {
 
     @Test
     void convertsParentFrameToLocalFrameUsingStartAndStretch() {
-        Layer layer = layer(2, null, null, 10);
+        Layer layer = layer(2.0, null, null, 10.0);
 
         assertEquals(8.0, FrameTiming.toLocalFrame(layer, 26.0));
     }
 
     @Test
     void fallsBackToNoOffsetAndUnitStretchForInvalidValues() {
-        Layer layer = layer(0, null, null, null);
+        Layer layer = layer(0.0, null, null, null);
 
         assertEquals(15.0, FrameTiming.toLocalFrame(layer, 15.0));
     }
@@ -57,7 +57,7 @@ public class FrameTimingTest {
         assertEquals(360, FrameTiming.getAnimationHeight(animation));
     }
 
-    private static Layer layer(Integer timeStretch, Integer inPoint, Integer outPoint, Integer startTime) {
+    private static Layer layer(Double timeStretch, Double inPoint, Double outPoint, Double startTime) {
         return new Layer(
                 null, null, null, null, null, null, null,
                 timeStretch, inPoint, outPoint, startTime,
