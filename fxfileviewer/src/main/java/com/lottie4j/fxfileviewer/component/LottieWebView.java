@@ -11,9 +11,18 @@ import javafx.scene.web.WebView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lottie4j.core.model.dot.Manifest;
+
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * A JavaFX component that renders Lottie animations using a WebView with the dotlottie-wc library.
@@ -220,7 +229,7 @@ public class LottieWebView extends Pane {
 
     /**
      * Loads a Lottie animation into the WebView using the lottie-web JavaScript library.
-     * Generates HTML with embedded animation data and control functions.
+     * The {@link Animation} object is serialized back to JSON before loading.
      *
      * @param animation {@link Animation}
      * @param width     the width of the player in pixels
@@ -232,6 +241,7 @@ public class LottieWebView extends Pane {
 
     /**
      * Loads a Lottie animation into the WebView and optionally shows an in-WebView debug overlay.
+     * The {@link Animation} object is serialized back to JSON before loading.
      *
      * @param animation     the Lottie animation to load
      * @param width         the width of the player in pixels
@@ -240,17 +250,111 @@ public class LottieWebView extends Pane {
      */
     public void loadLottie(Animation animation, int width, int height, boolean showDebugInfo) {
         try {
-            setSize(width, height);
             var lottieJson = OBJECT_MAPPER.writeValueAsString(animation);
-
-            // Debug: write JSON to file
             try {
-                java.nio.file.Files.writeString(java.nio.file.Paths.get("/tmp/lottie-webview-actual.json"), lottieJson);
+                Files.writeString(Path.of("/tmp/lottie-webview-actual.json"), lottieJson);
                 logger.info("Debug: Wrote JSON to /tmp/lottie-webview-actual.json");
             } catch (Exception e) {
                 logger.warn("Failed to write debug JSON: {}", e.getMessage());
             }
+            loadLottieRaw(lottieJson, width, height, showDebugInfo);
+        } catch (Exception e) {
+            logger.error("Failed to serialize Animation for WebView: {}", e.getMessage());
+        }
+    }
 
+    /**
+     * Loads a Lottie animation from a raw JSON string, bypassing Java object parsing.
+     * Use this to rule out parse/serialize round-trip issues when comparing against reference renderers.
+     *
+     * @param rawJson the Lottie JSON string
+     * @param width   the width of the player in pixels
+     * @param height  the height of the player in pixels
+     */
+    public void loadLottie(String rawJson, int width, int height) {
+        loadLottieRaw(rawJson, width, height, false);
+    }
+
+    /**
+     * Loads a Lottie animation from a raw JSON string, bypassing Java object parsing.
+     *
+     * @param rawJson       the Lottie JSON string
+     * @param width         the width of the player in pixels
+     * @param height        the height of the player in pixels
+     * @param showDebugInfo if true, displays a debug overlay with rendering information
+     */
+    public void loadLottie(String rawJson, int width, int height, boolean showDebugInfo) {
+        loadLottieRaw(rawJson, width, height, showDebugInfo);
+    }
+
+    /**
+     * Loads a Lottie animation from a JSON file, bypassing Java object parsing.
+     * Use this to rule out parse/serialize round-trip issues when comparing against reference renderers.
+     *
+     * @param file  the Lottie JSON file
+     * @param width  the width of the player in pixels
+     * @param height the height of the player in pixels
+     * @throws IOException if the file cannot be read
+     */
+    public void loadLottie(File file, int width, int height) throws IOException {
+        loadLottieRaw(readRawJson(file), width, height, false);
+    }
+
+    /**
+     * Loads a Lottie animation from a file, bypassing Java object parsing.
+     * Supports both {@code .json} and {@code .lottie} files.
+     *
+     * @param file          the Lottie file ({@code .json} or {@code .lottie})
+     * @param width         the width of the player in pixels
+     * @param height        the height of the player in pixels
+     * @param showDebugInfo if true, displays a debug overlay with rendering information
+     * @throws IOException if the file cannot be read
+     */
+    public void loadLottie(File file, int width, int height, boolean showDebugInfo) throws IOException {
+        loadLottieRaw(readRawJson(file), width, height, showDebugInfo);
+    }
+
+    private static String readRawJson(File file) throws IOException {
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".json")) {
+            return Files.readString(file.toPath(), StandardCharsets.UTF_8);
+        }
+        if (name.endsWith(".lottie")) {
+            return readFirstAnimationFromDotLottie(file);
+        }
+        throw new IOException("unsupported file type: " + file.getName());
+    }
+
+    private static String readFirstAnimationFromDotLottie(File file) throws IOException {
+        try (ZipFile zip = new ZipFile(file)) {
+            ZipEntry manifestEntry = zip.getEntry("manifest.json");
+            if (manifestEntry == null) {
+                throw new IOException("missing manifest.json in .lottie archive");
+            }
+            Manifest manifest;
+            try (var stream = zip.getInputStream(manifestEntry)) {
+                manifest = OBJECT_MAPPER.readValue(stream, Manifest.class);
+            }
+            if (manifest.animations() == null || manifest.animations().isEmpty()) {
+                throw new IOException("manifest contains no animations");
+            }
+            String animationId = manifest.animations().getFirst().id();
+            ZipEntry animEntry = zip.getEntry("a/" + animationId + ".json");
+            if (animEntry == null) {
+                animEntry = zip.getEntry("animations/" + animationId + ".json");
+            }
+            if (animEntry == null) {
+                throw new IOException("animation JSON not found for id: " + animationId);
+            }
+            try (var stream = zip.getInputStream(animEntry)) {
+                return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        }
+    }
+
+    private void loadLottieRaw(String lottieJson, int width, int height, boolean showDebugInfo) {
+        try {
+            setSize(width, height);
             var encodedJson = Base64.getEncoder().encodeToString(lottieJson.getBytes(StandardCharsets.UTF_8));
 
             var html = """
@@ -298,31 +402,21 @@ public class LottieWebView extends Pane {
                                 user-select: text;
                             }
                         </style>
-                        <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.7.1/dist/dotlottie-wc.js" type="module"></script>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
                     </head>
                     <body>
-                        <dotlottie-wc id="lottie-container"></dotlottie-wc>
-                        <div id="debug-overlay">Initializing WebView renderer...</div>
-                        <script>
-                            // Earliest possible marker: proves JS executes even if later init fails.
-                            (function() {
-                                var ov = document.getElementById('debug-overlay');
-                                if (ov) ov.textContent = 'JS started';
-                            })();
-                        </script>
+                        <div id="lottie-container"></div>
+                        <div id="debug-overlay">Initializing...</div>
                         <script>
                             var animationReady = false;
                             var currentFrame = 0;
                             var showDebugInfo = %s;
-                            var encodedAnimationData = "%s";
-                            var player = document.getElementById('lottie-container');
                             var debugOverlay = document.getElementById('debug-overlay');
-                            var diagLogs = [];
-                    
-                            if (debugOverlay && !showDebugInfo) {
-                                debugOverlay.style.display = 'none';
+
+                            if (debugOverlay) {
+                                debugOverlay.style.display = showDebugInfo ? 'block' : 'none';
                             }
-                    
+
                             function decodeBase64Json(base64) {
                                 var binary = atob(base64);
                                 var bytes = new Uint8Array(binary.length);
@@ -331,354 +425,88 @@ public class LottieWebView extends Pane {
                                 }
                                 return new TextDecoder('utf-8').decode(bytes);
                             }
-                    
-                            function renderOverlay(extraLine) {
-                                if (!debugOverlay || !showDebugInfo) {
-                                    return;
-                                }
-                                var lines = [
-                                    'renderer: dotlottie-wc@0.7.1',
+
+                            function updateDebugOverlay() {
+                                if (!debugOverlay || !showDebugInfo) return;
+                                debugOverlay.textContent = [
+                                    'renderer: lottie-web/bodymovin 5.12.2',
                                     'ready: ' + animationReady,
-                                    'frame: ' + window.getCurrentFrame(),
-                                    'tag: ' + (player ? player.tagName : 'none'),
-                                    '(click this panel to copy full debug text)'
-                                ];
-                                if (extraLine) {
-                                    lines.push(extraLine);
-                                }
-                                var recent = diagLogs.slice(-5);
-                                if (recent.length > 0) {
-                                    lines.push('--- logs ---');
-                                    lines = lines.concat(recent);
-                                }
-                                debugOverlay.textContent = lines.join('\\n');
+                                    'frame: ' + window.getCurrentFrame()
+                                ].join('\\n');
                             }
-                    
-                            function buildDebugText() {
-                                var inspection = window.getPlayerApiInspection ? window.getPlayerApiInspection() : { methods: [] };
-                                var svgCount = document.querySelectorAll('svg').length;
-                                var lines = [
-                                    'dotlottie count: ' + document.querySelectorAll('dotlottie-wc').length,
-                                    'fallbackActive: ' + !!window.__bodymovinFallbackInstalled,
-                                    'svgCount: ' + svgCount,
-                                    'ready: ' + animationReady,
-                                    'currentFrame: ' + window.getCurrentFrame(),
-                                    'methods: ' + (inspection.methods || []).join(','),
-                                    'logs: ' + diagLogs.join(' | ')
-                                ];
-                                return lines.join('\\n');
-                            }
-                    
-                            function copyDebugToClipboard(text) {
-                                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                                    return navigator.clipboard.writeText(text);
-                                }
-                                return new Promise(function(resolve, reject) {
-                                    try {
-                                        var area = document.createElement('textarea');
-                                        area.value = text;
-                                        area.style.position = 'fixed';
-                                        area.style.opacity = '0';
-                                        document.body.appendChild(area);
-                                        area.focus();
-                                        area.select();
-                                        var ok = document.execCommand('copy');
-                                        document.body.removeChild(area);
-                                        if (ok) {
-                                            resolve();
-                                        } else {
-                                            reject(new Error('execCommand copy failed'));
-                                        }
-                                    } catch (e) {
-                                        reject(e);
-                                    }
-                                });
-                            }
-                    
-                            if (debugOverlay) {
-                                debugOverlay.addEventListener('click', function() {
-                                    var text = buildDebugText();
-                                    copyDebugToClipboard(text)
-                                        .then(function() {
-                                            renderOverlay('copied debug text to clipboard');
-                                        })
-                                        .catch(function(err) {
-                                            renderOverlay('copy failed: ' + String(err));
-                                        });
-                                });
-                            }
-                    
-                            function diag(msg) {
-                                var line = '[lottie-webview] ' + msg;
-                                diagLogs.push(line);
-                                if (diagLogs.length > 60) {
-                                    diagLogs.shift();
-                                }
-                                renderOverlay(msg);
-                            }
-                    
-                            window.onerror = function(message, source, lineNo, colNo) {
-                                diag('window.onerror: ' + message + ' @ ' + source + ':' + lineNo + ':' + colNo);
-                            };
-                    
-                            window.onunhandledrejection = function(event) {
-                                diag('unhandledrejection: ' + String(event && event.reason));
-                            };
-                    
-                            function callFirst(target, names, args) {
-                                for (var i = 0; i < names.length; i++) {
-                                    var fn = target[names[i]];
-                                    if (typeof fn === 'function') {
-                                        try {
-                                            var value = fn.apply(target, args || []);
-                                            diag('call ok: ' + names[i]);
-                                            return { ok: true, value: value, name: names[i] };
-                                        } catch (e) {
-                                            diag('call ' + names[i] + ' failed: ' + String(e));
-                                            return { ok: false, error: String(e), name: names[i] };
-                                        }
-                                    }
-                                }
-                                return { ok: false, error: 'no matching method', name: null };
-                            }
-                    
-                            function setLoopEnabled(enabled) {
-                                var methodResult = callFirst(player, ['setLoop', 'setLooping'], [!!enabled]);
-                                if (!methodResult.ok) {
-                                    player.loop = !!enabled;
-                                    diag('set loop via property: ' + (!!enabled));
-                                }
-                            }
-                    
-                            function setFrameValue(frame) {
-                                var target = Math.round(frame);
-                                currentFrame = target;
-                                var result = callFirst(player, ['setFrame', 'seek', 'goToAndStop', 'setCurrentFrame'], [target]);
-                                if (!result.ok) {
-                                    var ratio = 0;
-                                    if (typeof player.totalFrames === 'number' && player.totalFrames > 1) {
-                                        ratio = target / (player.totalFrames - 1);
-                                        if (ratio < 0) ratio = 0;
-                                        if (ratio > 1) ratio = 1;
-                                    }
-                                    callFirst(player, ['setSeeker'], [ratio]);
-                                }
-                                renderOverlay();
-                            }
-                    
-                            function buildSrcFromJson(data) {
-                                try {
-                                    var json = JSON.stringify(data);
-                                    var base64 = btoa(unescape(encodeURIComponent(json)));
-                                    return 'data:application/json;base64,' + base64;
-                                } catch (e) {
-                                    var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-                                    return URL.createObjectURL(blob);
-                                }
-                            }
-                    
-                            function installBodymovinFallback(animationData) {
-                                if (window.__bodymovinFallbackInstalled) {
-                                    return;
-                                }
-                                window.__bodymovinFallbackInstalled = true;
-                                diag('Installing bodymovin fallback');
-                    
-                                var fallbackScript = document.createElement('script');
-                                fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js';
-                                fallbackScript.onload = function() {
-                                    var host = document.getElementById('lottie-container');
-                                    host.style.display = 'none';
-                    
-                                    var fallbackHost = document.getElementById('bodymovin-fallback-host');
-                                    if (!fallbackHost) {
-                                        fallbackHost = document.createElement('div');
-                                        fallbackHost.id = 'bodymovin-fallback-host';
-                                        fallbackHost.style.position = 'absolute';
-                                        fallbackHost.style.top = '0';
-                                        fallbackHost.style.left = '0';
-                                        fallbackHost.style.width = '100%%';
-                                        fallbackHost.style.height = '100%%';
-                                        fallbackHost.style.zIndex = '1';
-                                        document.body.appendChild(fallbackHost);
-                                    }
-                                    fallbackHost.innerHTML = '';
-                    
-                                    var fallbackContainer = document.createElement('div');
-                                    fallbackContainer.style.width = '100%%';
-                                    fallbackContainer.style.height = '100%%';
-                                    fallbackHost.appendChild(fallbackContainer);
-                    
-                                    var animation = window.lottie.loadAnimation({
-                                        container: fallbackContainer,
-                                        renderer: 'svg',
-                                        loop: true,
-                                        autoplay: false,
-                                        animationData: animationData,
-                                        rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }
-                                    });
-                    
-                                    animation.addEventListener('DOMLoaded', function() {
-                                        animationReady = true;
-                                        var svg = fallbackContainer.querySelector('svg');
-                                        var rect = fallbackContainer.getBoundingClientRect();
-                                        diag('bodymovin fallback DOMLoaded; svg=' + (svg ? 'yes' : 'no') + '; bounds=' + Math.round(rect.width) + 'x' + Math.round(rect.height));
-                                        renderOverlay();
-                                    });
-                    
-                                    window.playAnimation = function() {
-                                        animation.loop = true;
-                                        animation.play();
-                                    };
-                                    window.playAnimationOnce = function() {
-                                        animation.loop = false;
-                                        animation.goToAndPlay(0, true);
-                                    };
-                                    window.pauseAnimation = function() { animation.pause(); };
-                                    window.stopAnimation = function() { animation.stop(); currentFrame = 0; renderOverlay(); };
-                                    window.seekToFrame = function(frame) {
-                                        currentFrame = Math.round(frame);
-                                        animation.goToAndStop(currentFrame, true);
-                                        renderOverlay();
-                                    };
-                                    window.getCurrentFrame = function() {
-                                        return Math.round(animation.currentFrame || currentFrame || 0);
-                                    };
-                                    renderOverlay('fallback: bodymovin active');
-                                };
-                                fallbackScript.onerror = function() {
-                                    diag('bodymovin fallback script failed to load');
-                                };
-                                document.head.appendChild(fallbackScript);
-                            }
-                    
-                            try {
-                                var animationData = JSON.parse(decodeBase64Json(encodedAnimationData));
-                    
-                                function attachReadyEvents() {
-                                    ['ready', 'load', 'loaded', 'complete'].forEach(function(eventName) {
-                                        player.addEventListener(eventName, function() {
-                                            animationReady = true;
-                                            diag('event:' + eventName);
-                                            renderOverlay();
-                                        });
-                                    });
-                                }
-                    
-                                function attachFrameEvents() {
-                                    ['frame', 'render', 'enterFrame'].forEach(function(eventName) {
-                                        player.addEventListener(eventName, function(event) {
-                                            var value = null;
-                                            if (event && typeof event.currentFrame === 'number') {
-                                                value = event.currentFrame;
-                                            } else if (event && event.detail && typeof event.detail.currentFrame === 'number') {
-                                                value = event.detail.currentFrame;
-                                            } else if (typeof player.currentFrame === 'number') {
-                                                value = player.currentFrame;
-                                            }
-                                            if (typeof value === 'number') {
-                                                currentFrame = Math.round(value);
-                                                renderOverlay();
-                                            }
-                                        });
-                                    });
-                                }
-                    
-                                attachReadyEvents();
-                                attachFrameEvents();
-                    
-                                customElements.whenDefined('dotlottie-wc').then(function() {
-                                    var srcUrl = buildSrcFromJson(animationData);
-                                    player.setAttribute('src', srcUrl);
-                                    diag('dotlottie-wc defined, src assigned');
-                                    renderOverlay();
-                                }).catch(function(e) {
-                                    diag('customElements.whenDefined failed: ' + String(e));
-                                    installBodymovinFallback(animationData);
-                                });
-                    
-                                setTimeout(function() {
-                                    if (!animationReady) {
-                                        diag('dotlottie-wc not ready after watchdog timeout');
-                                        installBodymovinFallback(animationData);
-                                    }
-                                }, 2500);
-                            } catch (e) {
-                                diag('bootstrap failed: ' + String(e));
-                            }
-                    
-                            window.playAnimation = function() {
-                                setLoopEnabled(true);
-                                callFirst(player, ['play'], []);
-                                renderOverlay();
-                            };
-                    
-                            window.playAnimationOnce = function() {
-                                setLoopEnabled(false);
-                                setFrameValue(0);
-                                callFirst(player, ['play'], []);
-                                renderOverlay();
-                            };
-                    
-                            window.pauseAnimation = function() {
-                                callFirst(player, ['pause'], []);
-                                renderOverlay();
-                            };
-                    
-                            window.stopAnimation = function() {
-                                callFirst(player, ['stop'], []);
-                                currentFrame = 0;
-                                renderOverlay();
-                            };
-                    
-                            window.seekToFrame = function(frame) {
-                                setFrameValue(frame);
-                                callFirst(player, ['pause'], []);
-                                renderOverlay();
-                            };
-                    
+
+                            var animationData = JSON.parse(decodeBase64Json('%s'));
+                            var anim = lottie.loadAnimation({
+                                container: document.getElementById('lottie-container'),
+                                renderer: 'svg',
+                                loop: true,
+                                autoplay: false,
+                                animationData: animationData,
+                                rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }
+                            });
+
+                            anim.addEventListener('DOMLoaded', function() {
+                                animationReady = true;
+                                updateDebugOverlay();
+                            });
+
+                            anim.addEventListener('enterFrame', function(e) {
+                                currentFrame = Math.round(e.currentTime);
+                                updateDebugOverlay();
+                            });
+
                             window.isAnimationReady = function() {
                                 return animationReady;
                             };
-                    
+
                             window.getCurrentFrame = function() {
-                                if (typeof player.currentFrame === 'number') {
-                                    return Math.round(player.currentFrame);
-                                }
-                                return currentFrame;
+                                return Math.round(anim.currentFrame != null ? anim.currentFrame : currentFrame);
                             };
-                    
-                            window.getPlayerApiInspection = function() {
-                                var proto = Object.getPrototypeOf(player) || {};
-                                var methods = Object.getOwnPropertyNames(proto).filter(function(name) {
-                                    return typeof player[name] === 'function';
-                                }).sort();
-                                return {
-                                    tagName: player.tagName,
-                                    methods: methods,
-                                    hasCurrentFrame: typeof player.currentFrame === 'number',
-                                    hasTotalFrames: typeof player.totalFrames === 'number',
-                                    ready: animationReady
-                                };
+
+                            window.playAnimation = function() {
+                                anim.loop = true;
+                                anim.play();
+                                updateDebugOverlay();
                             };
-                    
-                            window.getRenderDebug = function() {
-                                return buildDebugText().split('\\n').join(', ');
+
+                            window.playAnimationOnce = function() {
+                                anim.loop = false;
+                                anim.goToAndPlay(0, true);
+                                updateDebugOverlay();
                             };
-                    
+
+                            window.pauseAnimation = function() {
+                                anim.pause();
+                                updateDebugOverlay();
+                            };
+
+                            window.stopAnimation = function() {
+                                anim.stop();
+                                currentFrame = 0;
+                                updateDebugOverlay();
+                            };
+
+                            window.seekToFrame = function(frame) {
+                                currentFrame = Math.round(frame);
+                                anim.goToAndStop(currentFrame, true);
+                                updateDebugOverlay();
+                            };
+
                             window.setBackgroundColor = function(color) {
                                 document.body.style.backgroundColor = color;
                             };
-                    
+
                             window.setDebugOverlayVisible = function(visible) {
                                 showDebugInfo = !!visible;
                                 if (debugOverlay) {
                                     debugOverlay.style.display = showDebugInfo ? 'block' : 'none';
                                 }
-                                renderOverlay('debug overlay ' + (showDebugInfo ? 'enabled' : 'disabled'));
+                                updateDebugOverlay();
                             };
-                    
-                            renderOverlay('bootstrapping...');
+
+                            window.getRenderDebug = function() {
+                                return 'renderer: lottie-web/bodymovin 5.12.2, ready: ' + animationReady + ', frame: ' + window.getCurrentFrame();
+                            };
                         </script>
                     </body>
                     </html>

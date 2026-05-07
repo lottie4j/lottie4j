@@ -1,4 +1,4 @@
-# Lottie4J :: Java library to handle Lottie files
+# Lottie4J :: Library to Handle and Play Lottie Files with Java and JavaFX
 
 [![Build](https://github.com/lottie4j/lottie4j/actions/workflows/maven.yml/badge.svg)](https://github.com/lottie4j/lottie4j/actions/workflows/maven.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.lottie4j/lottie4j.svg?label=Maven%20Central)](https://central.sonatype.com/search?q=g:com.lottie4j)

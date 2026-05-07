@@ -422,8 +422,8 @@ public class LottieFileDebugViewer extends Application {
             // Update WebView size to match animation
             webView.setSize(width, height);
 
-            // Load animation into JavaScript player
-            webView.loadLottie(animation, width, height, debugInfoCheckBox.isSelected());
+            // Load animation into JavaScript player using raw JSON to bypass parse/serialize round-trip
+            webView.loadLottie(file, width, height, debugInfoCheckBox.isSelected());
 
             // Bind frame slider to lottie player's current frame
             lottiePlayer.currentFrameProperty().addListener((obs, oldVal, newVal) -> {
@@ -437,7 +437,7 @@ public class LottieFileDebugViewer extends Application {
             // Reset the animation UI
             setupAnimationControls();
             currentFrame = getInPoint();
-        } catch (LottieFileException e) {
+        } catch (LottieFileException | IOException e) {
             logger.error("Failed to load animation: {}", e.getMessage());
             AlertHelper.showError("Failed to load animation: " + e.getMessage());
         }
