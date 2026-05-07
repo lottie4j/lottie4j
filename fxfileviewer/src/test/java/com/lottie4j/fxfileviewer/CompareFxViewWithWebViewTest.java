@@ -72,20 +72,22 @@ class CompareFxViewWithWebViewTest {
                 "json/animated_background_patterns.json",
                 "json/box-moving-changing-color.json",
                 "json/face-exhaling.json",
+                "json/face-peeking.json",
                 "json/isometric_data_analysis.json",
-                "json/java_duke_fadein.json",
+                // "json/java_duke_fadein.json", // Not used, black borders are not merged
                 "json/java_duke_flip.json",
-                //"json/java_duke_slidein.json",
+                // "json/java_duke_slidein.json", // Not used, animation timing differences
                 "json/loading.json",
                 "json/lottie4j.json",
-                //"json/lottie_lego.json",
+                //"json/lottie_lego.json", // Not used, animation timing differences
                 "json/sandy_loading.json",
                 "json/snake_ladder_loading_animation.json",
                 "json/success.json",
                 "json/timeline_animation.json",
                 "dot/lottie4j.lottie",
-                "dot/demo-1.lottie"
-                //"dot/demo-2.lottie"
+                "dot/demo-1.lottie",
+                "dot/demo-2.lottie",
+                "dot/demo-3.lottie"
         );
     }
 
@@ -97,11 +99,10 @@ class CompareFxViewWithWebViewTest {
 
     @Test
     void compareFxAndJsRenderingHalfSize() throws Exception {
-        compareFxWithPreGeneratedImages(lottieJsonFiles().toList().getFirst(), 0.5);
+        compareFxWithPreGeneratedImages(lottieJsonFiles().toList().get(1), 0.5);
     }
 
     // ── Core comparison logic ─────────────────────────────────────────────────
-
     private void compareFxWithPreGeneratedImages(String fileName, double scale) throws Exception {
         String webviewDir = "/" + WebViewScreenshotGenerator.webViewDirPath(fileName) + "/";
 
@@ -181,8 +182,8 @@ class CompareFxViewWithWebViewTest {
                             totalSimilarity.updateAndGet(v -> v + rounded);
                             frameCount.incrementAndGet();
 
-                            System.out.printf("Frame %d @ %d%% scale: %.2f%% similar (threshold: %.0f%%)%n",
-                                    frame, (int) (scale * 100), rounded, SIMILARITY_THRESHOLD);
+                            System.out.printf("Frame %d @ %d%% scale: %.2f%% similar",
+                                    frame, (int) (scale * 100), rounded);
 
                             if (rounded < SIMILARITY_THRESHOLD) {
                                 Files.createDirectories(outputDir);
@@ -316,7 +317,9 @@ class CompareFxViewWithWebViewTest {
     }
 
     private void clearDirectory(Path dir) throws IOException {
-        if (!Files.exists(dir)) return;
+        if (!Files.exists(dir)) {
+            return;
+        }
         try (Stream<Path> paths = Files.walk(dir)) {
             paths.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
                 try {

@@ -2,80 +2,54 @@ package com.lottie4j.fxfileviewer;
 
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.component.LottieWebView;
-import com.lottie4j.fxfileviewer.util.ImageSaver;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
-import javafx.stage.Stage;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.util.*;
 import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
- * One-time utility for generating WebView reference screenshots for all Lottie animation files.
+ * One-time utility for generating WebView reference screenshots for all Lottie animation files
+ * using headless Chrome via Selenium. This doesn't use the JavaFX based webview component, because
+ * some animations don't render completely correct in the integrated JavaFX browser.
+ * Therefore, this generator uses Selenium to render the animation in a headless Chrome browser.
  *
- * <p>Run this class manually whenever a new animation file is added to {@link CompareFxViewWithWebViewTest#lottieJsonFiles()}.
+ * <p>Run this class manually whenever a new animation file is added to
+ * {@link CompareFxViewWithWebViewTest#lottieJsonFiles()}.
  * The generated PNG images are committed to {@code src/test/resources} and used by
- * {@link CompareFxViewWithWebViewTest} without requiring a live WebView at test time.</p>
+ * {@link CompareFxViewWithWebViewTest} without requiring a live browser at test time.</p>
  *
- * <p>To run: temporarily remove {@code @Disabled} or use {@code -Dtest=WebViewScreenshotGenerator}.</p>
+ * <p>Requires Chrome to be installed. ChromeDriver is managed automatically by Selenium Manager.</p>
  *
  * <p>Output layout: {@code src/test/resources/json/angry_bird-webview/frame_0.png}, etc.</p>
  */
-public class WebViewScreenshotGenerator extends Application {
+public class WebViewScreenshotGenerator {
     private static final Logger logger = LoggerFactory.getLogger(WebViewScreenshotGenerator.class);
 
-    private static final int CANVAS_WIDTH = 800;
-    private static final int CANVAS_HEIGHT = 600;
+    private static final int DEFAULT_WIDTH = 800;
+    private static final int DEFAULT_HEIGHT = 600;
 
-    // Initialised inside start() on the FX thread — must NOT be a static field
-    static LottieWebView webView;
-
-    public static void main(String[] args) {
-        assumeFalse(GraphicsEnvironment.isHeadless(), "No graphical display available for JavaFX");
-        Application.launch(args);
-    }
-
-    @Override
-    public void start(Stage stage) throws URISyntaxException {
-        // Create WebView here, on the FX thread, after the platform is running.
-        // Wrap in a Group so the scene never force-resizes the WebView to fill it.
-        webView = new LottieWebView();
-
-        stage.setScene(new Scene(new Group(webView), 1600, 800));
-        stage.show();
-        logger.info("WebView started");
-
-        // Anchor on a known resource to derive the src/test/resources directory.
-        // getResource("/") can return null with module-path classpaths.
+    public static void main(String[] args) throws Exception {
         URL knownResource = WebViewScreenshotGenerator.class.getResource("/json/angry_bird.json");
-        assertNotNull(knownResource, "Could not locate anchor resource json/angry_bird.json");
+        if (knownResource == null) {
+            throw new IllegalStateException("Could not locate anchor resource json/angry_bird.json");
+        }
         Path testResourcesDir = Path.of(knownResource.toURI())
                 .getParent()  // json/
                 .getParent()  // target/test-classes/
@@ -83,36 +57,48 @@ public class WebViewScreenshotGenerator extends Application {
                 .getParent()  // <module-root>
                 .resolve("src/test/resources");
 
-        // Run the processing loop on a background thread so start() returns immediately
-        // and does not block the FX thread (which would deadlock Platform.runLater calls).
-        new Thread(() -> {
-            List<String> failures = new ArrayList<>();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+                "--disable-gpu", "--hide-scrollbars");
+
+        List<String> failures = new ArrayList<>();
+
+        try {
+            var driver = new ChromeDriver(options);
             for (String fileName : CompareFxViewWithWebViewTest.lottieJsonFiles().toList()) {
                 logger.info("Generating screenshots for: {}", fileName);
                 try {
-                    generateScreenshotsForFile(fileName, testResourcesDir);
+                    generateScreenshotsForFile(fileName, testResourcesDir, driver);
                 } catch (Exception e) {
                     logger.error("FAILED {}: {}", fileName, e.getMessage(), e);
                     failures.add(fileName);
                 }
             }
-            if (failures.isEmpty()) {
-                logger.info("All screenshots generated successfully.");
-            } else {
-                logger.error("Failed to generate screenshots for: {}", failures);
-            }
-            Platform.exit();
-        }, "screenshot-generator").start();
+            driver.close();
+        } catch (Exception e) {
+            logger.error("Failed to initialize ChromeDriver: {}", e.getMessage(), e);
+            System.exit(1);
+        }
+
+        if (failures.isEmpty()) {
+            logger.info("All screenshots generated successfully.");
+        } else {
+            logger.error("Failed to generate screenshots for: {}", failures);
+            System.exit(1);
+        }
     }
 
-    private static void generateScreenshotsForFile(String fileName, Path testResourcesDir) throws Exception {
+    private static void generateScreenshotsForFile(String fileName, Path testResourcesDir,
+                                                   ChromeDriver driver) throws Exception {
         URL resource = WebViewScreenshotGenerator.class.getResource("/" + fileName);
-        assertTrue(resource != null, "Resource not found: " + fileName);
+        if (resource == null) {
+            throw new IllegalArgumentException("Resource not found: " + fileName);
+        }
 
         Animation animation = LottieFileLoader.load(new File(resource.getFile()));
 
-        int animWidth = animation.width() != null ? animation.width() : CANVAS_WIDTH;
-        int animHeight = animation.height() != null ? animation.height() : CANVAS_HEIGHT;
+        int animWidth = animation.width() != null ? animation.width() : DEFAULT_WIDTH;
+        int animHeight = animation.height() != null ? animation.height() : DEFAULT_HEIGHT;
 
         Path outputDir = testResourcesDir.resolve(webViewDirPath(fileName));
         if (Files.isDirectory(outputDir) && hasScreenshots(outputDir)) {
@@ -125,61 +111,101 @@ public class WebViewScreenshotGenerator extends Application {
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
         List<Integer> frames = buildSampledFrames(inPoint, Math.max(inPoint, outPoint - 5), 5);
 
-        CountDownLatch doneLatch = new CountDownLatch(1);
-        RuntimeException[] error = new RuntimeException[1];
+        String rawJson = readRawJson(new File(resource.getFile()));
+        String encodedJson = Base64.getEncoder().encodeToString(rawJson.getBytes(StandardCharsets.UTF_8));
 
-        Platform.runLater(() -> {
-            try {
-                webView.setSize(animWidth, animHeight);
-                webView.loadLottie(animation, animWidth, animHeight);
+        Path tempHtml = writeHtml(encodedJson, animWidth, animHeight);
+        try {
+            // Use CDP to set the viewport to exactly the animation size, bypassing outer window chrome
+            driver.executeCdpCommand("Emulation.setDeviceMetricsOverride", Map.of(
+                    "width", animWidth,
+                    "height", animHeight,
+                    "deviceScaleFactor", 1,
+                    "mobile", false));
+            driver.get(tempHtml.toUri().toString());
 
-                new Thread(() -> {
-                    try {
-                        assertTrue(webView.waitUntilReady(25_000), "WebView not ready: " + fileName);
-                        captureFrames(webView, frames, outputDir, animWidth, animHeight);
-                        System.out.printf("Generated %d frames for %s → %s%n", frames.size(), fileName, outputDir);
-                    } catch (Exception e) {
-                        error[0] = new RuntimeException(e);
-                    } finally {
-                        doneLatch.countDown();
-                    }
-                }).start();
-            } catch (Exception e) {
-                error[0] = new RuntimeException(e);
-                doneLatch.countDown();
+            new WebDriverWait(driver, Duration.ofSeconds(25))
+                    .until(d -> Boolean.TRUE.equals(
+                            ((JavascriptExecutor) d).executeScript(
+                                    "return window.isAnimationReady && window.isAnimationReady()")));
+
+            WebElement container = driver.findElement(By.id("lottie-container"));
+
+            for (int frame : frames) {
+                driver.executeScript("window.seekToFrame(" + frame + ")");
+
+                long deadline = System.currentTimeMillis() + 3_000;
+                while (System.currentTimeMillis() < deadline) {
+                    Object current = driver
+                            .executeScript("return window.getCurrentFrame && window.getCurrentFrame()");
+                    if (current instanceof Number n && n.intValue() == frame) break;
+                    Thread.sleep(50);
+                }
+                Thread.sleep(100);
+
+                byte[] png = driver.getScreenshotAs(OutputType.BYTES);
+                Files.write(outputDir.resolve("frame_" + frame + ".png"), png);
             }
-        });
 
-        assertTrue(doneLatch.await(120, TimeUnit.SECONDS), "Timed out generating: " + fileName);
-        if (error[0] != null) throw error[0];
+            logger.info("Generated {} frames for {} → {}", frames.size(), fileName, outputDir);
+        } finally {
+            Files.deleteIfExists(tempHtml);
+        }
     }
 
-    private static void captureFrames(LottieWebView webView, List<Integer> frames, Path outputDir,
-                                       int animWidth, int animHeight)
-            throws InterruptedException, IOException {
-        for (int frame : frames) {
-            CountDownLatch seekLatch = new CountDownLatch(1);
-            Platform.runLater(() -> {
-                webView.setFrame(frame);
-                seekLatch.countDown();
-            });
-            seekLatch.await();
-            webView.waitUntilFrame(frame, 3_000);
-            Thread.sleep(200);
-
-            CountDownLatch snapLatch = new CountDownLatch(1);
-            WritableImage[] img = new WritableImage[1];
-            Platform.runLater(() -> {
-                // Snapshot exactly the animation area, regardless of the stage/scene size
-                SnapshotParameters params = new SnapshotParameters();
-                params.setViewport(new Rectangle2D(0, 0, animWidth, animHeight));
-                img[0] = webView.snapshot(params, new WritableImage(animWidth, animHeight));
-                snapLatch.countDown();
-            });
-            snapLatch.await();
-
-            savePng(img[0], outputDir.resolve("frame_" + frame + ".png"));
-        }
+    private static Path writeHtml(String encodedJson, int width, int height) throws IOException {
+        Path tempFile = Files.createTempFile("lottie-screenshot-", ".html");
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { width: %spx; height: %spx; overflow: hidden; background: transparent; }
+                        #lottie-container { width: %spx; height: %spx; }
+                    </style>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+                </head>
+                <body>
+                    <div id="lottie-container"></div>
+                    <script>
+                        var animationReady = false;
+                        var currentFrame = 0;
+                
+                        function decodeBase64Json(base64) {
+                            var binary = atob(base64);
+                            var bytes = new Uint8Array(binary.length);
+                            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                            return new TextDecoder('utf-8').decode(bytes);
+                        }
+                
+                        var anim = lottie.loadAnimation({
+                            container: document.getElementById('lottie-container'),
+                            renderer: 'canvas',
+                            loop: false,
+                            autoplay: false,
+                            animationData: JSON.parse(decodeBase64Json('%s')),
+                            rendererSettings: { preserveAspectRatio: 'xMidYMid meet', clearCanvas: true }
+                        });
+                
+                        anim.addEventListener('DOMLoaded', function() { animationReady = true; });
+                        anim.addEventListener('enterFrame', function(e) { currentFrame = Math.round(e.currentTime); });
+                
+                        window.isAnimationReady = function() { return animationReady; };
+                        window.getCurrentFrame = function() {
+                            return Math.round(anim.currentFrame != null ? anim.currentFrame : currentFrame);
+                        };
+                        window.seekToFrame = function(frame) {
+                            currentFrame = Math.round(frame);
+                            anim.goToAndStop(currentFrame, true);
+                        };
+                    </script>
+                </body>
+                </html>
+                """.formatted(width, height, width, height, encodedJson);
+        Files.writeString(tempFile, html, StandardCharsets.UTF_8);
+        return tempFile;
     }
 
     // ── Shared helpers used by CompareFxViewWithWebViewTest ──────────────────
@@ -211,7 +237,32 @@ public class WebViewScreenshotGenerator extends Application {
         return frames;
     }
 
-    // ── Private utilities ────────────────────────────────────────────────────
+    // ── Private utilities ─────────────────────────────────────────────────────
+
+    private static String readRawJson(File file) throws IOException {
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".json")) {
+            return Files.readString(file.toPath(), StandardCharsets.UTF_8);
+        }
+        if (name.endsWith(".lottie")) {
+            try (ZipFile zip = new ZipFile(file)) {
+                ZipEntry manifestEntry = zip.getEntry("manifest.json");
+                if (manifestEntry == null) throw new IOException("missing manifest.json in " + file.getName());
+                // Find the first animation entry under a/ or animations/
+                var entries = zip.entries();
+                while (entries.hasMoreElements()) {
+                    ZipEntry entry = entries.nextElement();
+                    String n = entry.getName();
+                    if (!entry.isDirectory() && n.endsWith(".json")
+                            && (n.startsWith("a/") || n.startsWith("animations/"))) {
+                        return new String(zip.getInputStream(entry).readAllBytes(), StandardCharsets.UTF_8);
+                    }
+                }
+                throw new IOException("no animation JSON found in " + file.getName());
+            }
+        }
+        throw new IOException("unsupported file type: " + file.getName());
+    }
 
     private static boolean hasScreenshots(Path dir) throws IOException {
         try (Stream<Path> paths = Files.list(dir)) {
@@ -232,16 +283,5 @@ public class WebViewScreenshotGenerator extends Application {
             }
         }
         Files.createDirectories(dir);
-    }
-
-    private static void savePng(WritableImage image, Path path) throws IOException {
-        int w = (int) image.getWidth();
-        int h = (int) image.getHeight();
-        int[] pixels = new int[w * h];
-        image.getPixelReader().getPixels(0, 0, w, h, PixelFormat.getIntArgbInstance(), pixels, 0, w);
-        try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
-            ImageSaver.writePNG(fos, pixels, w, h);
-            logger.info("Saved PNG: {}", path);
-        }
     }
 }
