@@ -730,9 +730,12 @@ public class LottiePlayer extends Canvas {
             if (isLayerActiveAtFrame(layer, frame)) {
                 // Check if this layer uses a track matte (has tt set)
                 if (layer.matteMode() != null) {
-                    // This layer uses a matte - the next layer (i+1) should be the matte source
-                    if (i + 1 < animation.layers().size()) {
-                        Layer matteSource = animation.layers().get(i + 1);
+                    // This layer uses a matte. Per the Lottie/AE convention, the matte source is the
+                    // layer immediately ABOVE the consumer in the After Effects layer panel, which
+                    // corresponds to the IMMEDIATELY PRECEDING layer in the JSON layers array
+                    // (lower index, since index 0 is the top of the rendering stack).
+                    if (i - 1 >= 0) {
+                        Layer matteSource = animation.layers().get(i - 1);
                         if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
                                 && isLayerActiveAtFrame(matteSource, frame)) {
                             logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
