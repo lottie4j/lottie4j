@@ -10,7 +10,7 @@ public class LayerActivityTest {
 
     @Test
     void evaluatesLayerAsActiveWithinInclusiveExclusiveBounds() {
-        Layer layer = layer(10, 20);
+        Layer layer = layer(10.0, 20.0);
 
         assertFalse(LayerActivity.isActiveAtFrame(layer, 9.99));
         assertTrue(LayerActivity.isActiveAtFrame(layer, 10.0));
@@ -28,7 +28,7 @@ public class LayerActivityTest {
 
     @Test
     void respectsMissingOutPointAsInfinity() {
-        Layer layer = layer(5, null);
+        Layer layer = layer(5.0, null);
 
         assertFalse(LayerActivity.isActiveAtFrame(layer, 4.999));
         assertTrue(LayerActivity.isActiveAtFrame(layer, 5.0));
@@ -37,14 +37,27 @@ public class LayerActivityTest {
 
     @Test
     void respectsMissingInPointAsZero() {
-        Layer layer = layer(null, 8);
+        Layer layer = layer(null, 8.0);
 
         assertFalse(LayerActivity.isActiveAtFrame(layer, -0.001));
         assertTrue(LayerActivity.isActiveAtFrame(layer, 0.0));
         assertFalse(LayerActivity.isActiveAtFrame(layer, 8.0));
     }
 
-    private static Layer layer(Integer inPoint, Integer outPoint) {
+    @Test
+    void preservesFractionalOutPointFromLottieJson() {
+        // Real-world precomp layers can carry fractional in/out points (e.g. "op": 230.4
+        // when a precomp's content is shorter than the parent timeline frame boundary).
+        // Before Layer's in/out point fields were Double, Jackson truncated such values
+        // to integers, causing the layer to drop out a frame early.
+        Layer layer = layer(0.0, 230.4);
+
+        assertTrue(LayerActivity.isActiveAtFrame(layer, 230.0));
+        assertTrue(LayerActivity.isActiveAtFrame(layer, 230.39));
+        assertFalse(LayerActivity.isActiveAtFrame(layer, 230.4));
+    }
+
+    private static Layer layer(Double inPoint, Double outPoint) {
         return new Layer(
                 null, null, null, null, null, null, null,
                 null, inPoint, outPoint, null,
