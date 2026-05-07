@@ -60,6 +60,9 @@ public class LottiePlayer extends Canvas {
     private final SolidColorRenderer solidColorRenderer = new SolidColorRenderer();
     private final EffectsRenderer effectsRenderer = new EffectsRenderer();
     private final MatteRenderer matteRenderer = new MatteRenderer();
+    private final com.lottie4j.fxplayer.renderer.layer.MaskRenderer maskRenderer =
+            new com.lottie4j.fxplayer.renderer.layer.MaskRenderer(
+                    new com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator());
     private final int baseRenderWidth;
     private final int baseRenderHeight;
     private AnimationTimer animationTimer;
@@ -1024,6 +1027,11 @@ public class LottiePlayer extends Canvas {
         // Apply this layer's transform (with opacity)
         applyLayerTransform(gc, layer, frame);
 
+        // Apply layer-level vector masks (masksProperties) so subsequent draws are clipped
+        // to the mask region. The mask coordinates are in the layer's local space, so this
+        // must happen AFTER the layer transform is applied.
+        boolean maskApplied = maskRenderer.applyMasks(gc, layer, frame);
+
         // Handle precomposition layers
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             renderPrecompositionLayer(gc, layer, frame);
@@ -1076,6 +1084,10 @@ public class LottiePlayer extends Canvas {
             }
         } else {
             logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
+        }
+
+        if (maskApplied) {
+            maskRenderer.restoreMasks(gc);
         }
 
         gc.restore();
@@ -1375,6 +1387,10 @@ public class LottiePlayer extends Canvas {
      * @param frame current frame
      */
     private void renderLayerContent(GraphicsContext gc, Layer layer, double frame) {
+        // Apply layer-level vector masks (masksProperties). The caller has already applied
+        // any layer transforms, so the mask coordinates resolve in the same local space.
+        boolean maskApplied = maskRenderer.applyMasks(gc, layer, frame);
+
         // Handle precomposition layers
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             renderPrecompositionLayer(gc, layer, frame);
@@ -1427,6 +1443,10 @@ public class LottiePlayer extends Canvas {
             }
         } else {
             logger.debug("Skipping shape rendering for NULL layer: {}", layer.name());
+        }
+
+        if (maskApplied) {
+            maskRenderer.restoreMasks(gc);
         }
     }
 
@@ -1532,6 +1552,9 @@ public class LottiePlayer extends Canvas {
         // Apply this layer's transform (with opacity)
         applyLayerTransform(gc, layer, frame);
 
+        // Apply layer-level vector masks (masksProperties), in the layer's local space.
+        boolean maskApplied = maskRenderer.applyMasks(gc, layer, frame);
+
         // Handle precomposition layers
         if (layer.layerType() == LayerType.PRECOMPOSITION) {
             renderPrecompositionLayer(gc, layer, frame);
@@ -1574,6 +1597,10 @@ public class LottiePlayer extends Canvas {
             }
         } else {
             logger.debug("Rendering NULL layer: {}", layer.name());
+        }
+
+        if (maskApplied) {
+            maskRenderer.restoreMasks(gc);
         }
 
         gc.restore();
