@@ -19,8 +19,10 @@ import com.lottie4j.core.model.shape.style.Fill;
 import com.lottie4j.core.model.shape.style.GradientStroke;
 import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.element.FillStyle;
+import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+import com.lottie4j.fxplayer.util.StrokeHelper;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.SnapshotParameters;
@@ -266,12 +268,28 @@ public class ShapeGroupRenderer {
         gc.setFill(fillColor);
 
         double fillOpacity = fill.opacity() != null ? fill.opacity().getValue(0, frame) / 100.0 : 1.0;
+        double currentAlpha = gc.getGlobalAlpha();
         if (fillOpacity < 1.0) {
-            double currentAlpha = gc.getGlobalAlpha();
             gc.setGlobalAlpha(currentAlpha * fillOpacity);
         }
 
         gc.fill();
+        gc.setGlobalAlpha(currentAlpha);
+
+        // Also render stroke if present in the group (path is still current after fill)
+        for (BaseShape item : group.shapes()) {
+            if (item instanceof Stroke strokeShape) {
+                var strokeStyle = new StrokeStyle(strokeShape);
+                var strokeWidth = strokeStyle.getStrokeWidth(frame);
+                if (StrokeHelper.shouldRenderStroke(strokeWidth)) {
+                    gc.setStroke(strokeStyle.getColor(frame));
+                    gc.setLineWidth(StrokeHelper.getCompensatedStrokeWidth(gc, strokeWidth));
+                    gc.stroke();
+                }
+                break;
+            }
+        }
+
         gc.restore();
 
         // Render any nested groups
