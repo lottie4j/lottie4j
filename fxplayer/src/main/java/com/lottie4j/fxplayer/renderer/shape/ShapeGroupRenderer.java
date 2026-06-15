@@ -110,7 +110,7 @@ public class ShapeGroupRenderer {
             double groupOpacity = 1.0;
             boolean hasAnimatedOpacity = false;
             if (groupTransform != null && groupTransform.opacity() != null) {
-                groupOpacity = groupTransform.opacity().getValue(0, frame) / 100.0;
+                groupOpacity = Math.clamp(groupTransform.opacity().getValue(0, frame) / 100.0, 0.0, 1.0);
                 if (groupOpacity <= 0) {
                     logger.debug("Skipping group {} - opacity is {}", group.name(), groupOpacity);
                     gc.restore();
