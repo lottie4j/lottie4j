@@ -80,6 +80,7 @@ class CompareFxViewWithWebViewTest {
                 "json/loading.json",
                 "json/lottie4j.json",
                 //"json/lottie_lego.json", // Not used, animation timing differences
+                "json/pi4j.json",
                 "json/sandy_loading.json",
                 "json/snake_ladder_loading_animation.json",
                 "json/success.json",

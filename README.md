@@ -98,6 +98,7 @@ public class DemoApplication extends Application {
 
 ### Making a Release
 
+* Validate that the latest build was successful.
 * Define the release version number based on the latest release.
 * Go to https://github.com/lottie4j/lottie4j/actions/workflows/release.yml
 * Click on "Run workflow" and fill in the new version number.
