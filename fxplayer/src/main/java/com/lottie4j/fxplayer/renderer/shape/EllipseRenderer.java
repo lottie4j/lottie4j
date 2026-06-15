@@ -227,18 +227,29 @@ public class EllipseRenderer implements ShapeRenderer {
         start = start / 100.0;
         end = end / 100.0;
 
-        // Offset in Lottie is in degrees (can be positive or negative)
-        // For example: offset goes 0 → -360 → -720 for 2 full rotations
-        // Convert degrees to rotations (fraction of a full circle)
-        double offsetRotations = offset / 360.0;
+        // Full circle: when the trim covers 100% of the arc, offset is irrelevant and
+        // floating-point wrapping of (1.0 + x) - 1.0 != x can produce a near-zero
+        // arc extent instead of 360°. Handle this before any offset arithmetic.
+        if (end - start >= 1.0) {
+            // draw full circle — fall through to stroke with 360° extent
+            start = 0.0;
+            end = 1.0;
+        } else {
+            // Offset in Lottie is in degrees (can be positive or negative)
+            // For example: offset goes 0 → -360 → -720 for 2 full rotations
+            // Convert degrees to rotations (fraction of a full circle)
+            double offsetRotations = offset / 360.0;
 
-        // Apply offset as rotations to both start and end positions
-        start = start + offsetRotations;
-        end = end + offsetRotations;
+            // Apply offset as rotations to both start and end positions
+            start = start + offsetRotations;
+            end = end + offsetRotations;
 
-        // Handle wrapping for values > 1.0
-        while (start > 1.0) start -= 1.0;
-        while (end > 1.0) end -= 1.0;
+            // Handle wrapping for values outside [0, 1]
+            while (start > 1.0) start -= 1.0;
+            while (start < 0.0) start += 1.0;
+            while (end > 1.0) end -= 1.0;
+            while (end < 0.0) end += 1.0;
+        }
 
         // Lottie measures from the top (12 o'clock) going clockwise
         // JavaFX measures from the right (3 o'clock) with positive angles going counterclockwise

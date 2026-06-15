@@ -317,8 +317,10 @@ public record Animated(
         double x2 = easingIn.x() != null && !easingIn.x().isEmpty() ? easingIn.x().get(0) : 1.0;
         double y2 = easingIn.y() != null && !easingIn.y().isEmpty() ? easingIn.y().get(0) : 1.0;
 
-        // Use Newton-Raphson iteration to find t value that gives us the correct x
-        // This solves the cubic Bezier equation for x to find the corresponding y
+        // Use Newton-Raphson iteration to find t value that gives us the correct x.
+        // Clamp currentT to [0,1] after each step to prevent divergence on flat-point
+        // beziers like cubic-bezier(1,0,0,1) where dx/dt ≈ 0 near t=0.5.
+        // If the derivative is too small, fall back to bisection.
         double currentT = t;
         for (int i = 0; i < 8; i++) {
             double currentX = cubicBezier(currentT, 0, x1, x2, 1);
@@ -326,13 +328,33 @@ public record Animated(
             if (Math.abs(dx) < 0.001) break;
 
             double derivative = cubicBezierDerivative(currentT, 0, x1, x2, 1);
-            if (Math.abs(derivative) < 1e-6) break;
+            if (Math.abs(derivative) < 0.001) {
+                // Derivative too small for Newton-Raphson; use bisection instead
+                currentT = bisectionSolve(t, x1, x2);
+                break;
+            }
 
-            currentT = currentT - dx / derivative;
+            currentT = Math.clamp(currentT - dx / derivative, 0.0, 1.0);
         }
 
         // Calculate y value using the solved t
         return cubicBezier(currentT, 0, y1, y2, 1);
+    }
+
+    /**
+     * Bisection solver for the cubic Bezier x-component. Used as a fallback when
+     * Newton-Raphson cannot converge (e.g. flat-point beziers where dx/dt ≈ 0).
+     */
+    private double bisectionSolve(double targetX, double x1, double x2) {
+        double low = 0.0, high = 1.0, mid = targetX;
+        for (int i = 0; i < 50; i++) {
+            mid = (low + high) / 2.0;
+            double x = cubicBezier(mid, 0, x1, x2, 1);
+            if (Math.abs(x - targetX) < 1e-7) break;
+            if (x < targetX) low = mid;
+            else high = mid;
+        }
+        return mid;
     }
 
     /**
