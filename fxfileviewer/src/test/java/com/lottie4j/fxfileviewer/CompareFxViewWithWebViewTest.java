@@ -73,6 +73,7 @@ class CompareFxViewWithWebViewTest {
                 "json/box-moving-changing-color.json",
                 "json/face-exhaling.json",
                 "json/face-peeking.json",
+                "json/foojay-duke.json",
                 "json/foojay-reporter.json",
                 "json/isometric_data_analysis.json",
                 // "json/java_duke_fadein.json", // Not used, black borders are not merged
