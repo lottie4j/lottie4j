@@ -129,7 +129,6 @@
         </plugins>
     </build>
 
-
     <profiles>
         <profile>
             <!-- Activates JavaFX 26 headless windowing for unit tests in CI (requires Java 25+). -->
@@ -138,7 +137,9 @@
             <properties>
                 <java.version>25</java.version>
                 <javafx.version>26</javafx.version>
-                <surefire.argLine.headless>-Dglass.platform=headless --enable-native-access=javafx.graphics</surefire.argLine.headless>
+                <surefire.argLine.headless>
+                    -Dglass.platform=headless --enable-native-access=javafx.graphics
+                </surefire.argLine.headless>
             </properties>
             <build>
                 <plugins>

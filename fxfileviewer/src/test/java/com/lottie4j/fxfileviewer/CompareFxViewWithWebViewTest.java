@@ -1,26 +1,5 @@
 package com.lottie4j.fxfileviewer;
 
-import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.util.ImageSaver;
-import com.lottie4j.fxfileviewer.util.ImageSimilarity;
-import com.lottie4j.fxplayer.LottiePlayer;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -36,7 +15,32 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.util.ImageSaver;
+import com.lottie4j.fxfileviewer.util.ImageSimilarity;
+import com.lottie4j.fxplayer.LottiePlayer;
+
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 /**
  * Validates JavaFX player rendering against pre-generated WebView reference screenshots.
@@ -96,11 +100,10 @@ class CompareFxViewWithWebViewTest {
 
             // angry_bird: lots of motion, anti-aliased edges across many limbs. (observed 99.26)
             Map.entry("json/angry_bird.json", 98.7),
-            // animated_background_patterns: gradient-heavy, min dips to 81.51 on one frame.
-            //                                                                 (observed 99.36)
-            Map.entry("json/animated_background_patterns.json", 98.8),
+            // animated_background_patterns used to need an override (frame 90 drop to 81.51).
+            // After the boundary-frame fix it now averages ~99.55% and is removed from this map.
             // face-peeking: largest gap at -0.78pt; thin curves & strong AA differences.
-            //                                                                 (observed 98.72)
+            //                                                                 (observed 98.76)
             Map.entry("json/face-peeking.json", 98.2),
             // isometric_data_analysis: marginal miss (-0.01pt); should be easy to close.
             //                                                                 (observed 99.49)
@@ -264,11 +267,16 @@ class CompareFxViewWithWebViewTest {
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
-        // Every frame (step=1, inclusive of outPoint) — see plan §3. This is 5× the prior
+        // lottie-web treats outPoint as exclusive: the last rendered frame is op - 1, and the
+        // JavaFX player clamps seekToFrame to op - 1 (see FrameTiming.getLastRenderableFrame).
+        // Sampling frame == op would compare two clamped-to-different-things images and inject
+        // a large false drop on the final sample — so we stop at op - 1.
+        int lastFrame = Math.max(inPoint, outPoint - 1);
+        // Every frame (step=1, inclusive of lastFrame) — see plan §3. This is 5× the prior
         // sampling rate, so anything other than a deterministic per-frame sync would be
         // unreliable.
         List<Integer> frames = WebViewScreenshotGenerator.buildSampledFrames(
-                inPoint, Math.max(inPoint, outPoint), 1);
+                inPoint, lastFrame, 1);
 
         Path outputDir = Path.of("target/test-output",
                 WebViewScreenshotGenerator.webViewDirPath(fileName) + "_scale_" + scale);

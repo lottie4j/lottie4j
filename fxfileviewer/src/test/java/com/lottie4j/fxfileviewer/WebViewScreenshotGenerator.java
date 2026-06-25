@@ -129,8 +129,12 @@ public class WebViewScreenshotGenerator {
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
-        // Every frame (step=1, inclusive). See CompareFxViewWithWebViewTest for the rationale.
-        List<Integer> frames = buildSampledFrames(inPoint, Math.max(inPoint, outPoint), 1);
+        // lottie-web treats outPoint as exclusive: the last rendered frame is op - 1. Sampling
+        // frame == op would produce a reference that disagrees with the JavaFX player (which
+        // clamps seekToFrame to op - 1 via getLastRenderableFrame), so we stop at op - 1.
+        int lastFrame = Math.max(inPoint, outPoint - 1);
+        // Every frame (step=1, inclusive of lastFrame). See CompareFxViewWithWebViewTest for the rationale.
+        List<Integer> frames = buildSampledFrames(inPoint, lastFrame, 1);
 
         String rawJson = readRawJson(new File(resource.getFile()));
         String encodedJson = Base64.getEncoder().encodeToString(rawJson.getBytes(StandardCharsets.UTF_8));
