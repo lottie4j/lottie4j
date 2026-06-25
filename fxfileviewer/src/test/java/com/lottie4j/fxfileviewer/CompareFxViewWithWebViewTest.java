@@ -323,10 +323,21 @@ class CompareFxViewWithWebViewTest {
     /**
      * Loads a PNG from {@code url} and scales it to {@code targetWidth × targetHeight}
      * using JavaFX smooth bilinear scaling.
+     *
+     * <p>{@code backgroundLoading} is deliberately {@code false}: at every-frame sampling,
+     * asynchronous loads can occasionally lose the race and yield a 0×0 image, which then
+     * blows up the {@link WritableImage} constructor with
+     * {@code "Image dimensions must be positive"}.</p>
      */
     private WritableImage loadAndScale(URL url, int targetWidth, int targetHeight) {
-        Image img = new Image(url.toString(), targetWidth, targetHeight, false, true);
-        return new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
+        Image img = new Image(url.toString(), targetWidth, targetHeight, false, true, false);
+        int w = (int) img.getWidth();
+        int h = (int) img.getHeight();
+        if (w <= 0 || h <= 0 || img.getPixelReader() == null) {
+            throw new IllegalStateException(
+                    "Reference image failed to load (w=" + w + ", h=" + h + "): " + url);
+        }
+        return new WritableImage(img.getPixelReader(), w, h);
     }
 
     /**
