@@ -125,7 +125,9 @@ class CompareFxViewWithWebViewTest {
      * needs its own override map.
      */
     private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries(
-            // Populate empirically on first run.
+            // animated_background_patterns at 50% scale: observed avg ~96.78 on CI due to
+            // expected smoothing differences from bilinear downscaling.
+            Map.entry("json/animated_background_patterns.json", 96.2)
     );
 
     private static final int CANVAS_WIDTH = 800;
@@ -135,10 +137,17 @@ class CompareFxViewWithWebViewTest {
     @BeforeAll
     static void initJavaFX() throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
-        Platform.startup(() -> {
-            primaryStage = new Stage();
-            latch.countDown();
-        });
+        try {
+            Platform.startup(() -> {
+                primaryStage = new Stage();
+                latch.countDown();
+            });
+        } catch (IllegalStateException alreadyStarted) {
+            Platform.runLater(() -> {
+                primaryStage = new Stage();
+                latch.countDown();
+            });
+        }
         assertTrue(latch.await(5, TimeUnit.SECONDS), "JavaFX Platform failed to start");
     }
 

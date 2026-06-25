@@ -149,6 +149,7 @@
                         <configuration>
                             <argLine>
                                 --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
+                                --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer.util=ALL-UNNAMED
                                 -Dglass.platform=headless --enable-native-access=javafx.graphics
                             </argLine>
                         </configuration>
