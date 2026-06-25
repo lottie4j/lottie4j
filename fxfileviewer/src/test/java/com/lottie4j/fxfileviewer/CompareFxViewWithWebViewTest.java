@@ -380,10 +380,22 @@ class CompareFxViewWithWebViewTest {
      * one-time retry covers the residual flakiness.</p>
      */
     private WritableImage loadAndScale(URL url, int targetWidth, int targetHeight) throws IOException {
-        for (int attempt = 0; attempt < 2; attempt++) {
+        IOException lastIo = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
             Image img;
             try (InputStream in = url.openStream()) {
                 img = new Image(in, targetWidth, targetHeight, false, true);
+            } catch (IOException io) {
+                // Transient filesystem hiccup seen right after a `mvn clean` rebuild: the
+                // classpath URL resolves but the file is briefly not on disk. Wait and retry.
+                lastIo = io;
+                try {
+                    Thread.sleep(50L * (attempt + 1));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw io;
+                }
+                continue;
             }
             int w = (int) img.getWidth();
             int h = (int) img.getHeight();
@@ -391,8 +403,11 @@ class CompareFxViewWithWebViewTest {
                 return new WritableImage(img.getPixelReader(), w, h);
             }
         }
+        if (lastIo != null) {
+            throw lastIo;
+        }
         throw new IllegalStateException(
-                "Reference image failed to load after retry (target=" + targetWidth + "×"
+                "Reference image failed to decode after retries (target=" + targetWidth + "×"
                         + targetHeight + "): " + url);
     }
 
