@@ -1,5 +1,26 @@
 package com.lottie4j.fxfileviewer;
 
+import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.util.ImageSaver;
+import com.lottie4j.fxfileviewer.util.ImageSimilarity;
+import com.lottie4j.fxplayer.LottiePlayer;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,32 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.util.ImageSaver;
-import com.lottie4j.fxfileviewer.util.ImageSimilarity;
-import com.lottie4j.fxplayer.LottiePlayer;
-
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Validates JavaFX player rendering against pre-generated WebView reference screenshots.
@@ -72,11 +68,15 @@ import javafx.stage.Stage;
 class CompareFxViewWithWebViewTest {
     private static final Logger logger = LoggerFactory.getLogger(CompareFxViewWithWebViewTest.class);
 
-    /** Long-term per-frame similarity floor. The bar we are climbing to. */
+    /**
+     * Long-term per-frame similarity floor. The bar we are climbing to.
+     */
     private static final double TARGET_PER_FRAME_SIMILARITY = 99.5;
 
-    /** Long-term average similarity floor. Kept separate from the per-frame target so they
-     * can be tuned independently if needed. */
+    /**
+     * Long-term average similarity floor. Kept separate from the per-frame target so they
+     * can be tuned independently if needed.
+     */
     private static final double TARGET_AVERAGE_SIMILARITY = 99.5;
 
     /**
@@ -89,7 +89,26 @@ class CompareFxViewWithWebViewTest {
      * first calibration run.</p>
      */
     private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
-            // Populate empirically on first run; entries are technical debt to drive down.
+            // Each entry is technical debt. Format: file → floor with ~0.5pt safety margin
+            // below the observed average. Driving an entry to ≥ TARGET means it can be removed.
+            // Captured during initial calibration; the third column is the *observed average*
+            // at the time the entry was added so progress can be tracked over time.
+
+            // angry_bird: lots of motion, anti-aliased edges across many limbs. (observed 99.26)
+            Map.entry("json/angry_bird.json", 98.7),
+            // animated_background_patterns: gradient-heavy, min dips to 81.51 on one frame.
+            //                                                                 (observed 99.36)
+            Map.entry("json/animated_background_patterns.json", 98.8),
+            // face-peeking: largest gap at -0.78pt; thin curves & strong AA differences.
+            //                                                                 (observed 98.72)
+            Map.entry("json/face-peeking.json", 98.2),
+            // isometric_data_analysis: marginal miss (-0.01pt); should be easy to close.
+            //                                                                 (observed 99.49)
+            Map.entry("json/isometric_data_analysis.json", 98.9),
+            // sandy_loading: spinning shapes, sub-pixel rotation offsets.    (observed 99.39)
+            Map.entry("json/sandy_loading.json", 98.8),
+            // dot/demo-1: dotLottie demo with min 91.00 on one frame.        (observed 99.44)
+            Map.entry("dot/demo-1.lottie", 98.9)
     );
 
     /**
@@ -132,12 +151,12 @@ class CompareFxViewWithWebViewTest {
                 "json/foojay-duke.json",
                 "json/foojay-reporter.json",
                 "json/isometric_data_analysis.json",
-                // "json/java_duke_fadein.json", // Not used, black borders are not merged
+                "json/java_duke_fadein.json",
                 "json/java_duke_flip.json",
-                // "json/java_duke_slidein.json", // Not used, animation timing differences
+                "json/java_duke_slidein.json",
                 "json/loading.json",
                 "json/lottie4j.json",
-                //"json/lottie_lego.json", // Not used, animation timing differences
+                "json/lottie_lego.json",
                 "json/pi4j.json",
                 "json/sandy_loading.json",
                 "json/snake_ladder_loading_animation.json",
@@ -154,6 +173,34 @@ class CompareFxViewWithWebViewTest {
             return all.filter(wanted::equals);
         }
         return all;
+    }
+
+    /**
+     * Render a heatmap of per-window similarity scores. Red intensity reflects the gap
+     * from {@link #TARGET_PER_FRAME_SIMILARITY}; perfect windows render white.
+     */
+    private static int[] renderHeatmap(double[][] windowScores, int width, int height) {
+        int[] out = new int[width * height];
+        if (windowScores.length == 0 || windowScores[0].length == 0) {
+            for (int i = 0; i < out.length; i++) out[i] = 0xFFFFFFFF;
+            return out;
+        }
+        int winsY = windowScores.length;
+        int winsX = windowScores[0].length;
+        for (int y = 0; y < height; y++) {
+            int wy = Math.min(winsY - 1, (int) ((long) y * winsY / Math.max(1, height)));
+            for (int x = 0; x < width; x++) {
+                int wx = Math.min(winsX - 1, (int) ((long) x * winsX / Math.max(1, width)));
+                double score = windowScores[wy][wx];
+                double gap = Math.max(0, TARGET_PER_FRAME_SIMILARITY - score);
+                // map gap 0..100 → red intensity 0..255
+                int intensity = (int) Math.min(255, Math.round(gap * 255.0 / 100.0));
+                int g = 255 - intensity;
+                int b = 255 - intensity;
+                out[y * width + x] = 0xFF000000 | (255 << 16) | (g << 8) | b;
+            }
+        }
+        return out;
     }
 
     @ParameterizedTest
@@ -297,6 +344,8 @@ class CompareFxViewWithWebViewTest {
                 fileName, average, floor, TARGET_AVERAGE_SIMILARITY, gapToTarget));
     }
 
+    // ── Image utilities ───────────────────────────────────────────────────────
+
     /**
      * Seek the JavaFX player to {@code frame} and wait until at least one render pulse has
      * completed, so the subsequent snapshot reflects the new frame.
@@ -318,8 +367,6 @@ class CompareFxViewWithWebViewTest {
         Platform.runLater(pulseLatch::countDown);
         pulseLatch.await();
     }
-
-    // ── Image utilities ───────────────────────────────────────────────────────
 
     /**
      * Loads a PNG from {@code url} and scales it to {@code targetWidth × targetHeight}
@@ -382,34 +429,6 @@ class CompareFxViewWithWebViewTest {
         try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
             ImageSaver.writePNG(fos, pixels, totalW, totalH);
         }
-    }
-
-    /**
-     * Render a heatmap of per-window similarity scores. Red intensity reflects the gap
-     * from {@link #TARGET_PER_FRAME_SIMILARITY}; perfect windows render white.
-     */
-    private static int[] renderHeatmap(double[][] windowScores, int width, int height) {
-        int[] out = new int[width * height];
-        if (windowScores.length == 0 || windowScores[0].length == 0) {
-            for (int i = 0; i < out.length; i++) out[i] = 0xFFFFFFFF;
-            return out;
-        }
-        int winsY = windowScores.length;
-        int winsX = windowScores[0].length;
-        for (int y = 0; y < height; y++) {
-            int wy = Math.min(winsY - 1, (int) ((long) y * winsY / Math.max(1, height)));
-            for (int x = 0; x < width; x++) {
-                int wx = Math.min(winsX - 1, (int) ((long) x * winsX / Math.max(1, width)));
-                double score = windowScores[wy][wx];
-                double gap = Math.max(0, TARGET_PER_FRAME_SIMILARITY - score);
-                // map gap 0..100 → red intensity 0..255
-                int intensity = (int) Math.min(255, Math.round(gap * 255.0 / 100.0));
-                int g = 255 - intensity;
-                int b = 255 - intensity;
-                out[y * width + x] = 0xFF000000 | (255 << 16) | (g << 8) | b;
-            }
-        }
-        return out;
     }
 
     private void clearDirectory(Path dir) throws IOException {
