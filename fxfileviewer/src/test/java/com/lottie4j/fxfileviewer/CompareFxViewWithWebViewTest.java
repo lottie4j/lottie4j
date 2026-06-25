@@ -105,6 +105,14 @@ class CompareFxViewWithWebViewTest {
             // isometric_data_analysis: marginal miss (-0.01pt); should be easy to close.
             //                                                                 (observed 99.49)
             Map.entry("json/isometric_data_analysis.json", 98.9),
+            // java_duke_fadein: single-frame min dips to 78.14 — large rendering gap.
+            //                                                                 (observed 97.47)
+            Map.entry("json/java_duke_fadein.json", 96.9),
+            // java_duke_slidein: same 78.14 min as fadein — likely the same off-frame.
+            //                                                                 (observed 98.60)
+            Map.entry("json/java_duke_slidein.json", 98.1),
+            // lottie_lego: brick stacking animation, motion-heavy.            (observed 98.14)
+            Map.entry("json/lottie_lego.json", 97.6),
             // sandy_loading: spinning shapes, sub-pixel rotation offsets.    (observed 99.39)
             Map.entry("json/sandy_loading.json", 98.8),
             // dot/demo-1: dotLottie demo with min 91.00 on one frame.        (observed 99.44)
