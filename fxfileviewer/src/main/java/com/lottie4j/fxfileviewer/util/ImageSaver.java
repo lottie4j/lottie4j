@@ -1,5 +1,6 @@
 package com.lottie4j.fxfileviewer.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,6 +35,26 @@ public class ImageSaver {
      * @throws IOException if an I/O error occurs during writing
      */
     public static void writePNG(FileOutputStream fos, int[] pixels, int width, int height) throws IOException {
+        writePNG(fos, pixels, width, height, Deflater.DEFAULT_COMPRESSION);
+    }
+
+    /**
+     * Writes a PNG image to the specified output stream using a specific DEFLATE compression level.
+     * <p>
+     * Use this overload when you want to trade encoding time for smaller files. PNG screenshot
+     * fixtures in this project typically shrink 30–60% at {@link Deflater#BEST_COMPRESSION}.
+     * </p>
+     *
+     * @param fos              the output stream
+     * @param pixels           the pixel data in ARGB format
+     * @param width            the width of the image in pixels
+     * @param height           the height of the image in pixels
+     * @param compressionLevel a value in {@code [-1, 9]} as accepted by
+     *                         {@link Deflater#setLevel(int)}
+     * @throws IOException if an I/O error occurs
+     */
+    public static void writePNG(FileOutputStream fos, int[] pixels, int width, int height,
+                                int compressionLevel) throws IOException {
         // PNG signature
         fos.write(new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
 
@@ -41,7 +62,7 @@ public class ImageSaver {
         writeChunk(fos, "IHDR", createIHDR(width, height));
 
         // IDAT chunk (image data)
-        writeChunk(fos, "IDAT", compressImageData(pixels, width, height));
+        writeChunk(fos, "IDAT", compressImageData(pixels, width, height, compressionLevel));
 
         // IEND chunk
         writeChunk(fos, "IEND", new byte[0]);
@@ -78,13 +99,16 @@ public class ImageSaver {
      * The resulting data is compressed using DEFLATE compression as required by the PNG specification.
      * </p>
      *
-     * @param pixels the pixel data in ARGB format
-     * @param width  the width of the image in pixels
-     * @param height the height of the image in pixels
+     * @param pixels           the pixel data in ARGB format
+     * @param width            the width of the image in pixels
+     * @param height           the height of the image in pixels
+     * @param compressionLevel a value in {@code [-1, 9]} as accepted by
+     *                         {@link Deflater#setLevel(int)}
      * @return the compressed image data
      * @throws IOException if compression fails
      */
-    private static byte[] compressImageData(int[] pixels, int width, int height) throws IOException {
+    private static byte[] compressImageData(int[] pixels, int width, int height,
+                                            int compressionLevel) throws IOException {
         // Convert ARGB pixels to RGBA bytes with filter byte per scanline
         int rowBytes = width * 4 + 1;  // 4 bytes per pixel + 1 filter byte
         byte[] imageData = new byte[rowBytes * height];
@@ -106,27 +130,32 @@ public class ImageSaver {
         }
 
         // Compress with deflate
-        return deflate(imageData);
+        return deflate(imageData, compressionLevel);
     }
 
     /**
      * Compresses data using DEFLATE algorithm.
      *
-     * @param data the uncompressed data
+     * @param data             the uncompressed data
+     * @param compressionLevel a value in {@code [-1, 9]} as accepted by
+     *                         {@link Deflater#setLevel(int)}
      * @return the compressed data
      */
-    private static byte[] deflate(byte[] data) {
-        Deflater deflater = new Deflater();
+    private static byte[] deflate(byte[] data, int compressionLevel) {
+        Deflater deflater = new Deflater(compressionLevel);
         deflater.setInput(data);
         deflater.finish();
 
-        byte[] buffer = new byte[data.length + 100];
-        int compressedSize = deflater.deflate(buffer);
+        // Use a growable buffer because the deflated output can exceed the input for tiny inputs.
+        ByteArrayOutputStream out = new ByteArrayOutputStream(data.length);
+        byte[] buffer = new byte[Math.max(1024, data.length / 4 + 64)];
+        while (!deflater.finished()) {
+            int n = deflater.deflate(buffer);
+            if (n == 0) break;
+            out.write(buffer, 0, n);
+        }
         deflater.end();
-
-        byte[] result = new byte[compressedSize];
-        System.arraycopy(buffer, 0, result, 0, compressedSize);
-        return result;
+        return out.toByteArray();
     }
 
     /**

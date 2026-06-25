@@ -1,7 +1,27 @@
 package com.lottie4j.fxfileviewer;
 
-import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.animation.Animation;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Stream;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
+import javax.imageio.ImageIO;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
@@ -12,17 +32,9 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.*;
-import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.util.ImageSaver;
 
 /**
  * One-time utility for generating WebView reference screenshots for all Lottie animation files
@@ -38,6 +50,14 @@ import java.util.zip.ZipFile;
  * <p>Requires Chrome to be installed. ChromeDriver is managed automatically by Selenium Manager.</p>
  *
  * <p>Output layout: {@code src/test/resources/json/angry_bird-webview/frame_0.png}, etc.</p>
+ *
+ * <p><b>Runbook</b>: every-frame sampling can produce hundreds of frames per animation. Before
+ * committing regenerated references, sanity-check the on-disk size:
+ * <pre>
+ *   du -sh src/test/resources/json src/test/resources/dot   # expected &lt; 500 MB
+ * </pre>
+ * Reference PNGs are re-encoded through {@link ImageSaver} at
+ * {@link java.util.zip.Deflater#BEST_COMPRESSION} to keep this bounded.</p>
  */
 public class WebViewScreenshotGenerator {
     private static final Logger logger = LoggerFactory.getLogger(WebViewScreenshotGenerator.class);
@@ -109,7 +129,8 @@ public class WebViewScreenshotGenerator {
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
-        List<Integer> frames = buildSampledFrames(inPoint, Math.max(inPoint, outPoint - 5), 5);
+        // Every frame (step=1, inclusive). See CompareFxViewWithWebViewTest for the rationale.
+        List<Integer> frames = buildSampledFrames(inPoint, Math.max(inPoint, outPoint), 1);
 
         String rawJson = readRawJson(new File(resource.getFile()));
         String encodedJson = Base64.getEncoder().encodeToString(rawJson.getBytes(StandardCharsets.UTF_8));
@@ -144,12 +165,35 @@ public class WebViewScreenshotGenerator {
                 Thread.sleep(100);
 
                 byte[] png = driver.getScreenshotAs(OutputType.BYTES);
-                Files.write(outputDir.resolve("frame_" + frame + ".png"), png);
+                // Re-encode through ImageSaver at BEST_COMPRESSION. Most reference frames are
+                // simple cartoons and shrink 30–60% — meaningful because every-frame sampling
+                // multiplies committed PNG count by ~5 versus the previous step=5.
+                writeRecompressedPng(png, outputDir.resolve("frame_" + frame + ".png"));
             }
 
             logger.info("Generated {} frames for {} → {}", frames.size(), fileName, outputDir);
         } finally {
             Files.deleteIfExists(tempHtml);
+        }
+    }
+
+    /**
+     * Decode a PNG byte buffer and re-encode it through {@link ImageSaver} at
+     * {@link Deflater#BEST_COMPRESSION}. Output dimensions and pixel values are identical;
+     * only the on-disk byte count changes.
+     */
+    private static void writeRecompressedPng(byte[] pngBytes, Path target) throws IOException {
+        BufferedImage img = ImageIO.read(new ByteArrayInputStream(pngBytes));
+        if (img == null) {
+            // Fallback: just keep the raw bytes if decoding fails for some reason.
+            Files.write(target, pngBytes);
+            return;
+        }
+        int width = img.getWidth();
+        int height = img.getHeight();
+        int[] argb = img.getRGB(0, 0, width, height, null, 0, width);
+        try (FileOutputStream fos = new FileOutputStream(target.toFile())) {
+            ImageSaver.writePNG(fos, argb, width, height, Deflater.BEST_COMPRESSION);
         }
     }
 

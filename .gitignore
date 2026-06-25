@@ -9,3 +9,4 @@ todo.txt
 /screenshot/
 /*.log
 /fxfileviewer/*.log
+.DS_Store
