@@ -3,6 +3,7 @@ package com.lottie4j.fxfileviewer;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -324,20 +325,27 @@ class CompareFxViewWithWebViewTest {
      * Loads a PNG from {@code url} and scales it to {@code targetWidth × targetHeight}
      * using JavaFX smooth bilinear scaling.
      *
-     * <p>{@code backgroundLoading} is deliberately {@code false}: at every-frame sampling,
-     * asynchronous loads can occasionally lose the race and yield a 0×0 image, which then
-     * blows up the {@link WritableImage} constructor with
-     * {@code "Image dimensions must be positive"}.</p>
+     * <p>The PNG is loaded through an {@link InputStream} rather than the URL string, which
+     * bypasses JavaFX's URL-based image cache. Under every-frame sampling we observed that
+     * cache occasionally yielding a 0-dimension {@link Image} (which then blows up the
+     * {@link WritableImage} constructor with "Image dimensions must be positive"). A
+     * one-time retry covers the residual flakiness.</p>
      */
-    private WritableImage loadAndScale(URL url, int targetWidth, int targetHeight) {
-        Image img = new Image(url.toString(), targetWidth, targetHeight, false, true, false);
-        int w = (int) img.getWidth();
-        int h = (int) img.getHeight();
-        if (w <= 0 || h <= 0 || img.getPixelReader() == null) {
-            throw new IllegalStateException(
-                    "Reference image failed to load (w=" + w + ", h=" + h + "): " + url);
+    private WritableImage loadAndScale(URL url, int targetWidth, int targetHeight) throws IOException {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            Image img;
+            try (InputStream in = url.openStream()) {
+                img = new Image(in, targetWidth, targetHeight, false, true);
+            }
+            int w = (int) img.getWidth();
+            int h = (int) img.getHeight();
+            if (w > 0 && h > 0 && img.getPixelReader() != null) {
+                return new WritableImage(img.getPixelReader(), w, h);
+            }
         }
-        return new WritableImage(img.getPixelReader(), w, h);
+        throw new IllegalStateException(
+                "Reference image failed to load after retry (target=" + targetWidth + "×"
+                        + targetHeight + "): " + url);
     }
 
     /**
