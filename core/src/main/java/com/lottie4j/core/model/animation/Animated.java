@@ -1,13 +1,14 @@
 package com.lottie4j.core.model.animation;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import tools.jackson.databind.annotation.JsonDeserialize;
-import tools.jackson.databind.annotation.JsonSerialize;
 import com.lottie4j.core.definition.AnimatedValueType;
+import com.lottie4j.core.helper.BezierEasing;
 import com.lottie4j.core.helper.KeyframeDeserializer;
 import com.lottie4j.core.helper.KeyframeSerializer;
 import com.lottie4j.core.info.PropertyListing;
@@ -16,7 +17,8 @@ import com.lottie4j.core.model.keyframe.Keyframe;
 import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.keyframe.TimedKeyframe;
 
-import java.util.List;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Represents an animated property in a Lottie animation that can contain either static values or keyframe-based animations.
@@ -301,60 +303,19 @@ public record Animated(
     }
 
     /**
-     * Apply cubic Bezier easing curve to progress value
-     * Based on the Lottie easing specification
+     * Apply cubic Bezier easing curve to progress value, delegating to the
+     * shared {@link BezierEasing} solver that mirrors lottie-web's
+     * {@code BezierEaser.js} byte-for-byte. Centralising the algorithm here
+     * removes solver drift as a source of distributed sub-pixel rendering
+     * differences against lottie-web.
      *
      * @param t         progress value (0-1)
      * @param easingOut outgoing easing handle from current keyframe
-     * @param easingIn  incoming easing handle for next keyframe (not used in simplified calculation)
+     * @param easingIn  incoming easing handle for next keyframe
      * @return eased progress value
      */
     private double applyBezierEasing(double t, EasingHandle easingOut, EasingHandle easingIn) {
-        // Get control points from easing handles (use first value if multiple)
-        // Lottie uses cubic bezier with control points P0(0,0), P1(x1,y1), P2(x2,y2), P3(1,1)
-        double x1 = easingOut.x() != null && !easingOut.x().isEmpty() ? easingOut.x().get(0) : 0.0;
-        double y1 = easingOut.y() != null && !easingOut.y().isEmpty() ? easingOut.y().get(0) : 0.0;
-        double x2 = easingIn.x() != null && !easingIn.x().isEmpty() ? easingIn.x().get(0) : 1.0;
-        double y2 = easingIn.y() != null && !easingIn.y().isEmpty() ? easingIn.y().get(0) : 1.0;
-
-        // Use Newton-Raphson iteration to find t value that gives us the correct x.
-        // Clamp currentT to [0,1] after each step to prevent divergence on flat-point
-        // beziers like cubic-bezier(1,0,0,1) where dx/dt ≈ 0 near t=0.5.
-        // If the derivative is too small, fall back to bisection.
-        double currentT = t;
-        for (int i = 0; i < 8; i++) {
-            double currentX = cubicBezier(currentT, 0, x1, x2, 1);
-            double dx = currentX - t;
-            if (Math.abs(dx) < 0.001) break;
-
-            double derivative = cubicBezierDerivative(currentT, 0, x1, x2, 1);
-            if (Math.abs(derivative) < 0.001) {
-                // Derivative too small for Newton-Raphson; use bisection instead
-                currentT = bisectionSolve(t, x1, x2);
-                break;
-            }
-
-            currentT = Math.clamp(currentT - dx / derivative, 0.0, 1.0);
-        }
-
-        // Calculate y value using the solved t
-        return cubicBezier(currentT, 0, y1, y2, 1);
-    }
-
-    /**
-     * Bisection solver for the cubic Bezier x-component. Used as a fallback when
-     * Newton-Raphson cannot converge (e.g. flat-point beziers where dx/dt ≈ 0).
-     */
-    private double bisectionSolve(double targetX, double x1, double x2) {
-        double low = 0.0, high = 1.0, mid = targetX;
-        for (int i = 0; i < 50; i++) {
-            mid = (low + high) / 2.0;
-            double x = cubicBezier(mid, 0, x1, x2, 1);
-            if (Math.abs(x - targetX) < 1e-7) break;
-            if (x < targetX) low = mid;
-            else high = mid;
-        }
-        return mid;
+        return BezierEasing.solve(t, easingOut, easingIn);
     }
 
     /**
@@ -375,24 +336,6 @@ public record Animated(
         double mt3 = mt2 * mt;
 
         return mt3 * p0 + 3 * mt2 * t * p1 + 3 * mt * t2 * p2 + t3 * p3;
-    }
-
-    /**
-     * Calculate derivative of cubic Bezier at t for control points p0, p1, p2, p3.
-     *
-     * @param t  the parameter value (0-1)
-     * @param p0 first control point
-     * @param p1 second control point
-     * @param p2 third control point
-     * @param p3 fourth control point
-     * @return the derivative of the Bezier curve at parameter t
-     */
-    private double cubicBezierDerivative(double t, double p0, double p1, double p2, double p3) {
-        double t2 = t * t;
-        double mt = 1 - t;
-        double mt2 = mt * mt;
-
-        return 3 * mt2 * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t2 * (p3 - p2);
     }
 
     /**
