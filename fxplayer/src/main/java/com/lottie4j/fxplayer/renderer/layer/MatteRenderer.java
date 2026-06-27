@@ -1,7 +1,11 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.definition.MatteMode;
 import com.lottie4j.core.model.layer.Layer;
+
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -9,8 +13,6 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Renderer for track matte (masking) operations.
@@ -183,16 +185,45 @@ public class MatteRenderer {
         contentReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), contentBuffer, 0, width);
         matteReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), matteBuffer, 0, width);
 
+        composeMatte(contentBuffer, matteBuffer, resultBuffer, matteMode);
+
+        resultWriter.setPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), resultBuffer, 0, width);
+        return result;
+    }
+
+    /**
+     * Composites a content buffer with a matte buffer in-place into {@code resultBuffer}.
+     *
+     * <p>This is the pure, pixel-level core of {@link #applyMatte(WritableImage, WritableImage, MatteMode)}
+     * extracted so it can be unit-tested without a JavaFX runtime. All buffers are straight-alpha
+     * ARGB (as produced by {@code PixelFormat.getIntArgbInstance()}).</p>
+     *
+     * <p>Invariants enforced here, per the Lottie / After-Effects track-matte spec:</p>
+     * <ul>
+     *   <li>The content layer's RGB channels are <strong>preserved exactly</strong>; the matte
+     *       source's RGB never leaks into the result. This is what makes
+     *       {@link MatteMode#ALPHA} an <em>alpha</em> matte rather than a colour matte.</li>
+     *   <li>Only the result's alpha is modulated. For {@link MatteMode#ALPHA} the modulator is
+     *       the matte's alpha; for {@link MatteMode#LUMA} it is the matte's Rec. 601 luma.</li>
+     *   <li>Inverted variants substitute {@code (255 - x)} for the modulator.</li>
+     * </ul>
+     *
+     * @param contentBuffer straight-alpha ARGB pixels of the content layer
+     * @param matteBuffer   straight-alpha ARGB pixels of the matte source layer
+     * @param resultBuffer  output buffer (must be the same length as the inputs)
+     * @param matteMode     matte composition mode
+     */
+    static void composeMatte(int[] contentBuffer, int[] matteBuffer, int[] resultBuffer, MatteMode matteMode) {
         for (int i = 0; i < contentBuffer.length; i++) {
             int contentPixel = contentBuffer[i];
             int mattePixel = matteBuffer[i];
 
-            int cA = (contentPixel >> 24) & 0xFF;
+            int cA = (contentPixel >>> 24) & 0xFF;
             int cR = (contentPixel >> 16) & 0xFF;
             int cG = (contentPixel >> 8) & 0xFF;
             int cB = contentPixel & 0xFF;
 
-            int mA = (mattePixel >> 24) & 0xFF;
+            int mA = (mattePixel >>> 24) & 0xFF;
             int mR = (mattePixel >> 16) & 0xFF;
             int mG = (mattePixel >> 8) & 0xFF;
             int mB = mattePixel & 0xFF;
@@ -200,43 +231,42 @@ public class MatteRenderer {
             int resultA;
             switch (matteMode) {
                 case ALPHA:
-                    // Use matte's alpha to mask content
-                    // The content's RGB stays, but alpha is multiplied by matte's alpha
+                    // tt:1 — content alpha is multiplied by the matte's alpha only.
+                    // The matte source's RGB MUST NOT influence the result; it is a mask, not a colour.
                     resultA = (cA * mA) / 255;
                     break;
 
                 case INVERTED_ALPHA:
-                    // Use inverted matte's alpha to mask content
+                    // tt:3 — same as ALPHA but with the matte's alpha inverted.
                     resultA = (cA * (255 - mA)) / 255;
                     break;
 
-                case LUMA:
-                    // Use matte's luminance as alpha
+                case LUMA: {
+                    // tt:2 — content alpha is multiplied by the matte's Rec. 601 luma.
                     int luma = (299 * mR + 587 * mG + 114 * mB) / 1000;
                     resultA = (cA * luma) / 255;
                     break;
+                }
 
-                case INVERTED_LUMA:
-                    // Use inverted matte's luminance as alpha
-                    int lumaInv = (299 * mR + 587 * mG + 114 * mB) / 1000;
-                    resultA = (cA * (255 - lumaInv)) / 255;
+                case INVERTED_LUMA: {
+                    // tt:4 — same as LUMA but with the matte's luma inverted.
+                    int luma = (299 * mR + 587 * mG + 114 * mB) / 1000;
+                    resultA = (cA * (255 - luma)) / 255;
                     break;
+                }
 
                 default:
                     resultA = cA;
             }
 
-            // IMPORTANT: Keep content's RGB, only modify alpha
-            // If resultA is 0, make the pixel fully transparent
+            // Preserve content RGB; only alpha is modulated. If the result is fully transparent,
+            // zero out RGB as well so downstream consumers do not see stale colour data.
             if (resultA == 0) {
-                resultBuffer[i] = 0; // Fully transparent
+                resultBuffer[i] = 0;
             } else {
                 resultBuffer[i] = (resultA << 24) | (cR << 16) | (cG << 8) | cB;
             }
         }
-
-        resultWriter.setPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), resultBuffer, 0, width);
-        return result;
     }
 
     /**
