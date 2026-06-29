@@ -1,5 +1,26 @@
 package com.lottie4j.fxfileviewer;
 
+import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.util.ImageSaver;
+import com.lottie4j.fxfileviewer.util.ImageSimilarity;
+import com.lottie4j.fxplayer.LottiePlayer;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,32 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.util.ImageSaver;
-import com.lottie4j.fxfileviewer.util.ImageSimilarity;
-import com.lottie4j.fxplayer.LottiePlayer;
-
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Validates JavaFX player rendering against pre-generated WebView reference screenshots.
@@ -104,22 +100,22 @@ class CompareFxViewWithWebViewTest {
             // After the boundary-frame fix it now averages ~99.55% and is removed from this map.
             // face-peeking: largest gap at -0.78pt; thin curves & strong AA differences.
             //                                                                 (observed 98.76)
-            Map.entry("json/face-peeking.json", 98.2),
+            Map.entry("json/face-peeking.json", 98.5),
             // isometric_data_analysis: marginal miss (-0.01pt); should be easy to close.
             //                                                                 (observed 99.49)
             Map.entry("json/isometric_data_analysis.json", 98.9),
             // java_duke_fadein: single-frame min dips to 78.14 — large rendering gap.
             //                                                                 (observed 97.47)
-            Map.entry("json/java_duke_fadein.json", 96.9),
+            Map.entry("json/java_duke_fadein.json", 97.5),
             // java_duke_slidein: same 78.14 min as fadein — likely the same off-frame.
             //                                                                 (observed 98.60)
-            Map.entry("json/java_duke_slidein.json", 98.1),
+            Map.entry("json/java_duke_slidein.json", 98.8),
             // lottie_lego: brick stacking animation, motion-heavy.            (observed 98.14)
             Map.entry("json/lottie_lego.json", 97.6),
             // sandy_loading: spinning shapes, sub-pixel rotation offsets.    (observed 99.39)
             Map.entry("json/sandy_loading.json", 98.8),
             // dot/demo-1: dotLottie demo with min 91.00 on one frame.        (observed 99.44)
-            Map.entry("dot/demo-1.lottie", 98.9)
+            Map.entry("dot/demo-1.lottie", 99.4)
     );
 
     /**
