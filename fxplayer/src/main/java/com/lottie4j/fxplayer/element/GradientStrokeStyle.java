@@ -1,14 +1,17 @@
 package com.lottie4j.fxplayer.element;
 
+import java.util.List;
+
 import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.model.shape.style.GradientStroke;
-import com.lottie4j.fxplayer.util.LottieValueHelper;
-import javafx.scene.paint.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 
 /**
  * Wrapper for Lottie gradient stroke definitions, converting them to JavaFX gradient paints.
@@ -128,77 +131,20 @@ public class GradientStrokeStyle {
     }
 
     /**
-     * Builds the list of gradient stops from the stroke color data.
+     * Builds the list of gradient stops from the stroke color data using the
+     * shared {@link GradientStopParser}. Colour and alpha tracks are merged at
+     * every unique offset so alpha transitions between colour stops are preserved.
      *
      * @param frame animation frame to sample
      * @return list of gradient stops
      */
     private List<Stop> buildGradientStops(double frame) {
-        List<Stop> stops = new ArrayList<>();
-        if (gradientStroke.colors().colors() != null) {
-            int numColors = gradientStroke.colors().numberOfColors();
-            var colorAnimated = gradientStroke.colors().colors();
-            int totalElements = colorAnimated.keyframes() != null ? colorAnimated.keyframes().size() : 0;
-
-            int colorSectionSize = numColors * 4;
-            List<double[]> alphaStops = new ArrayList<>();
-            if (totalElements > colorSectionSize) {
-                for (int i = colorSectionSize; i + 1 < totalElements; i += 2) {
-                    Double alphaOffset = colorAnimated.getValue(i);
-                    Double alphaValue = colorAnimated.getValue(i + 1);
-                    if (alphaOffset != null && alphaValue != null) {
-                        alphaStops.add(new double[]{alphaOffset, LottieValueHelper.clamp(alphaValue)});
-                    }
-                }
-                alphaStops.sort(Comparator.comparingDouble(stop -> stop[0]));
-            }
-
-            for (int i = 0; i < numColors; i++) {
-                int baseIdx = i * 4;
-                double offset = colorAnimated.getValue(baseIdx);
-                double r = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 1));
-                double g = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 2));
-                double b = LottieValueHelper.clamp(colorAnimated.getValue(baseIdx + 3));
-                double alpha = interpolateAlpha(alphaStops, offset);
-                stops.add(new Stop(offset, Color.color(r, g, b, alpha)));
-            }
+        if (gradientStroke.colors().colors() == null) {
+            return List.of();
         }
-        return stops;
-    }
-
-    /**
-     * Interpolates alpha for a color stop offset using the parsed alpha stop list.
-     *
-     * @param alphaStops ordered alpha stop pairs in the form {@code [offset, alpha]}
-     * @param offset     stop offset to resolve
-     * @return interpolated alpha value in the range {@code [0, 1]}
-     */
-    private double interpolateAlpha(List<double[]> alphaStops, double offset) {
-        if (alphaStops.isEmpty()) {
-            return 1.0;
-        }
-        if (offset <= alphaStops.get(0)[0]) {
-            return alphaStops.get(0)[1];
-        }
-        int last = alphaStops.size() - 1;
-        if (offset >= alphaStops.get(last)[0]) {
-            return alphaStops.get(last)[1];
-        }
-
-        for (int i = 0; i < last; i++) {
-            double[] left = alphaStops.get(i);
-            double[] right = alphaStops.get(i + 1);
-            if (offset >= left[0] && offset <= right[0]) {
-                double span = right[0] - left[0];
-                if (span <= 1e-9) {
-                    return right[1];
-                }
-                double t = (offset - left[0]) / span;
-                return left[1] + ((right[1] - left[1]) * t);
-            }
-        }
-
-        return 1.0;
+        Integer numColorsBoxed = gradientStroke.colors().numberOfColors();
+        int numColors = numColorsBoxed != null ? numColorsBoxed : 0;
+        return GradientStopParser.parseStops(gradientStroke.colors().colors(), numColors);
     }
 
     /**

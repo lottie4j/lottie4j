@@ -1,15 +1,17 @@
 package com.lottie4j.fxplayer.element;
 
+import java.util.List;
+
 import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.GradientType;
 import com.lottie4j.core.model.shape.style.GradientFill;
-import com.lottie4j.fxplayer.util.LottieValueHelper;
-import javafx.scene.paint.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 
 public class GradientFillStyle {
     private final GradientFill gradientFill;
@@ -64,52 +66,17 @@ public class GradientFillStyle {
         }
 
         // Get gradient colors
-        List<Stop> stops = new ArrayList<>();
+        // Lottie packs gradient stops as [pos1, r1, g1, b1, ..., posN, rN, gN, bN]
+        // optionally followed by alpha stops [pos1, a1, ..., posM, aM] where the
+        // alpha offsets are independent from the colour offsets. Delegate to the
+        // dedicated parser so colour and alpha tracks are merged at every offset.
+        List<Stop> stops;
         if (gradientFill.colors().colors() != null) {
-            int numColors = gradientFill.colors().numberOfColors();
-            var colorAnimated = gradientFill.colors().colors();
-
-            // The gradient color data is stored as a flat array with two possible layouts:
-            // Without alpha: [offset1, r1, g1, b1, offset2, r2, g2, b2, ...]
-            // With alpha: [offset1, r1, g1, b1, ..., offsetN, rN, gN, bN, alpha_offset1, alpha1, alpha_offset2, alpha2, ...]
-
-            // Access the keyframes list directly to get all elements
-            int totalElements = colorAnimated.keyframes() != null ? colorAnimated.keyframes().size() : 0;
-
-            // Build a map of alpha values by offset
-            Map<Double, Double> alphaByOffset = new HashMap<>();
-
-            // If there are more elements than numColors * 4, there's an alpha section
-            int colorSectionSize = numColors * 4;
-            if (totalElements > colorSectionSize) {
-                // Parse alpha values (interleaved: offset, alpha, offset, alpha, ...)
-                for (int i = colorSectionSize; i < totalElements; i += 2) {
-                    Double alphaOffset = colorAnimated.getValue(i);
-                    Double alphaValue = colorAnimated.getValue(i + 1);
-                    if (alphaOffset != null && alphaValue != null) {
-                        alphaByOffset.put(alphaOffset, LottieValueHelper.clamp(alphaValue));
-                    }
-                }
-            }
-
-            // Parse color stops
-            for (int i = 0; i < numColors; i++) {
-                int baseIdx = i * 4;
-                double offset = colorAnimated.getValue(baseIdx);
-                double rRaw = colorAnimated.getValue(baseIdx + 1);
-                double gRaw = colorAnimated.getValue(baseIdx + 2);
-                double bRaw = colorAnimated.getValue(baseIdx + 3);
-
-                double r = LottieValueHelper.clamp(rRaw);
-                double g = LottieValueHelper.clamp(gRaw);
-                double b = LottieValueHelper.clamp(bRaw);
-
-                // Get alpha for this offset, default to 1.0 if not specified
-                double alpha = alphaByOffset.getOrDefault(offset, 1.0);
-
-                Color stopColor = Color.color(r, g, b, alpha);
-                stops.add(new Stop(offset, stopColor));
-            }
+            Integer numColorsBoxed = gradientFill.colors().numberOfColors();
+            int numColors = numColorsBoxed != null ? numColorsBoxed : 0;
+            stops = GradientStopParser.parseStops(gradientFill.colors().colors(), numColors);
+        } else {
+            stops = List.of();
         }
 
         if (stops.isEmpty()) {
