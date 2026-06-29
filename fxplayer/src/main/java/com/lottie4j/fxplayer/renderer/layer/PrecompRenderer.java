@@ -1,5 +1,16 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.asset.Asset;
@@ -9,12 +20,9 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.*;
 
 /**
  * Renderer for precomposition layers in Lottie animations.
@@ -830,9 +838,17 @@ public class PrecompRenderer {
     }
 
     /**
-     * Renders a layer with a blend mode using offscreen buffer approach.
-     * This matches HTML/CSS blend mode behavior where the layer is rendered first,
-     * then composited with the blend mode.
+     * Renders a layer with a blend mode using an off-screen buffer approach,
+     * matching HTML/CSS group-blend semantics: the layer is rasterized into a
+     * transparent buffer first, then composited onto the destination with the
+     * chosen blend mode.
+     *
+     * <p>An empirical comparison with a direct {@code gc.setGlobalBlendMode}
+     * path showed that direct rendering regresses steady-state frames in
+     * animations with stacked blend-mode layers (e.g. <code>angry_bird</code>)
+     * because each shape inside the layer ends up blending against the
+     * destination separately instead of as one composed unit. The off-screen
+     * buffer therefore remains the correct approach.</p>
      */
     private void renderLayerWithBlendMode(GraphicsContext gc,
                                           Layer layer,
@@ -847,7 +863,6 @@ public class PrecompRenderer {
                                           SolidColorLayerRenderer solidColorLayerRenderer,
                                           ShapeGroupRenderer shapeGroupRenderer,
                                           ShapeRendererDelegate shapeRendererDelegate) {
-        // Get blend mode
         javafx.scene.effect.BlendMode fxBlendMode = convertToFxBlendMode(layer.blendMode());
         if (fxBlendMode == null) {
             // Unsupported blend mode - render normally
@@ -862,19 +877,18 @@ public class PrecompRenderer {
             logger.info("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
         }
 
-        // Calculate bounds for offscreen buffer - use precomp bounds if available
-        double bufferWidth = Math.max(100, parentPrecompWidth > 0 ? parentPrecompWidth : 400);
-        double bufferHeight = Math.max(100, parentPrecompHeight > 0 ? parentPrecompHeight : 400);
+        // Calculate bounds for offscreen buffer - use precomp bounds if available.
+        // Round up so fractional precomp bounds do not lose sub-pixel coverage on
+        // the right/bottom edges when the snapshot is taken.
+        double bufferWidth = Math.ceil(Math.max(100, parentPrecompWidth > 0 ? parentPrecompWidth : 400));
+        double bufferHeight = Math.ceil(Math.max(100, parentPrecompHeight > 0 ? parentPrecompHeight : 400));
 
-        // Render layer to offscreen buffer
         WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
-            // Render the layer normally to the offscreen buffer
             renderPrecompLayerWithoutBlendMode(offscreenGc, layer, frame, precompRenderCache, assetsById, animation,
                     parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
                     layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
         });
 
-        // Composite the offscreen image with blend mode
         gc.save();
         gc.setGlobalBlendMode(fxBlendMode);
         gc.drawImage(layerImage, 0, 0);

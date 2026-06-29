@@ -1,5 +1,18 @@
 package com.lottie4j.fxplayer;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.animation.Marker;
@@ -9,7 +22,14 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
-import com.lottie4j.fxplayer.renderer.layer.*;
+import com.lottie4j.fxplayer.renderer.layer.EffectsRenderer;
+import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
+import com.lottie4j.fxplayer.renderer.layer.MaskRenderer;
+import com.lottie4j.fxplayer.renderer.layer.MatteRenderer;
+import com.lottie4j.fxplayer.renderer.layer.PrecompRenderer;
+import com.lottie4j.fxplayer.renderer.layer.SolidColorRenderer;
+import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
+import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
 import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
 import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
@@ -17,6 +37,7 @@ import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.LayerActivity;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -26,12 +47,6 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.util.*;
-import java.util.function.Consumer;
 
 /**
  * JavaFX Canvas component for playing Lottie animations
@@ -1482,8 +1497,10 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
-     * Renders a layer with a blend mode using offscreen buffer.
-     * This matches HTML/CSS blend mode behavior.
+     * Renders a layer with a blend mode using an off-screen buffer.
+     * Matches HTML/CSS group-blend semantics by rasterising the layer to a
+     * transparent buffer first, then compositing onto the destination with the
+     * chosen blend mode.
      */
     private void renderLayerWithBlendModeOffscreen(GraphicsContext gc,
                                                    Layer layer,
@@ -1501,16 +1518,15 @@ public class LottiePlayer extends Canvas {
             logger.info("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
         }
 
-        // Use animation dimensions for buffer
-        double bufferWidth = Math.max(100, getAnimationWidth());
-        double bufferHeight = Math.max(100, getAnimationHeight());
+        // Use animation dimensions for buffer. Round up to capture sub-pixel
+        // coverage on the right/bottom edges instead of silently truncating it.
+        double bufferWidth = Math.ceil(Math.max(100, getAnimationWidth()));
+        double bufferHeight = Math.ceil(Math.max(100, getAnimationHeight()));
 
-        // Render layer to offscreen buffer
         WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
             renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame, renderResolutionScale);
         });
 
-        // Composite with blend mode
         gc.save();
         gc.setGlobalBlendMode(fxBlendMode);
         gc.drawImage(layerImage, 0, 0);

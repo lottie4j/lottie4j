@@ -21,24 +21,35 @@ public class OffscreenRenderer {
     /**
      * Renders content to an off-screen canvas and returns it as an image.
      *
-     * @param width    width of the off-screen canvas
-     * @param height   height of the off-screen canvas
+     * <p>Buffer dimensions are rounded <em>up</em> to the next integer pixel so that
+     * the right and bottom sub-pixel edges of fractional layer bounds are preserved
+     * during snapshot. Rounding down would silently drop the last column/row of
+     * anti-aliased coverage, causing a uniform fidelity tax on every composited
+     * layer (most visible with blend modes such as MULTIPLY and SCREEN).</p>
+     *
+     * @param width    width of the off-screen canvas (may be fractional)
+     * @param height   height of the off-screen canvas (may be fractional)
      * @param renderer function that performs the rendering
      * @return WritableImage containing the rendered content
      */
     public static WritableImage renderToImage(double width, double height, OffscreenRenderingTask renderer) {
-        // Create an off-screen canvas
-        Canvas offscreenCanvas = new Canvas(width, height);
+        int pixelWidth = Math.max(1, (int) Math.ceil(width));
+        int pixelHeight = Math.max(1, (int) Math.ceil(height));
+
+        // Create an off-screen canvas sized to the same integer pixel grid as the
+        // snapshot target so the snapshot captures every rendered pixel without
+        // sub-pixel truncation.
+        Canvas offscreenCanvas = new Canvas(pixelWidth, pixelHeight);
         GraphicsContext offscreenGc = offscreenCanvas.getGraphicsContext2D();
 
         // Clear the off-screen canvas (transparent background)
-        offscreenGc.clearRect(0, 0, width, height);
+        offscreenGc.clearRect(0, 0, pixelWidth, pixelHeight);
 
         // Perform the rendering
         renderer.render(offscreenGc);
 
         // Create an image from the canvas with transparent fill.
-        WritableImage image = new WritableImage((int) width, (int) height);
+        WritableImage image = new WritableImage(pixelWidth, pixelHeight);
         SnapshotParameters snapshotParameters = new SnapshotParameters();
         snapshotParameters.setFill(Color.TRANSPARENT);
         offscreenCanvas.snapshot(snapshotParameters, image);
