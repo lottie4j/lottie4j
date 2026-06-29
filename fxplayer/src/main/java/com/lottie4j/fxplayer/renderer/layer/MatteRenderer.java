@@ -237,12 +237,12 @@ public class MatteRenderer {
                     break;
 
                 case INVERTED_ALPHA:
-                    // tt:3 — same as ALPHA but with the matte's alpha inverted.
+                    // tt:2 — same as ALPHA but with the matte's alpha inverted.
                     resultA = (cA * (255 - mA)) / 255;
                     break;
 
                 case LUMA: {
-                    // tt:2 — content alpha is multiplied by the matte's Rec. 601 luma.
+                    // tt:3 — content alpha is multiplied by the matte's Rec. 601 luma.
                     int luma = (299 * mR + 587 * mG + 114 * mB) / 1000;
                     resultA = (cA * luma) / 255;
                     break;

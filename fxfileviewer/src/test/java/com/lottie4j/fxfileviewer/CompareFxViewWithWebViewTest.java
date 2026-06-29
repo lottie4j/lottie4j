@@ -166,7 +166,7 @@ class CompareFxViewWithWebViewTest {
                 "json/face-peeking.json",
                 "json/foojay-duke.json",
                 "json/foojay-reporter.json",
-                // "json/interactive_mood_selector_ui.json",
+                "json/interactive_mood_selector_ui.json",
                 "json/isometric_data_analysis.json",
                 "json/java_duke_fadein.json",
                 "json/java_duke_flip.json",
