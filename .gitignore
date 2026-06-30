@@ -10,3 +10,6 @@ todo.txt
 /*.log
 /fxfileviewer/*.log
 .DS_Store
+/.vscode/calibrate-8-remaining.sh
+/.vscode/settings.json
+/.vscode/tasks.json
