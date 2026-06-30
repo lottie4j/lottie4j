@@ -1,18 +1,5 @@
 package com.lottie4j.fxfileviewer.component;
 
-import tools.jackson.databind.ObjectMapper;
-import com.lottie4j.core.helper.ObjectMapperFactory;
-import com.lottie4j.core.model.animation.Animation;
-import javafx.application.Platform;
-import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.lottie4j.core.model.dot.Manifest;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,15 +11,49 @@ import java.util.concurrent.CountDownLatch;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.lottie4j.core.helper.ObjectMapperFactory;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.core.model.dot.Manifest;
+
+import javafx.application.Platform;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import tools.jackson.databind.ObjectMapper;
+
 /**
- * A JavaFX component that renders Lottie animations using a WebView with the dotlottie-wc library.
+ * A JavaFX component that renders Lottie animations using a WebView with the
+ * {@code @lottiefiles/dotlottie-wc} Web Component (thorvg under the hood).
  * Provides controls for playing, pausing, seeking, and inspecting animation frames.
  * Includes optional debug overlay for troubleshooting rendering issues.
+ *
+ * @implNote The renderer is loaded as an ES module from a pinned unpkg CDN URL
+ *           ({@link #DOTLOTTIE_WC_URL}) so reference screenshots remain reproducible.
+ *           Animation JSON is passed via a {@code data:application/json;base64,…}
+ *           URL so no temporary files are needed.
  */
 public class LottieWebView extends Pane {
     private static final Logger logger = LoggerFactory.getLogger(LottieWebView.class);
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
     private static final int DEFAULT_SIZE = 500;
+
+    /**
+     * Pinned version of the {@code @lottiefiles/dotlottie-wc} Web Component used as the
+     * rendering engine. Keep this in sync with
+     * {@code WebViewScreenshotGenerator.DOTLOTTIE_WC_VERSION} so the live JavaFX viewer
+     * and the committed Selenium reference PNGs use the same renderer build.
+     */
+    public static final String DOTLOTTIE_WC_VERSION = "0.7.1";
+
+    /**
+     * Fully-qualified unpkg URL for the pinned {@code dotlottie-wc} ES module.
+     */
+    public static final String DOTLOTTIE_WC_URL =
+            "https://unpkg.com/@lottiefiles/dotlottie-wc@" + DOTLOTTIE_WC_VERSION + "/dist/dotlottie-wc.js";
 
     private final WebEngine webEngine;
     private final WebView webView;
@@ -228,7 +249,7 @@ public class LottieWebView extends Pane {
     }
 
     /**
-     * Loads a Lottie animation into the WebView using the lottie-web JavaScript library.
+     * Loads a Lottie animation into the WebView using the {@code dotlottie-wc} Web Component.
      * The {@link Animation} object is serialized back to JSON before loading.
      *
      * @param animation {@link Animation}
@@ -366,15 +387,15 @@ public class LottieWebView extends Pane {
                             body {
                                 margin: 0;
                                 padding: 0;
-                                width: %spx;
-                                height: %spx;
+                                width: %1$spx;
+                                height: %2$spx;
                                 background-color: #ffffff;
                                 overflow: hidden;
                                 position: relative;
                             }
                             #lottie-container {
-                                width: %spx;
-                                height: %spx;
+                                width: %1$spx;
+                                height: %2$spx;
                                 margin: 0;
                                 padding: 0;
                                 display: block;
@@ -402,97 +423,153 @@ public class LottieWebView extends Pane {
                                 user-select: text;
                             }
                         </style>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+                        <script type="module" src="%3$s"></script>
                     </head>
                     <body>
-                        <div id="lottie-container"></div>
+                        <dotlottie-wc id="lottie-container"
+                                      src="data:application/json;base64,%6$s"
+                                      style="width:%1$spx;height:%2$spx;display:block">
+                        </dotlottie-wc>
                         <div id="debug-overlay">Initializing...</div>
                         <script>
                             var animationReady = false;
                             var currentFrame = 0;
-                            var showDebugInfo = %s;
+                            var showDebugInfo = %5$s;
                             var debugOverlay = document.getElementById('debug-overlay');
+                            var rendererBanner = 'renderer: dotlottie-wc/thorvg @ %4$s';
 
                             if (debugOverlay) {
                                 debugOverlay.style.display = showDebugInfo ? 'block' : 'none';
                             }
 
-                            function decodeBase64Json(base64) {
-                                var binary = atob(base64);
-                                var bytes = new Uint8Array(binary.length);
-                                for (var i = 0; i < binary.length; i++) {
-                                    bytes[i] = binary.charCodeAt(i);
+                            var player = document.getElementById('lottie-container');
+                            var instance = null;
+
+                            function resolveInstance() {
+                                if (instance) return instance;
+                                try {
+                                    if (player && typeof player.getDotLottieInstance === 'function') {
+                                        instance = player.getDotLottieInstance();
+                                    }
+                                } catch (e) { /* not ready yet */ }
+                                if (!instance && player && player.dotLottie) {
+                                    instance = player.dotLottie;
                                 }
-                                return new TextDecoder('utf-8').decode(bytes);
+                                return instance;
                             }
 
                             function updateDebugOverlay() {
                                 if (!debugOverlay || !showDebugInfo) return;
                                 debugOverlay.textContent = [
-                                    'renderer: lottie-web/bodymovin 5.12.2',
+                                    rendererBanner,
                                     'ready: ' + animationReady,
                                     'frame: ' + window.getCurrentFrame()
                                 ].join('\\n');
                             }
 
-                            var animationData = JSON.parse(decodeBase64Json('%s'));
-                            var anim = lottie.loadAnimation({
-                                container: document.getElementById('lottie-container'),
-                                renderer: 'svg',
-                                loop: true,
-                                autoplay: false,
-                                animationData: animationData,
-                                rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }
-                            });
-
-                            anim.addEventListener('DOMLoaded', function() {
+                            function markReady(e) {
+                                instance = resolveInstance()
+                                    || (e && e.detail && (e.detail.dotLottie || e.detail.instance));
+                                if (instance) {
+                                    try { instance.setLoop(false); } catch (err) {}
+                                    try { instance.pause(); } catch (err) {}
+                                }
                                 animationReady = true;
                                 updateDebugOverlay();
-                            });
+                            }
 
-                            anim.addEventListener('enterFrame', function(e) {
-                                currentFrame = Math.round(e.currentTime);
-                                updateDebugOverlay();
-                            });
+                            if (player) {
+                                ['ready', 'load', 'loadComplete', 'dotlottie-ready', 'play']
+                                    .forEach(function(name) { player.addEventListener(name, markReady); });
+                                player.addEventListener('frame', function(e) {
+                                    var f = (e && e.detail && typeof e.detail.currentFrame === 'number')
+                                        ? e.detail.currentFrame
+                                        : (e && typeof e.currentFrame === 'number' ? e.currentFrame : currentFrame);
+                                    currentFrame = Math.round(f);
+                                    updateDebugOverlay();
+                                });
+                            }
+
+                            // Polling fallback: events may have fired before this script ran (data:
+                            // URL can load synchronously), so resolve from the instance directly
+                            // until ready.
+                            (function pollReady() {
+                                if (animationReady) return;
+                                var i = resolveInstance();
+                                if (i && (i.totalFrames > 0 || typeof i.currentFrame === 'number')) {
+                                    try { i.setLoop(false); } catch (err) {}
+                                    try { i.pause(); } catch (err) {}
+                                    animationReady = true;
+                                    updateDebugOverlay();
+                                    return;
+                                }
+                                setTimeout(pollReady, 50);
+                            })();
 
                             window.isAnimationReady = function() {
                                 return animationReady;
                             };
 
                             window.getCurrentFrame = function() {
-                                return Math.round(anim.currentFrame != null ? anim.currentFrame : currentFrame);
+                                var i = resolveInstance();
+                                if (i && typeof i.currentFrame === 'number') {
+                                    return Math.round(i.currentFrame);
+                                }
+                                return Math.round(currentFrame);
                             };
 
                             window.playAnimation = function() {
-                                anim.loop = true;
-                                anim.play();
+                                var i = resolveInstance();
+                                if (!i) return;
+                                try { i.setLoop(true); } catch (err) {}
+                                try { i.play(); } catch (err) {}
                                 updateDebugOverlay();
                             };
 
                             window.playAnimationOnce = function() {
-                                anim.loop = false;
-                                anim.goToAndPlay(0, true);
+                                var i = resolveInstance();
+                                if (!i) return;
+                                try { i.setLoop(false); } catch (err) {}
+                                try { i.setFrame(0); } catch (err) {}
+                                try { i.play(); } catch (err) {}
                                 updateDebugOverlay();
                             };
 
                             window.pauseAnimation = function() {
-                                anim.pause();
+                                var i = resolveInstance();
+                                if (!i) return;
+                                try { i.pause(); } catch (err) {}
                                 updateDebugOverlay();
                             };
 
                             window.stopAnimation = function() {
-                                anim.stop();
+                                var i = resolveInstance();
+                                if (!i) return;
+                                if (typeof i.stop === 'function') {
+                                    try { i.stop(); } catch (err) {}
+                                } else {
+                                    try { i.setFrame(0); } catch (err) {}
+                                    try { i.pause(); } catch (err) {}
+                                }
                                 currentFrame = 0;
                                 updateDebugOverlay();
                             };
 
                             window.seekToFrame = function(frame) {
-                                currentFrame = Math.round(frame);
-                                anim.goToAndStop(currentFrame, true);
+                                var f = Math.round(frame);
+                                currentFrame = f;
+                                var i = resolveInstance();
+                                if (!i) return;
+                                try { i.setFrame(f); } catch (err) {}
+                                try { i.pause(); } catch (err) {}
                                 updateDebugOverlay();
                             };
 
                             window.setBackgroundColor = function(color) {
+                                var i = resolveInstance();
+                                if (i && typeof i.setBackgroundColor === 'function') {
+                                    try { i.setBackgroundColor(color); } catch (err) {}
+                                }
                                 document.body.style.backgroundColor = color;
                             };
 
@@ -505,12 +582,15 @@ public class LottieWebView extends Pane {
                             };
 
                             window.getRenderDebug = function() {
-                                return 'renderer: lottie-web/bodymovin 5.12.2, ready: ' + animationReady + ', frame: ' + window.getCurrentFrame();
+                                return rendererBanner
+                                    + ', ready: ' + animationReady
+                                    + ', frame: ' + window.getCurrentFrame();
                             };
                         </script>
                     </body>
                     </html>
-                    """.formatted(width, height, width, height, showDebugInfo, encodedJson);
+                    """.formatted(width, height, DOTLOTTIE_WC_URL, DOTLOTTIE_WC_VERSION,
+                            showDebugInfo, encodedJson);
 
             webEngine.loadContent(html);
         } catch (Exception e) {
