@@ -30,11 +30,6 @@
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-web</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
 
         <!-- Log4j2 implementation for SLF4J -->
         <dependency>
@@ -53,13 +48,16 @@
             <version>2.24.3</version>
         </dependency>
 
-        <!-- Testing -->
+        <!-- Selenium drives headless Chrome both at runtime (live LottieWebView in-process
+             render → ImageView) and at test time (WebViewScreenshotGenerator). The user's Chrome
+             install is provisioned by Selenium Manager. -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
             <version>4.27.0</version>
-            <scope>test</scope>
         </dependency>
+
+        <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

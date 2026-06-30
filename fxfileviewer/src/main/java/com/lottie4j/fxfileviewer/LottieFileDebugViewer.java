@@ -1,12 +1,27 @@
 package com.lottie4j.fxfileviewer;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.exception.LottieFileException;
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.component.*;
+import com.lottie4j.fxfileviewer.component.LayerTileView;
+import com.lottie4j.fxfileviewer.component.LayerTreeView;
+import com.lottie4j.fxfileviewer.component.LottieTreeView;
+import com.lottie4j.fxfileviewer.component.LottieWebView;
+import com.lottie4j.fxfileviewer.component.ViewerMenuBar;
 import com.lottie4j.fxfileviewer.util.AlertHelper;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 import com.lottie4j.fxplayer.LottiePlayer;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -14,7 +29,14 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
@@ -23,15 +45,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * JavaFX Lottie Animation Viewer
@@ -143,7 +156,8 @@ public class LottieFileDebugViewer extends Application {
 
     /**
      * Called when the application is being stopped.
-     * Ensures any playing animation is stopped and UI is reset.
+     * Ensures any playing animation is stopped, the headless Chrome renderer is released,
+     * and the UI is reset.
      */
     @Override
     public void stop() {
@@ -155,6 +169,9 @@ public class LottieFileDebugViewer extends Application {
             currentFrame = getInPoint();
             frameSlider.setValue(currentFrame);
             updateFrameLabel();
+        }
+        if (webView != null) {
+            webView.shutdown();
         }
     }
 
