@@ -1,17 +1,5 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
-import com.lottie4j.core.definition.EffectType;
-import com.lottie4j.core.model.animation.Animated;
-import com.lottie4j.core.model.bezier.AnimatedBezier;
-import com.lottie4j.core.model.layer.Layer;
-import com.lottie4j.fxplayer.util.OffscreenRenderer;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.effect.BoxBlur;
-import javafx.scene.effect.GaussianBlur;
-import javafx.scene.image.WritableImage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.RecordComponent;
 import java.util.Collections;
@@ -19,6 +7,20 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.lottie4j.core.definition.EffectType;
+import com.lottie4j.core.model.animation.Animated;
+import com.lottie4j.core.model.bezier.AnimatedBezier;
+import com.lottie4j.core.model.layer.Layer;
+import com.lottie4j.fxplayer.util.OffscreenRenderer;
+
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.BoxBlur;
+import javafx.scene.effect.GaussianBlur;
+import javafx.scene.image.WritableImage;
 
 /**
  * Applies layer-level effects that need JavaFX-side post-processing after the layer content has been drawn.
@@ -37,6 +39,19 @@ public class EffectsRenderer {
     private static final double STATIC_BLUR_CACHE_MIN_RADIUS = 20.0;
     private static final long STATIC_BLUR_CACHE_MAX_PIXEL_COUNT = 8_000_000L;
 
+    /**
+     * Maximum per-pass Gaussian blur radius (in offscreen pixels) used when downsampling extreme
+     * Lottie blur values. Set just under JavaFX's {@link GaussianBlur#MAX_RADIUS} (63 px) so the
+     * inner blur pass stays in the smooth Gaussian regime.
+     */
+    private static final double MAX_PASS_BLUR_RADIUS = 60.0;
+
+    /**
+     * Hard ceiling JavaFX's {@link GaussianBlur} clamps its radius to internally. Mirrored here so the
+     * downsample path can pre-clamp values that would otherwise be silently truncated by the effect.
+     */
+    private static final double JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS = 63.0;
+
     private final Map<StaticLayerBlurCacheKey, WritableImage> staticLayerBlurCache = new ConcurrentHashMap<>();
 
     /**
@@ -50,45 +65,39 @@ public class EffectsRenderer {
     }
 
     /**
-     * Extracts the effective Gaussian blur radius for a layer at the supplied frame.
+     * Extracts the raw Lottie Gaussian blur radius for a layer at the supplied frame.
      *
      * <p>The method searches the layer effect list for the first enabled
-     * {@link com.lottie4j.core.definition.EffectType#GAUSSIAN_BLUR} entry and then samples its
-     * {@code Blurriness} property. Because JavaFX blur effects saturate at smaller radii than Lottie-web,
-     * the sampled value is mapped through a heuristic scale curve and clamped to JavaFX's practical maximum.
+     * {@link com.lottie4j.core.definition.EffectType#GAUSSIAN_BLUR} entry and returns its sampled
+     * {@code Blurriness} property unmodified. Mapping the raw Lottie value into JavaFX's effect space
+     * (which saturates at 63 px per pass) is the responsibility of the bounded-blur path, which uses a
+     * multi-scale downsample/upsample scheme to reach effective radii of 700–800 px.
      *
      * @param layer layer whose effects should be inspected; must not be {@code null}
      * @param frame animation frame to sample from the effect value curve
-     * @return a JavaFX-ready blur radius in the range {@code [0, 63]}; returns {@code 0.0} when the layer has
-     * no enabled Gaussian blur effect or no usable blur value
+     * @return the raw Lottie blur radius (in composition-space pixels); returns {@code 0.0} when the
+     * layer has no enabled Gaussian blur effect or no usable blur value
      */
     public double getGaussianBlurRadius(Layer layer, double frame) {
-        // Default to no blur
         double blurRadius = 0.0;
 
-        // Check if the layer has effects
         if (layer.effects() == null) {
             logger.debug("Layer {} has NO effects", layer.name());
             return blurRadius;
         }
 
         logger.debug("Layer {} has {} effects", layer.name(), layer.effects().size());
-        // Log track matte and mask info for blur layers
         logger.debug("  Layer matteMode: {}, hasMask: {}", layer.matteMode(), layer.masks() != null && !layer.masks().isEmpty());
 
         for (var effect : layer.effects()) {
             logger.debug("  Effect type: {}, enabled: {}", effect.type(), effect.enabled());
-            // Look for Gaussian Blur effect (type 14)
             if (effect.type() != EffectType.GAUSSIAN_BLUR) {
                 continue;
             }
-
-            // Skip if effect is disabled
             if (effect.enabled() != null && effect.enabled() == 0) {
                 continue;
             }
 
-            // Look for "Blurriness" property in the effect values
             if (effect.values() != null) {
                 logger.debug("  Effect has {} values", effect.values().size());
                 for (var effectValue : effect.values()) {
@@ -96,37 +105,8 @@ public class EffectsRenderer {
                     if (effectValue != null && "Blurriness".equals(effectValue.name())) {
                         if (effectValue.value() != null) {
                             double rawBlur = effectValue.value().getValue(0, frame);
-
-                            // The key insight: Lottie-web's blur values of 700-800 create VERY diffuse blur
-                            // that makes shapes blend together into gradient-like appearances.
-                            // JavaFX blur is fundamentally limited to 63px radius.
-                            // Strategy: Use maximum blur (63) for all extreme values and rely on opacity
-                            // to create the gradient effect when multiple blurred shapes overlap.
-
-                            if (rawBlur > 400) {
-                                // Extreme blur (400+) - always use maximum
-                                blurRadius = 63.0;
-                            } else if (rawBlur > 200) {
-                                // Very high blur - scale to near maximum
-                                blurRadius = 50 + ((rawBlur - 200) / 200.0) * 13.0;
-                            } else if (rawBlur > 100) {
-                                // High blur
-                                blurRadius = 35 + ((rawBlur - 100) / 100.0) * 15.0;
-                            } else if (rawBlur > 50) {
-                                // Medium-high blur
-                                blurRadius = 20 + ((rawBlur - 50) / 50.0) * 15.0;
-                            } else if (rawBlur > 20) {
-                                // Medium blur
-                                blurRadius = 10 + ((rawBlur - 20) / 30.0) * 10.0;
-                            } else {
-                                // Light blur
-                                blurRadius = rawBlur / 2.0;
-                            }
-
-                            // Ensure we never exceed JavaFX's limit
-                            blurRadius = Math.min(63, blurRadius);
-
-                            logger.debug("Gaussian Blur FOUND: raw={} scaled={} for layer {} at frame {}", rawBlur, blurRadius, layer.name(), frame);
+                            blurRadius = Math.max(0.0, rawBlur);
+                            logger.debug("Gaussian Blur FOUND: raw={} for layer {} at frame {}", rawBlur, layer.name(), frame);
                         }
                         break;
                     }
@@ -136,6 +116,27 @@ public class EffectsRenderer {
         }
 
         return blurRadius;
+    }
+
+    /**
+     * Chooses the power-of-two downsample factor that keeps a Gaussian blur pass within
+     * {@link #MAX_PASS_BLUR_RADIUS} pixels.
+     *
+     * <p>Each halving of the offscreen raster doubles the effective composition-space blur radius for
+     * free, with JavaFX's bilinear {@code drawImage} providing the smoothing upsample.</p>
+     *
+     * @param desiredOffscreenRadius desired blur radius in offscreen pixels before downsampling
+     * @return a power-of-two factor {@code >= 1} such that {@code desiredOffscreenRadius / factor <= MAX_PASS_BLUR_RADIUS}
+     */
+    static int chooseDownsampleFactor(double desiredOffscreenRadius) {
+        if (!(desiredOffscreenRadius > MAX_PASS_BLUR_RADIUS)) {
+            return 1;
+        }
+        int factor = 1;
+        while (desiredOffscreenRadius / factor > MAX_PASS_BLUR_RADIUS) {
+            factor *= 2;
+        }
+        return factor;
     }
 
     /**
@@ -214,14 +215,15 @@ public class EffectsRenderer {
             return;
         }
 
+        // No bounds: cannot use the offscreen downsample scheme, so cap the radius at the JavaFX limit.
         gc.save();
-        double scaledBlur = blurRadius * effectiveScale;
+        double scaledBlur = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, blurRadius * effectiveScale);
         applyBlurEffect(gc, scaledBlur);
         layerRenderer.render(gc, layer, frame);
         gc.setEffect(null);
         gc.restore();
-        logger.debug("Applied direct blur (no bounds) for layer {}: radius={} (scaled={})", layer.name(), blurRadius, scaledBlur);
-    }
+        logger.debug("Applied direct blur (no bounds) for layer {}: radius={} (capped={})", layer.name(), blurRadius, scaledBlur);
+        }
 
     /**
      * Renders into an off-screen buffer with padding, blurs the result, and draws back only the cropped center.
@@ -248,21 +250,25 @@ public class EffectsRenderer {
                                        double renderResolutionScale,
                                        LayerRenderer layerRenderer) {
         double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
-        double scaledBlurRadius = blurRadius * effectiveScale;
+        double desiredOffscreenRadius = blurRadius * effectiveScale;
+        int downsample = chooseDownsampleFactor(desiredOffscreenRadius);
+        double passScale = effectiveScale / downsample;
+        double passRadius = blurRadius * passScale;
+        double clampedPassRadius = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, passRadius);
 
-        double padding = Math.ceil(scaledBlurRadius * 2);
-        double renderWidth = Math.max(1.0, Math.ceil(boundsWidth * effectiveScale));
-        double renderHeight = Math.max(1.0, Math.ceil(boundsHeight * effectiveScale));
-        double offscreenWidth = renderWidth + padding * 2;
-        double offscreenHeight = renderHeight + padding * 2;
-        logger.debug("Creating offscreen buffer: {}x{} (render={}x{}, padding={}, scale={})",
-                offscreenWidth, offscreenHeight, renderWidth, renderHeight, padding, effectiveScale);
+        double passPadding = Math.ceil(Math.max(passRadius, 1.0) * 2);
+        double renderWidth = Math.max(1.0, Math.ceil(boundsWidth * passScale));
+        double renderHeight = Math.max(1.0, Math.ceil(boundsHeight * passScale));
+        double offscreenWidth = renderWidth + passPadding * 2;
+        double offscreenHeight = renderHeight + passPadding * 2;
+        logger.debug("Creating offscreen buffer: {}x{} (render={}x{}, padding={}, downsample={}, passScale={}, passRadius={})",
+                offscreenWidth, offscreenHeight, renderWidth, renderHeight, passPadding, downsample, passScale, passRadius);
 
         WritableImage blurredImage = OffscreenRenderer.renderToImage(offscreenWidth, offscreenHeight, offscreenGc -> {
             offscreenGc.save();
-            offscreenGc.scale(effectiveScale, effectiveScale);
-            offscreenGc.translate(padding / effectiveScale, padding / effectiveScale);
-            applyBlurEffect(offscreenGc, scaledBlurRadius);
+            offscreenGc.scale(passScale, passScale);
+            offscreenGc.translate(passPadding / passScale, passPadding / passScale);
+            offscreenGc.setEffect(new GaussianBlur(clampedPassRadius));
             layerRenderer.render(offscreenGc, layer, frame);
             offscreenGc.setEffect(null);
             offscreenGc.restore();
@@ -270,12 +276,12 @@ public class EffectsRenderer {
 
         gc.save();
         gc.drawImage(blurredImage,
-                padding, padding, renderWidth, renderHeight,
+                passPadding, passPadding, renderWidth, renderHeight,
                 0, 0, boundsWidth, boundsHeight);
         gc.restore();
 
-        logger.debug("Applied bounded blur crop for layer {}: radius={} (scaled={}) src=({}, {}, {}, {}) dst=(0, 0, {}, {})",
-                layer.name(), blurRadius, scaledBlurRadius, padding, padding, renderWidth, renderHeight, boundsWidth, boundsHeight);
+        logger.debug("Applied bounded blur crop for layer {}: radius={} downsample={} (passRadius={}) src=({}, {}, {}, {}) dst=(0, 0, {}, {})",
+                layer.name(), blurRadius, downsample, passRadius, passPadding, passPadding, renderWidth, renderHeight, boundsWidth, boundsHeight);
     }
 
     /**
@@ -379,9 +385,12 @@ public class EffectsRenderer {
                                                        double renderResolutionScale,
                                                        LayerRenderer layerRenderer) {
         double effectiveScale = Math.clamp(renderResolutionScale, 0.1, 1.0);
-        int imageWidth = Math.max(1, (int) Math.ceil(boundsWidth * effectiveScale));
-        int imageHeight = Math.max(1, (int) Math.ceil(boundsHeight * effectiveScale));
-        double scaledBlurRadius = blurRadius * effectiveScale;
+        double desiredOffscreenRadius = blurRadius * effectiveScale;
+        int downsample = chooseDownsampleFactor(desiredOffscreenRadius);
+        double passScale = effectiveScale / downsample;
+        double passRadius = blurRadius * passScale;
+        int imageWidth = Math.max(1, (int) Math.ceil(boundsWidth * passScale));
+        int imageHeight = Math.max(1, (int) Math.ceil(boundsHeight * passScale));
         long pixelCount = (long) imageWidth * imageHeight;
         if (boundsWidth <= 0 || boundsHeight <= 0 || pixelCount > STATIC_BLUR_CACHE_MAX_PIXEL_COUNT) {
             logger.debug("Skipping static blur cache for layer {} - bounds={}x{}, pixels={}, scale={}",
@@ -394,11 +403,12 @@ public class EffectsRenderer {
                 System.identityHashCode(layer),
                 imageWidth,
                 imageHeight,
-                Double.doubleToLongBits(scaledBlurRadius)
+                Double.doubleToLongBits(passRadius),
+                downsample
         );
 
         WritableImage cachedImage = staticLayerBlurCache.computeIfAbsent(cacheKey,
-                unused -> createStaticBlurCacheImage(layer, frame, scaledBlurRadius, imageWidth, imageHeight, effectiveScale, layerRenderer));
+                unused -> createStaticBlurCacheImage(layer, frame, passRadius, imageWidth, imageHeight, passScale, layerRenderer));
         gc.drawImage(cachedImage,
                 0, 0, imageWidth, imageHeight,
                 0, 0, boundsWidth, boundsHeight);
@@ -420,17 +430,18 @@ public class EffectsRenderer {
      */
     private WritableImage createStaticBlurCacheImage(Layer layer,
                                                      double frame,
-                                                     double blurRadius,
+                                                     double passRadius,
                                                      int imageWidth,
                                                      int imageHeight,
-                                                     double renderResolutionScale,
+                                                     double passScale,
                                                      LayerRenderer layerRenderer) {
-        logger.debug("Creating static blur cache image for layer {}: {}x{}, radius={}, scale={}",
-                layer.name(), imageWidth, imageHeight, blurRadius, renderResolutionScale);
+                                                     double clampedPassRadius = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, passRadius);
+        logger.debug("Creating static blur cache image for layer {}: {}x{}, passRadius={}, passScale={}",
+                layer.name(), imageWidth, imageHeight, passRadius, passScale);
         return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
             offscreenGc.save();
-            offscreenGc.scale(renderResolutionScale, renderResolutionScale);
-            applyBlurEffect(offscreenGc, blurRadius);
+            offscreenGc.scale(passScale, passScale);
+            offscreenGc.setEffect(new GaussianBlur(clampedPassRadius));
             layerRenderer.render(offscreenGc, layer, frame);
             offscreenGc.setEffect(null);
             offscreenGc.restore();
@@ -529,10 +540,13 @@ public class EffectsRenderer {
      * Cache key for a blurred static layer raster.
      *
      * @param layerIdentityHash identity-based hash of the source layer instance
-     * @param width             cached image width in pixels
-     * @param height            cached image height in pixels
-     * @param blurBits          raw {@code double} bits for the sampled blur radius
+     * @param width             cached image width in pass-space pixels
+     * @param height            cached image height in pass-space pixels
+     * @param blurBits          raw {@code double} bits for the per-pass blur radius
+     * @param downsample        downsample factor used when producing the cached image; included so a layer
+     *                          rendered at raw blur 700 (downsample=16) cannot share a cache entry with the
+     *                          same layer rendered at raw blur 80 (downsample=2)
      */
-    private record StaticLayerBlurCacheKey(int layerIdentityHash, int width, int height, long blurBits) {
+    private record StaticLayerBlurCacheKey(int layerIdentityHash, int width, int height, long blurBits, int downsample) {
     }
 }

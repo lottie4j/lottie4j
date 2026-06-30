@@ -1,11 +1,19 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
+import com.lottie4j.core.definition.EffectType;
+import com.lottie4j.core.model.animation.Animated;
+import com.lottie4j.core.model.effect.Effect;
+import com.lottie4j.core.model.effect.EffectValue;
+import com.lottie4j.core.model.keyframe.NumberKeyframe;
 import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.fxplayer.util.FxTestHelper;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -93,6 +101,129 @@ class EffectsRendererTest {
         });
 
         assertTrue(canDraw, "Graphics context should remain usable");
+    }
+
+    @Test
+    void chooseDownsampleFactorReturnsExpectedPowerOfTwo() {
+        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(0));
+        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(20));
+        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(60));
+        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(61));
+        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(120));
+        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(121));
+        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(240));
+        assertEquals(8, EffectsRenderer.chooseDownsampleFactor(480));
+        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(481));
+        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(700));
+        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(800));
+    }
+
+    @Test
+    void chooseDownsampleFactorAlwaysKeepsPassRadiusAtOrBelowSixty() {
+        for (double raw : new double[]{0, 1, 20, 60, 60.0001, 100, 177.6, 200, 300, 500, 700, 800, 1600, 3200}) {
+            int factor = EffectsRenderer.chooseDownsampleFactor(raw);
+            assertTrue(factor >= 1, "factor must be >= 1 for raw=" + raw + " got " + factor);
+            assertTrue((factor & (factor - 1)) == 0, "factor must be power of two for raw=" + raw + " got " + factor);
+            assertTrue(raw / factor <= 60.0 + 1e-9, "raw/factor must be <= 60 for raw=" + raw + " got " + (raw / factor));
+        }
+    }
+
+    @Test
+    void getGaussianBlurRadiusReturnsRawBlurrinessUnclamped() {
+        EffectsRenderer renderer = new EffectsRenderer();
+        assertEquals(3.0, renderer.getGaussianBlurRadius(layerWithBlurriness(3), 0.0), 1e-9);
+        assertEquals(177.6, renderer.getGaussianBlurRadius(layerWithBlurriness(177.6), 0.0), 1e-9);
+        assertEquals(700.0, renderer.getGaussianBlurRadius(layerWithBlurriness(700), 0.0), 1e-9);
+        assertEquals(800.0, renderer.getGaussianBlurRadius(layerWithBlurriness(800), 0.0), 1e-9);
+    }
+
+    @Test
+    void getGaussianBlurRadiusReturnsZeroWhenLayerHasNoBlurEffect() {
+        EffectsRenderer renderer = new EffectsRenderer();
+        assertEquals(0.0, renderer.getGaussianBlurRadius(layerWithoutEffects(), 0.0));
+    }
+
+    @Test
+    void getGaussianBlurRadiusReturnsZeroWhenBlurEffectIsDisabled() {
+        EffectsRenderer renderer = new EffectsRenderer();
+        Effect disabled = new Effect(
+                "Gaussian Blur", null, null, EffectType.GAUSSIAN_BLUR, 0,
+                List.of(new EffectValue("Blurriness", 0,
+                        new Animated(0, List.of(new NumberKeyframe(800.0)), null, null, null, null, null))));
+        Layer layer = new Layer(
+                "blurLayer", null, null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null, null, null, null, null, List.of(disabled),
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
+        assertEquals(0.0, renderer.getGaussianBlurRadius(layer, 0.0));
+    }
+
+    @Test
+    void boundedBlurExtremeRadiusProducesSofterSpreadThanModerateRadius() {
+        // Smoke test: extreme blur values must not throw, and must produce a softer (lower-amplitude)
+        // result than a moderate blur — because the wide Gaussian kernel scatters the source
+        // colour over a much larger area, including beyond the bounds.
+        EffectsRenderer renderer = new EffectsRenderer();
+        Layer layer = layerWithoutEffects();
+
+        double moderateMax = sampleMaxAlpha(renderer, layer, 63.0);
+        double extremeMax = sampleMaxAlpha(renderer, layer, 800.0);
+        double noBlurMax = sampleMaxAlpha(renderer, layer, 0.0);
+
+        assertTrue(noBlurMax > 0.99,
+                "No-blur path must preserve the opaque source pixel, got max alpha " + noBlurMax);
+        assertTrue(moderateMax > 0.0,
+                "Moderate blur must still leave visible alpha, got " + moderateMax);
+        assertTrue(extremeMax > 0.0,
+                "Extreme blur must still produce some alpha (downsample path), got " + extremeMax);
+        assertTrue(extremeMax < moderateMax,
+                "Extreme blur should spread the source further than a moderate blur, leaving lower"
+                        + " peak alpha; moderate=" + moderateMax + " extreme=" + extremeMax);
+    }
+
+    private static double sampleMaxAlpha(EffectsRenderer renderer, Layer layer, double blurRadius) {
+        return FxTestHelper.callAndWait(() -> {
+            final int size = 64;
+            Canvas canvas = new Canvas(size, size);
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            EffectsRenderer.LayerRenderer redRect = (gc_inner, l, frame) -> {
+                gc_inner.setFill(Color.RED);
+                gc_inner.fillRect((size - 16) / 2.0, (size - 16) / 2.0, 16, 16);
+            };
+            if (blurRadius == 0.0) {
+                redRect.render(gc, layer, 0.0);
+            } else {
+                renderer.renderLayerWithGaussianBlur(gc, layer, 0.0, blurRadius, size, size, 1.0, redRect);
+            }
+            javafx.scene.image.WritableImage image = canvas.snapshot(new javafx.scene.SnapshotParameters(), null);
+            javafx.scene.image.PixelReader reader = image.getPixelReader();
+            double maxAlpha = 0.0;
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    double alpha = reader.getColor(x, y).getOpacity();
+                    if (alpha > maxAlpha) {
+                        maxAlpha = alpha;
+                    }
+                }
+            }
+            return maxAlpha;
+        });
+    }
+
+    private static Layer layerWithBlurriness(double blurriness) {
+        Animated value = new Animated(0, List.of(new NumberKeyframe(blurriness)), null, null, null, null, null);
+        EffectValue blurrinessValue = new EffectValue("Blurriness", 0, value);
+        Effect effect = new Effect(
+                "Gaussian Blur", null, null, EffectType.GAUSSIAN_BLUR, 1, List.of(blurrinessValue));
+        return new Layer(
+                "blurLayer", null, null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null, null, null, null, null, List.of(effect),
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
     }
 
     @Test
