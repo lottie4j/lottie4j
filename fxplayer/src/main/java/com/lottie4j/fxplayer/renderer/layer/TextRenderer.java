@@ -1,16 +1,17 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
+import java.util.List;
+import java.util.Map;
+
 import com.lottie4j.core.model.layer.Layer;
 import com.lottie4j.core.model.text.TextData;
 import com.lottie4j.core.model.text.TextKeyframe;
+
 import javafx.geometry.VPos;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Renders text layers from Lottie animations.
@@ -76,15 +77,13 @@ public class TextRenderer {
 
         applyTextAnimatorTransform(gc, textData, frame);
 
-        Color fill = getAnimatorFillColor(textData, frame);
-        if (fill == null) {
-            fill = interpolateKeyframeFill(window, frame);
-        }
-        if (fill == null) {
+        Color base = interpolateKeyframeFill(window, frame);
+        if (base == null) {
             double[] rgb = keyframe.getFontColor();
-            fill = (rgb != null && rgb.length >= 3) ? Color.color(rgb[0], rgb[1], rgb[2]) : Color.BLACK;
+            base = (rgb != null && rgb.length >= 3) ? Color.color(rgb[0], rgb[1], rgb[2]) : Color.BLACK;
         }
-        gc.setFill(fill);
+        Color animated = getAnimatorFillColor(textData, frame, base);
+        gc.setFill(animated != null ? animated : base);
 
         double[] strokeRgb = keyframe.getStrokeColor();
         Double strokeWidth = keyframe.getStrokeWidth();
@@ -144,14 +143,28 @@ public class TextRenderer {
     /**
      * Resolves animator-controlled fill color for the current frame.
      *
+     * <p>Per the Lottie spec, the text-animator properties {@code fh}, {@code fs}, and {@code fb} are
+     * <em>deltas</em> applied to the base text fill colour after converting to HSL — they are not
+     * absolute HSB coordinates. {@code fh} is added in degrees (modulo 360), and {@code fs} / {@code fb}
+     * are added as percentage points (divided by 100, clamped to {@code [0, 1]}). When an animator also
+     * supplies an {@code fc} RGB override, that override becomes the new base before the deltas are
+     * applied (matching {@code lottie-web}'s {@code TextAnimatorProperty}).</p>
+     *
+     * <p>HSL is required so that a white base ({@code L = 1}) remains white when {@code fs} and
+     * {@code fb} clamp at their maxima — the behaviour matched by the {@code dotlottie-wc} / thorvg
+     * reference. An HSB conversion would turn the same input into pure red.</p>
+     *
      * @param textData text block containing animator definitions
      * @param frame    current animation frame
-     * @return animator color override, or {@code null} when no animator color applies
+     * @param base     base text colour resolved from the active document keyframe
+     * @return animator-modified colour, or {@code null} when no animator property contributes a colour
      */
-    private Color getAnimatorFillColor(TextData textData, double frame) {
+    private Color getAnimatorFillColor(TextData textData, double frame, Color base) {
         if (textData.animators() == null) {
             return null;
         }
+        Color result = base;
+        boolean anyApplied = false;
         for (Map<String, Object> animator : textData.animators()) {
             Object aObj = animator.get("a");
             if (!(aObj instanceof Map<?, ?> raw)) {
@@ -160,22 +173,98 @@ public class TextRenderer {
             @SuppressWarnings("unchecked")
             Map<String, Object> aMap = (Map<String, Object>) raw;
 
-            // Prefer HSB override when present (matches this animation's behavior)
-            Double h = getAnimatedNumberFromAnimatorMap(aMap, "fh", frame);
-            Double s = getAnimatedNumberFromAnimatorMap(aMap, "fs", frame);
-            Double br = getAnimatedNumberFromAnimatorMap(aMap, "fb", frame);
-            if (h != null && s != null && br != null) {
-                return Color.hsb(h, clamp01(s / 100.0), clamp01(br / 100.0));
+            // A direct RGB override on the animator becomes the new base for subsequent delta application.
+            double[] fcRgb = evalAnimatedColor(aMap.get("fc"), frame);
+            if (fcRgb != null) {
+                result = Color.color(clamp01(fcRgb[0]), clamp01(fcRgb[1]), clamp01(fcRgb[2]));
+                anyApplied = true;
             }
 
-            // Fallback: direct RGB fill color (supports static and keyframed forms)
-            Object fc = aMap.get("fc");
-            double[] rgb = evalAnimatedColor(fc, frame);
-            if (rgb != null) {
-                return Color.color(clamp01(rgb[0]), clamp01(rgb[1]), clamp01(rgb[2]));
+            Double dh = getAnimatedNumberFromAnimatorMap(aMap, "fh", frame);
+            Double ds = getAnimatedNumberFromAnimatorMap(aMap, "fs", frame);
+            Double db = getAnimatedNumberFromAnimatorMap(aMap, "fb", frame);
+            if (dh == null && ds == null && db == null) {
+                continue;
             }
+            if (result == null) {
+                continue;
+            }
+
+            double[] hsl = rgbToHsl(result.getRed(), result.getGreen(), result.getBlue());
+            if (dh != null) {
+                hsl[0] = ((hsl[0] + dh) % 360.0 + 360.0) % 360.0;
+            }
+            if (ds != null) {
+                hsl[1] = clamp01(hsl[1] + ds / 100.0);
+            }
+            if (db != null) {
+                hsl[2] = clamp01(hsl[2] + db / 100.0);
+            }
+            double[] rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
+            result = Color.color(clamp01(rgb[0]), clamp01(rgb[1]), clamp01(rgb[2]));
+            anyApplied = true;
         }
-        return null;
+        return anyApplied ? result : null;
+    }
+
+    /**
+     * Converts an sRGB colour triplet into HSL coordinates (hue in degrees, saturation and lightness in {@code [0, 1]}).
+     *
+     * @param r red channel in {@code [0, 1]}
+     * @param g green channel in {@code [0, 1]}
+     * @param b blue channel in {@code [0, 1]}
+     * @return {@code [hue, saturation, lightness]}
+     */
+    static double[] rgbToHsl(double r, double g, double b) {
+        double max = Math.max(r, Math.max(g, b));
+        double min = Math.min(r, Math.min(g, b));
+        double l = (max + min) / 2.0;
+        if (max == min) {
+            return new double[]{0.0, 0.0, l};
+        }
+        double d = max - min;
+        double s = l > 0.5 ? d / (2.0 - max - min) : d / (max + min);
+        double h;
+        if (max == r) {
+            h = (g - b) / d + (g < b ? 6.0 : 0.0);
+        } else if (max == g) {
+            h = (b - r) / d + 2.0;
+        } else {
+            h = (r - g) / d + 4.0;
+        }
+        return new double[]{h * 60.0, s, l};
+    }
+
+    /**
+     * Converts HSL coordinates back into an sRGB colour triplet.
+     *
+     * @param h hue in degrees (any real number; wrapped internally)
+     * @param s saturation in {@code [0, 1]}
+     * @param l lightness in {@code [0, 1]}
+     * @return {@code [r, g, b]} in {@code [0, 1]}
+     */
+    static double[] hslToRgb(double h, double s, double l) {
+        if (s == 0.0) {
+            return new double[]{l, l, l};
+        }
+        double hueNorm = (((h % 360.0) + 360.0) % 360.0) / 360.0;
+        double q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+        double p = 2.0 * l - q;
+        return new double[]{
+                hueToRgb(p, q, hueNorm + 1.0 / 3.0),
+                hueToRgb(p, q, hueNorm),
+                hueToRgb(p, q, hueNorm - 1.0 / 3.0)
+        };
+    }
+
+    private static double hueToRgb(double p, double q, double t) {
+        double tt = t;
+        if (tt < 0.0) tt += 1.0;
+        if (tt > 1.0) tt -= 1.0;
+        if (tt < 1.0 / 6.0) return p + (q - p) * 6.0 * tt;
+        if (tt < 1.0 / 2.0) return q;
+        if (tt < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - tt) * 6.0;
+        return p;
     }
 
     /**
