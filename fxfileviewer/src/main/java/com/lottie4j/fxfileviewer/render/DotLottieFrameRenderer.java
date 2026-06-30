@@ -153,7 +153,17 @@ public class DotLottieFrameRenderer implements AutoCloseable {
         }
         Thread.sleep(100); // settle paint before screenshot
 
-        return driver.getScreenshotAs(OutputType.BYTES);
+        try {
+            return driver.getScreenshotAs(OutputType.BYTES);
+        } catch (org.openqa.selenium.WebDriverException wde) {
+            // Selenium's JdkHttpClient wraps InterruptedException in WebDriverException.
+            // Unwrap it so the caller's interrupt-handling path fires correctly.
+            if (wde.getCause() instanceof InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw ie;
+            }
+            throw wde;
+        }
     }
 
     /**
