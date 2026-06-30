@@ -40,17 +40,12 @@ public class EffectsRenderer {
     private static final long STATIC_BLUR_CACHE_MAX_PIXEL_COUNT = 8_000_000L;
 
     /**
-     * Maximum per-pass Gaussian blur radius (in offscreen pixels) used when downsampling extreme
-     * Lottie blur values. Set just under JavaFX's {@link GaussianBlur#MAX_RADIUS} (63 px) so the
-     * inner blur pass stays in the smooth Gaussian regime.
+     * Maximum per-pass blur radius (in offscreen pixels) used when downsampling extreme Lottie blur
+     * values. The chosen limit (200 px) keeps the inner pass within JavaFX's {@link BoxBlur} addressable
+     * range (max 255 px per axis) while ensuring extreme raw values such as 700–800 px only need a 4×
+     * downsample — enough to fit the per-pass kernel without losing significant source detail.
      */
-    private static final double MAX_PASS_BLUR_RADIUS = 60.0;
-
-    /**
-     * Hard ceiling JavaFX's {@link GaussianBlur} clamps its radius to internally. Mirrored here so the
-     * downsample path can pre-clamp values that would otherwise be silently truncated by the effect.
-     */
-    private static final double JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS = 63.0;
+    private static final double MAX_PASS_BLUR_RADIUS = 200.0;
 
     private final Map<StaticLayerBlurCacheKey, WritableImage> staticLayerBlurCache = new ConcurrentHashMap<>();
 
@@ -215,9 +210,10 @@ public class EffectsRenderer {
             return;
         }
 
-        // No bounds: cannot use the offscreen downsample scheme, so cap the radius at the JavaFX limit.
+        // No bounds: cannot use the offscreen downsample scheme, so cap the radius at JavaFX's
+        // single-pass BoxBlur limit (255 per axis).
         gc.save();
-        double scaledBlur = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, blurRadius * effectiveScale);
+        double scaledBlur = Math.min(MAX_PASS_BLUR_RADIUS, blurRadius * effectiveScale);
         applyBlurEffect(gc, scaledBlur);
         layerRenderer.render(gc, layer, frame);
         gc.setEffect(null);
@@ -254,7 +250,6 @@ public class EffectsRenderer {
         int downsample = chooseDownsampleFactor(desiredOffscreenRadius);
         double passScale = effectiveScale / downsample;
         double passRadius = blurRadius * passScale;
-        double clampedPassRadius = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, passRadius);
 
         double passPadding = Math.ceil(Math.max(passRadius, 1.0) * 2);
         double renderWidth = Math.max(1.0, Math.ceil(boundsWidth * passScale));
@@ -268,7 +263,7 @@ public class EffectsRenderer {
             offscreenGc.save();
             offscreenGc.scale(passScale, passScale);
             offscreenGc.translate(passPadding / passScale, passPadding / passScale);
-            offscreenGc.setEffect(new GaussianBlur(clampedPassRadius));
+            applyBlurEffect(offscreenGc, passRadius);
             layerRenderer.render(offscreenGc, layer, frame);
             offscreenGc.setEffect(null);
             offscreenGc.restore();
@@ -435,18 +430,17 @@ public class EffectsRenderer {
                                                      int imageHeight,
                                                      double passScale,
                                                      LayerRenderer layerRenderer) {
-                                                     double clampedPassRadius = Math.min(JAVAFX_GAUSSIAN_BLUR_MAX_RADIUS, passRadius);
-        logger.debug("Creating static blur cache image for layer {}: {}x{}, passRadius={}, passScale={}",
-                layer.name(), imageWidth, imageHeight, passRadius, passScale);
-        return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
-            offscreenGc.save();
-            offscreenGc.scale(passScale, passScale);
-            offscreenGc.setEffect(new GaussianBlur(clampedPassRadius));
-            layerRenderer.render(offscreenGc, layer, frame);
-            offscreenGc.setEffect(null);
-            offscreenGc.restore();
-        });
-    }
+                                                     logger.debug("Creating static blur cache image for layer {}: {}x{}, passRadius={}, passScale={}",
+                                                     layer.name(), imageWidth, imageHeight, passRadius, passScale);
+                                                     return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
+                                                     offscreenGc.save();
+                                                     offscreenGc.scale(passScale, passScale);
+                                                     applyBlurEffect(offscreenGc, passRadius);
+                                                     layerRenderer.render(offscreenGc, layer, frame);
+                                                     offscreenGc.setEffect(null);
+                                                     offscreenGc.restore();
+                                                     });
+                                                     }
 
     /**
      * Internal recursive implementation of {@link #containsAnimation(Object)}.

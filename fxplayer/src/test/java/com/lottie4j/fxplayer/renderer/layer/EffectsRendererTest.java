@@ -105,26 +105,27 @@ class EffectsRendererTest {
 
     @Test
     void chooseDownsampleFactorReturnsExpectedPowerOfTwo() {
+        // MAX_PASS_BLUR_RADIUS is 200 px so factor doubles only once raw exceeds that.
         assertEquals(1, EffectsRenderer.chooseDownsampleFactor(0));
-        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(20));
         assertEquals(1, EffectsRenderer.chooseDownsampleFactor(60));
-        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(61));
-        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(120));
-        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(121));
-        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(240));
-        assertEquals(8, EffectsRenderer.chooseDownsampleFactor(480));
-        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(481));
-        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(700));
-        assertEquals(16, EffectsRenderer.chooseDownsampleFactor(800));
+        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(177.6));
+        assertEquals(1, EffectsRenderer.chooseDownsampleFactor(200));
+        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(201));
+        assertEquals(2, EffectsRenderer.chooseDownsampleFactor(400));
+        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(401));
+        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(700));
+        assertEquals(4, EffectsRenderer.chooseDownsampleFactor(800));
+        assertEquals(8, EffectsRenderer.chooseDownsampleFactor(1600));
     }
 
     @Test
-    void chooseDownsampleFactorAlwaysKeepsPassRadiusAtOrBelowSixty() {
-        for (double raw : new double[]{0, 1, 20, 60, 60.0001, 100, 177.6, 200, 300, 500, 700, 800, 1600, 3200}) {
+    void chooseDownsampleFactorAlwaysKeepsPassRadiusWithinMaxPassLimit() {
+        // Per-pass cap (200 px) tracks JavaFX's BoxBlur addressable range.
+        for (double raw : new double[]{0, 1, 20, 60, 100, 177.6, 200, 200.0001, 300, 500, 700, 800, 1600, 3200}) {
             int factor = EffectsRenderer.chooseDownsampleFactor(raw);
             assertTrue(factor >= 1, "factor must be >= 1 for raw=" + raw + " got " + factor);
             assertTrue((factor & (factor - 1)) == 0, "factor must be power of two for raw=" + raw + " got " + factor);
-            assertTrue(raw / factor <= 60.0 + 1e-9, "raw/factor must be <= 60 for raw=" + raw + " got " + (raw / factor));
+            assertTrue(raw / factor <= 200.0 + 1e-9, "raw/factor must be <= 200 for raw=" + raw + " got " + (raw / factor));
         }
     }
 
@@ -162,28 +163,32 @@ class EffectsRendererTest {
 
     @Test
     void boundedBlurExtremeRadiusProducesSofterSpreadThanModerateRadius() {
-        // Smoke test: extreme blur values must not throw, and must produce a softer (lower-amplitude)
+        // Smoke test: extreme blur values must not throw, and must produce a softer (lower peak red)
         // result than a moderate blur — because the wide Gaussian kernel scatters the source
-        // colour over a much larger area, including beyond the bounds.
+        // colour over a much larger area, including beyond the kept bounds.
         EffectsRenderer renderer = new EffectsRenderer();
         Layer layer = layerWithoutEffects();
 
-        double moderateMax = sampleMaxAlpha(renderer, layer, 63.0);
-        double extremeMax = sampleMaxAlpha(renderer, layer, 800.0);
-        double noBlurMax = sampleMaxAlpha(renderer, layer, 0.0);
+        double moderatePeak = samplePeakRed(renderer, layer, 63.0);
+        double extremePeak = samplePeakRed(renderer, layer, 800.0);
+        double noBlurPeak = samplePeakRed(renderer, layer, 0.0);
 
-        assertTrue(noBlurMax > 0.99,
-                "No-blur path must preserve the opaque source pixel, got max alpha " + noBlurMax);
-        assertTrue(moderateMax > 0.0,
-                "Moderate blur must still leave visible alpha, got " + moderateMax);
-        assertTrue(extremeMax > 0.0,
-                "Extreme blur must still produce some alpha (downsample path), got " + extremeMax);
-        assertTrue(extremeMax < moderateMax,
+        assertTrue(noBlurPeak > 0.99,
+                "No-blur path must preserve the opaque source pixel, got peak red " + noBlurPeak);
+        assertTrue(moderatePeak > 0.0,
+                "Moderate blur must still leave visible red, got " + moderatePeak);
+        assertTrue(extremePeak > 0.0,
+                "Extreme blur must still produce some red (downsample path), got " + extremePeak);
+        assertTrue(extremePeak < moderatePeak,
                 "Extreme blur should spread the source further than a moderate blur, leaving lower"
-                        + " peak alpha; moderate=" + moderateMax + " extreme=" + extremeMax);
+                        + " peak red; moderate=" + moderatePeak + " extreme=" + extremePeak);
     }
 
-    private static double sampleMaxAlpha(EffectsRenderer renderer, Layer layer, double blurRadius) {
+    /**
+     * Snapshots the canvas onto a black background so the red channel measures effective coverage
+     * (transparent areas → black → red=0). Returns the maximum red value across all pixels.
+     */
+    private static double samplePeakRed(EffectsRenderer renderer, Layer layer, double blurRadius) {
         return FxTestHelper.callAndWait(() -> {
             final int size = 64;
             Canvas canvas = new Canvas(size, size);
@@ -197,18 +202,20 @@ class EffectsRendererTest {
             } else {
                 renderer.renderLayerWithGaussianBlur(gc, layer, 0.0, blurRadius, size, size, 1.0, redRect);
             }
-            javafx.scene.image.WritableImage image = canvas.snapshot(new javafx.scene.SnapshotParameters(), null);
+            javafx.scene.SnapshotParameters params = new javafx.scene.SnapshotParameters();
+            params.setFill(Color.BLACK);
+            javafx.scene.image.WritableImage image = canvas.snapshot(params, null);
             javafx.scene.image.PixelReader reader = image.getPixelReader();
-            double maxAlpha = 0.0;
+            double maxRed = 0.0;
             for (int y = 0; y < size; y++) {
                 for (int x = 0; x < size; x++) {
-                    double alpha = reader.getColor(x, y).getOpacity();
-                    if (alpha > maxAlpha) {
-                        maxAlpha = alpha;
+                    double red = reader.getColor(x, y).getRed();
+                    if (red > maxRed) {
+                        maxRed = red;
                     }
                 }
             }
-            return maxAlpha;
+            return maxRed;
         });
     }
 

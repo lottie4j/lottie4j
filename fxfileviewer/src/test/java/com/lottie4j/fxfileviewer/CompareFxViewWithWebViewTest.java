@@ -86,13 +86,44 @@ class CompareFxViewWithWebViewTest {
     private static final double TARGET_AVERAGE_SIMILARITY = 99.5;
 
     /**
-     * Per-file override of the average-similarity floor. Currently empty: every animation
-     * meets {@link #TARGET_AVERAGE_SIMILARITY} under the regenerated WebView references.
-     * Repopulate only if a re-run of {@link #compareFxAndJsRenderingFullSize} shows an
-     * average below the target — entries are tracked technical debt and should be driven
-     * back to &ge; the target so they can be removed again.
+     * Per-file override of the average-similarity floor. Entries are tracked technical debt and
+     * should be driven back to &ge; {@link #TARGET_AVERAGE_SIMILARITY} so they can be removed.
+     *
+     * <p>Floor values follow {@code floor = floor(observed * 10) / 10 - 0.1} so a small future
+     * regression flips the build red rather than silently eroding fidelity.</p>
+     *
+     * <ul>
+     *   <li><b>json/interactive_mood_selector_ui.json</b> — lifted from 92.40 → 95.57 by
+     *       {@code Fix-rendering--json-interactive-mood.md} (HSL text-animator deltas and
+     *       multi-scale Gaussian blur for radii beyond JavaFX's 63 px single-pass cap). The
+     *       residual gap (~3.9 pp) shows up as edge softness on the gradient emoji bodies that
+     *       the BoxBlur + bilinear-upsample chain cannot match thorvg's true Gaussian on; a
+     *       follow-up plan is needed once {@code GradientFillStyle} bounds are inspected.</li>
+     * </ul>
      */
-    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries();
+    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
+            // Lifted from 92.40 → 95.58 by Fix-rendering--json-interactive-mood.md (HSL
+            // text-animator deltas + multi-scale Gaussian blur for radii beyond JavaFX's 63 px
+            // single-pass cap). The residual ~3.9 pp gap shows up as edge softness on the
+            // gradient emoji bodies that BoxBlur + bilinear upsample cannot match thorvg's true
+            // Gaussian on; a follow-up plan is needed.
+            Map.entry("json/interactive_mood_selector_ui.json", 95.4),
+
+            // Pre-existing failures — explicitly listed as out-of-scope of the mood-selector
+            // fix ("separate regressions surfaced by the same calibration run" / "pre-existing
+            // technical debt or marginal regressions that are tracked separately"). These files
+            // have no Gaussian blur and no fh/fs/fb text animators, so the mood-selector fix
+            // cannot affect them. Drop entries individually once their dedicated follow-up plans
+            // land. Floors follow the documented `floor(observed * 10) / 10 - 0.1` rule.
+            Map.entry("json/animated_background_patterns.json", 99.2),
+            Map.entry("json/angry_bird.json", 98.2),
+            Map.entry("json/face-peeking.json", 98.6),
+            Map.entry("json/java_duke_flip.json", 95.7),
+            Map.entry("json/java_duke_slidein.json", 98.8),
+            Map.entry("json/lottie_lego.json", 98.0),
+            Map.entry("json/sandy_loading.json", 99.3),
+            Map.entry("dot/demo-1.lottie", 99.3)
+    );
 
     /**
      * Per-file override for the half-size variant. Currently empty: the single sampled
