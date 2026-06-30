@@ -25,6 +25,7 @@ import javax.imageio.ImageIO;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.component.LottieWebView;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
 
 /**
@@ -41,6 +43,10 @@ import com.lottie4j.fxfileviewer.util.ImageSaver;
  * using headless Chrome via Selenium. This doesn't use the JavaFX based webview component, because
  * some animations don't render completely correct in the integrated JavaFX browser.
  * Therefore, this generator uses Selenium to render the animation in a headless Chrome browser.
+ *
+ * <p>This was previously {@code lottie-web} canvas; switched to {@code @lottiefiles/dotlottie-wc}
+ * (thorvg under the hood) to match the LottieFiles online preview and to correctly render
+ * gradients-with-alpha (e.g. soft halos in {@code interactive_mood_selector_ui}).</p>
  *
  * <p>Run this class manually whenever a new animation file is added to
  * {@link CompareFxViewWithWebViewTest#lottieJsonFiles()}.
@@ -65,6 +71,14 @@ public class WebViewScreenshotGenerator {
     private static final int DEFAULT_WIDTH = 800;
     private static final int DEFAULT_HEIGHT = 600;
 
+    /**
+     * Pinned URL of the {@code @lottiefiles/dotlottie-wc} ES module. Mirrors
+     * {@link LottieWebView#DOTLOTTIE_WC_URL} so the live JavaFX viewer and the committed
+     * Selenium reference PNGs are produced by the exact same renderer build at version
+     * {@link LottieWebView#DOTLOTTIE_WC_VERSION}.
+     */
+    private static final String DOTLOTTIE_WC_URL = LottieWebView.DOTLOTTIE_WC_URL;
+
     public static void main(String[] args) throws Exception {
         URL knownResource = WebViewScreenshotGenerator.class.getResource("/json/angry_bird.json");
         if (knownResource == null) {
@@ -80,6 +94,9 @@ public class WebViewScreenshotGenerator {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
                 "--disable-gpu", "--hide-scrollbars");
+
+        logger.info("Renderer: dotlottie-wc/thorvg @ {} ({})",
+                LottieWebView.DOTLOTTIE_WC_VERSION, DOTLOTTIE_WC_URL);
 
         List<String> failures = new ArrayList<>();
 
@@ -129,9 +146,10 @@ public class WebViewScreenshotGenerator {
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
-        // lottie-web treats outPoint as exclusive: the last rendered frame is op - 1. Sampling
-        // frame == op would produce a reference that disagrees with the JavaFX player (which
-        // clamps seekToFrame to op - 1 via getLastRenderableFrame), so we stop at op - 1.
+        // Both lottie-web and dotlottie-web/thorvg treat outPoint as exclusive: totalFrames is
+        // op - ip and the last renderable frame index is op - 1. Sampling frame == op would
+        // produce a reference that disagrees with the JavaFX player (which clamps seekToFrame
+        // to op - 1 via getLastRenderableFrame), so we stop at op - 1.
         int lastFrame = Math.max(inPoint, outPoint - 1);
         // Every frame (step=1, inclusive of lastFrame). See CompareFxViewWithWebViewTest for the rationale.
         List<Integer> frames = buildSampledFrames(inPoint, lastFrame, 1);
@@ -149,10 +167,27 @@ public class WebViewScreenshotGenerator {
                     "mobile", false));
             driver.get(tempHtml.toUri().toString());
 
-            new WebDriverWait(driver, Duration.ofSeconds(25))
-                    .until(d -> Boolean.TRUE.equals(
-                            ((JavascriptExecutor) d).executeScript(
-                                    "return window.isAnimationReady && window.isAnimationReady()")));
+            // 60s instead of 25s — thorvg + WASM cold-start can be slow for larger JSONs,
+            // and dotlottie-wc fetches its WASM blob on first load.
+            try {
+                new WebDriverWait(driver, Duration.ofSeconds(60))
+                        .until(d -> Boolean.TRUE.equals(
+                                ((JavascriptExecutor) d).executeScript(
+                                        "return window.isAnimationReady && window.isAnimationReady()")));
+            } catch (TimeoutException te) {
+                Object jsErrors = driver.executeScript(
+                        "return (window.__lottieJsErrors || []).slice();");
+                Object instanceInfo = driver.executeScript(
+                        "var p = document.getElementById('lottie-container');"
+                                + "return { hasElement: !!p,"
+                                + "         elementTag: p ? p.tagName : null,"
+                                + "         hasDotLottieProp: !!(p && p.dotLottie),"
+                                + "         hasGetter: !!(p && typeof p.getDotLottieInstance==='function'),"
+                                + "         customElementDefined: !!customElements.get('dotlottie-wc') };");
+                logger.error("Readiness timeout for {}. JS errors: {}. Element state: {}",
+                        fileName, jsErrors, instanceInfo);
+                throw te;
+            }
 
             WebElement container = driver.findElement(By.id("lottie-container"));
 
@@ -210,48 +245,99 @@ public class WebViewScreenshotGenerator {
                     <meta charset="UTF-8">
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { width: %spx; height: %spx; overflow: hidden; background: transparent; }
-                        #lottie-container { width: %spx; height: %spx; }
+                        body { width: %1$spx; height: %2$spx; overflow: hidden; background: transparent; }
+                        #lottie-container { width: %1$spx; height: %2$spx; display: block; }
                     </style>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-                </head>
-                <body>
-                    <div id="lottie-container"></div>
+                    <script type="module" src="%3$s"></script>
+                    <script>
+                        window.__lottieJsErrors = [];
+                        window.addEventListener('error', function(e) {
+                            window.__lottieJsErrors.push(String(e.message || e));
+                        });
+                        window.addEventListener('unhandledrejection', function(e) {
+                            window.__lottieJsErrors.push('promise: ' + String((e && e.reason) || e));
+                        });
+                    </script>
+                    </head>
+                    <body>
+                    <dotlottie-wc id="lottie-container"
+                                  src="data:application/json;base64,%4$s"
+                                  style="width:%1$spx;height:%2$spx;display:block">
+                    </dotlottie-wc>
                     <script>
                         var animationReady = false;
                         var currentFrame = 0;
-                
-                        function decodeBase64Json(base64) {
-                            var binary = atob(base64);
-                            var bytes = new Uint8Array(binary.length);
-                            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                            return new TextDecoder('utf-8').decode(bytes);
+                        var player = document.getElementById('lottie-container');
+                        var instance = null;
+
+                        function resolveInstance() {
+                            if (instance) return instance;
+                            try {
+                                if (player && typeof player.getDotLottieInstance === 'function') {
+                                    instance = player.getDotLottieInstance();
+                                }
+                            } catch (e) { /* not ready yet */ }
+                            if (!instance && player && player.dotLottie) {
+                                instance = player.dotLottie;
+                            }
+                            return instance;
                         }
-                
-                        var anim = lottie.loadAnimation({
-                            container: document.getElementById('lottie-container'),
-                            renderer: 'canvas',
-                            loop: false,
-                            autoplay: false,
-                            animationData: JSON.parse(decodeBase64Json('%s')),
-                            rendererSettings: { preserveAspectRatio: 'xMidYMid meet', clearCanvas: true }
-                        });
-                
-                        anim.addEventListener('DOMLoaded', function() { animationReady = true; });
-                        anim.addEventListener('enterFrame', function(e) { currentFrame = Math.round(e.currentTime); });
-                
+
+                        function markReady(e) {
+                            instance = resolveInstance()
+                                || (e && e.detail && (e.detail.dotLottie || e.detail.instance));
+                            if (instance) {
+                                try { instance.setLoop(false); } catch (err) {}
+                                try { instance.pause(); } catch (err) {}
+                            }
+                            animationReady = true;
+                        }
+
+                        if (player) {
+                            ['ready', 'load', 'loadComplete', 'dotlottie-ready', 'play']
+                                .forEach(function(name) { player.addEventListener(name, markReady); });
+                            player.addEventListener('frame', function(e) {
+                                var f = (e && e.detail && typeof e.detail.currentFrame === 'number')
+                                    ? e.detail.currentFrame
+                                    : (e && typeof e.currentFrame === 'number' ? e.currentFrame : currentFrame);
+                                currentFrame = Math.round(f);
+                            });
+                        }
+
+                        // Polling fallback: events may have fired before this script ran (data: URL
+                        // can load synchronously), so resolve from the instance directly until ready.
+                        (function pollReady() {
+                            if (animationReady) return;
+                            var i = resolveInstance();
+                            if (i && (i.totalFrames > 0 || typeof i.currentFrame === 'number')) {
+                                try { i.setLoop(false); } catch (err) {}
+                                try { i.pause(); } catch (err) {}
+                                animationReady = true;
+                                return;
+                            }
+                            setTimeout(pollReady, 50);
+                        })();
+
                         window.isAnimationReady = function() { return animationReady; };
                         window.getCurrentFrame = function() {
-                            return Math.round(anim.currentFrame != null ? anim.currentFrame : currentFrame);
+                            var i = resolveInstance();
+                            if (i && typeof i.currentFrame === 'number') {
+                                return Math.round(i.currentFrame);
+                            }
+                            return Math.round(currentFrame);
                         };
                         window.seekToFrame = function(frame) {
-                            currentFrame = Math.round(frame);
-                            anim.goToAndStop(currentFrame, true);
+                            var f = Math.round(frame);
+                            currentFrame = f;
+                            var i = resolveInstance();
+                            if (!i) return;
+                            try { i.setFrame(f); } catch (err) {}
+                            try { i.pause(); } catch (err) {}
                         };
                     </script>
                 </body>
                 </html>
-                """.formatted(width, height, width, height, encodedJson);
+                """.formatted(width, height, DOTLOTTIE_WC_URL, encodedJson);
         Files.writeString(tempFile, html, StandardCharsets.UTF_8);
         return tempFile;
     }

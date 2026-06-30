@@ -1,26 +1,5 @@
 package com.lottie4j.fxfileviewer;
 
-import com.lottie4j.core.file.LottieFileLoader;
-import com.lottie4j.core.model.animation.Animation;
-import com.lottie4j.fxfileviewer.util.ImageSaver;
-import com.lottie4j.fxfileviewer.util.ImageSimilarity;
-import com.lottie4j.fxplayer.LottiePlayer;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.WritableImage;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -36,14 +15,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.lottie4j.core.file.LottieFileLoader;
+import com.lottie4j.core.model.animation.Animation;
+import com.lottie4j.fxfileviewer.util.ImageSaver;
+import com.lottie4j.fxfileviewer.util.ImageSimilarity;
+import com.lottie4j.fxplayer.LottiePlayer;
+
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 /**
  * Validates JavaFX player rendering against pre-generated WebView reference screenshots.
  *
  * <p>Reference images are produced once by {@link WebViewScreenshotGenerator} and committed
- * to {@code src/test/resources}. This test never starts a WebView and is safe to run in CI
- * headless mode.</p>
+ * to {@code src/test/resources}. The reference renderer is
+ * {@code @lottiefiles/dotlottie-wc} (thorvg under the hood) — the same engine the official
+ * LottieFiles online preview uses — driven by headless Chrome via Selenium. This test never
+ * starts a WebView and is safe to run in CI headless mode.</p>
  *
  * <p>If no reference images exist for a file, the test is skipped.
  * Run {@link WebViewScreenshotGenerator} locally to create or refresh them.</p>
@@ -263,10 +269,11 @@ class CompareFxViewWithWebViewTest {
 
         int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
         int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
-        // lottie-web treats outPoint as exclusive: the last rendered frame is op - 1, and the
-        // JavaFX player clamps seekToFrame to op - 1 (see FrameTiming.getLastRenderableFrame).
-        // Sampling frame == op would compare two clamped-to-different-things images and inject
-        // a large false drop on the final sample — so we stop at op - 1.
+        // dotlottie-web/thorvg (and lottie-web before it) treat outPoint as exclusive: the last
+        // rendered frame is op - 1, and the JavaFX player clamps seekToFrame to op - 1 (see
+        // FrameTiming.getLastRenderableFrame). Sampling frame == op would compare two
+        // clamped-to-different-things images and inject a large false drop on the final
+        // sample — so we stop at op - 1.
         int lastFrame = Math.max(inPoint, outPoint - 1);
         // Every frame (step=1, inclusive of lastFrame) — see plan §3. This is 5× the prior
         // sampling rate, so anything other than a deterministic per-frame sync would be
