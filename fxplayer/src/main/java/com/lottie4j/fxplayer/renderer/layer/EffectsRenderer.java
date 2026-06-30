@@ -430,17 +430,17 @@ public class EffectsRenderer {
                                                      int imageHeight,
                                                      double passScale,
                                                      LayerRenderer layerRenderer) {
-                                                     logger.debug("Creating static blur cache image for layer {}: {}x{}, passRadius={}, passScale={}",
-                                                     layer.name(), imageWidth, imageHeight, passRadius, passScale);
-                                                     return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
-                                                     offscreenGc.save();
-                                                     offscreenGc.scale(passScale, passScale);
-                                                     applyBlurEffect(offscreenGc, passRadius);
-                                                     layerRenderer.render(offscreenGc, layer, frame);
-                                                     offscreenGc.setEffect(null);
-                                                     offscreenGc.restore();
-                                                     });
-                                                     }
+        logger.debug("Creating static blur cache image for layer {}: {}x{}, passRadius={}, passScale={}",
+                layer.name(), imageWidth, imageHeight, passRadius, passScale);
+        return OffscreenRenderer.renderToImage(imageWidth, imageHeight, offscreenGc -> {
+            offscreenGc.save();
+            offscreenGc.scale(passScale, passScale);
+            applyBlurEffect(offscreenGc, passRadius);
+            layerRenderer.render(offscreenGc, layer, frame);
+            offscreenGc.setEffect(null);
+            offscreenGc.restore();
+        });
+        }
 
     /**
      * Internal recursive implementation of {@link #containsAnimation(Object)}.

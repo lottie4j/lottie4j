@@ -1,5 +1,10 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
@@ -13,12 +18,9 @@ import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.GradientStrokeStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
+
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 
 /**
  * Renders Lottie rectangle shapes with support for rounded corners, fill, stroke, and gradient styles.
@@ -78,7 +80,9 @@ public class RectangleRenderer implements ShapeRenderer {
         }
         double arc = radius * 2.0;
 
-        // Check for gradient fill first, then regular fill
+        // Check for gradient fill first, then regular fill. Rectangles pass their painted
+        // bounding box directly into GradientFillStyle, so unlike cubic-bezier paths (see
+        // PathRenderer#calculateGeometryBounds) they do not need a separate extent calculation.
         var gradientFillStyle = getGradientFillStyle(parentGroup);
         if (gradientFillStyle.isPresent()) {
             Paint gradientPaint = gradientFillStyle.get().getPaint(frame, renderX, renderY, width, height);

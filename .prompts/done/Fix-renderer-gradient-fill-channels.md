@@ -83,3 +83,9 @@ After applying the fix:
 - `Fix-rendering-dot-demo-1.md`
 - `Fix-rendering-java_duke_fadein.md`
 - `Fix-rendering-java_duke_slidein.md`
+- `Follow-up--Close-residual-gap-on.md` — resolved the *bounds* part of the
+  gradient-fill story (`PathRenderer.calculateGeometryBounds` now uses the full
+  cubic-bezier extent, including tangent reach, rather than the under-sized vertex
+  hull). All currently-floored `gf` files (`face-exhaling`, `java_duke_*`,
+  `demo-1.lottie`, `isometric_data_analysis`) verified non-regressing under the
+  change in the regression sentinels.

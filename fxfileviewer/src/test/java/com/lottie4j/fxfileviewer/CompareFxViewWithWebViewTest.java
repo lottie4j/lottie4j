@@ -93,20 +93,29 @@ class CompareFxViewWithWebViewTest {
      * regression flips the build red rather than silently eroding fidelity.</p>
      *
      * <ul>
-     *   <li><b>json/interactive_mood_selector_ui.json</b> — lifted from 92.40 → 95.57 by
-     *       {@code Fix-rendering--json-interactive-mood.md} (HSL text-animator deltas and
+     *   <li><b>json/interactive_mood_selector_ui.json</b> — lifted from 92.40 → 95.58 by
+     *       {@code Fix-rendering-json-interactive-mood.md} (HSL text-animator deltas and
      *       multi-scale Gaussian blur for radii beyond JavaFX's 63 px single-pass cap). The
-     *       residual gap (~3.9 pp) shows up as edge softness on the gradient emoji bodies that
-     *       the BoxBlur + bilinear-upsample chain cannot match thorvg's true Gaussian on; a
-     *       follow-up plan is needed once {@code GradientFillStyle} bounds are inspected.</li>
+     *       follow-up {@code Follow-up--Close-residual-gap-on.md} investigated the residual
+     *       ~3.9 pp gap and ruled out the two leading hypotheses: (a) the file has no {@code gf}
+     *       gradient fills so the bezier-extent bounds change in {@code PathRenderer} cannot
+     *       help (the lift it provides is preserved as defensive correctness for other files);
+     *       (b) replacing the {@code BoxBlur(passRadius, passRadius, 3)} offscreen pass with a
+     *       cascaded {@code GaussianBlur(60)} chain regressed the file from 95.58 → 91.39
+     *       because a true Gaussian at σ = passRadius produces a wider halo than the
+     *       3-iteration box (whose effective σ ≈ passRadius/2 is closer to thorvg's reference
+     *       output). Closing the remaining gap requires a different approach — probably
+     *       per-emoji body geometry comparison — and is parked here as accepted technical
+     *       debt.</li>
      * </ul>
      */
-    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
-            // Lifted from 92.40 → 95.58 by Fix-rendering--json-interactive-mood.md (HSL
+     private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
+            // Lifted from 92.40 → 95.58 by Fix-rendering-json-interactive-mood.md (HSL
             // text-animator deltas + multi-scale Gaussian blur for radii beyond JavaFX's 63 px
-            // single-pass cap). The residual ~3.9 pp gap shows up as edge softness on the
-            // gradient emoji bodies that BoxBlur + bilinear upsample cannot match thorvg's true
-            // Gaussian on; a follow-up plan is needed.
+            // single-pass cap). Follow-up--Close-residual-gap-on.md ruled out the bezier-extent
+            // bounds hypothesis (file has no gf fills) and the Gaussian-cascade hypothesis
+            // (regressed the file to 91.39 because BoxBlur(r,r,3) effective σ is closer to
+            // thorvg's reference than σ = passRadius). Residual ~3.9 pp gap remains.
             Map.entry("json/interactive_mood_selector_ui.json", 95.4),
 
             // Pre-existing failures — explicitly listed as out-of-scope of the mood-selector

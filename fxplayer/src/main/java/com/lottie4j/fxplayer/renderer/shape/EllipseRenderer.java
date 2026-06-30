@@ -1,5 +1,10 @@
 package com.lottie4j.fxplayer.renderer.shape;
 
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lottie4j.core.definition.AnimatedValueType;
 import com.lottie4j.core.definition.LineCap;
 import com.lottie4j.core.model.shape.BaseShape;
@@ -13,14 +18,11 @@ import com.lottie4j.fxplayer.element.FillStyle;
 import com.lottie4j.fxplayer.element.GradientFillStyle;
 import com.lottie4j.fxplayer.element.StrokeStyle;
 import com.lottie4j.fxplayer.util.StrokeHelper;
+
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.StrokeLineCap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 
 /**
  * Renders Lottie ellipse shapes with support for fill, stroke, gradients, and trim path.
@@ -150,6 +152,11 @@ public class EllipseRenderer implements ShapeRenderer {
 
     /**
      * Extracts gradient fill style from parent group.
+     *
+     * <p>Ellipses already pass their painted bounding box ({@code renderX, renderY, width,
+     * height}) into {@link GradientFillStyle#getPaint(double, double, double, double, double)},
+     * so they do not suffer the under-sized vertex-hull bounds problem that the {@code PathRenderer}
+     * uses {@link PathRenderer#calculateGeometryBounds} to avoid for cubic-bezier paths.
      *
      * @param group parent group containing styles
      * @return gradient fill style if present

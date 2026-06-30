@@ -288,3 +288,112 @@ Final acceptance (after all applicable steps):
    R / G / B all ≥ 99.0 (currently 94.65 / 95.97 / 98.60).
 5. The heatmap PNG for `interactive_mood_selector_ui` no longer shows warm-colour edges around
    the emoji bodies. Compare visually against the predecessor's reference heatmap if archived.
+
+## Outcome
+
+**Headline:** The two leading hypotheses from the predecessor plan were investigated and
+both ruled out. The residual ~3.9 pp gap on `interactive_mood_selector_ui.json` remains, so
+the `PER_FILE_FLOOR_OVERRIDE` entry stays at **95.4**. Step 1 still landed as defensive
+correctness for the other files that *do* use `gf` fills.
+
+### Measured before / after on `interactive_mood_selector_ui`
+| metric                    | before | after Step 1 | after Step 2 (then reverted) |
+|---------------------------|--------|--------------|------------------------------|
+| average                   | 95.58 %| 95.58 %      | 91.39 %                      |
+| minimum                   | 93.09 %| 93.09 %      | 90.95 %                      |
+| frame 0 R / G / B         | 94.65 / 95.97 / 98.60 | 94.65 / 95.98 / 98.60 | 86.37 / 89.97 / 97.46 |
+
+### What landed
+
+#### Step 1 — full cubic-bezier extent for gradient bounds (`PathRenderer`)
+- `PathRenderer.calculateBounds` renamed to `calculateVertexBounds` and kept as the
+  fallback path when tangent data is missing.
+- New `calculateGeometryBounds(vertices, tangentsIn, tangentsOut, closed)` walks every
+  cubic segment, computes the analytical extrema of `B'(t) = 0` (a quadratic in `t`) per
+  axis, and merges them with the segment endpoints. Closed paths additionally walk the
+  implicit closing segment.
+- New `addCubicExtrema(v0, c1, c2, v3, acc, xAxis)` does the per-axis quadratic solve,
+  with the derivation verified by hand:
+  - `a = -v0 + 3 c1 - 3 c2 + v3`
+  - `b = 2 (v0 - 2 c1 + c2)`
+  - `c = c1 - v0`
+- Ellipse and Rectangle renderers already pass their painted bounding box — added a
+  one-line Javadoc cross-reference so the next reader doesn't repeat this investigation.
+
+##### `PathRendererBoundsTest` (new)
+Six cases, all running without a JavaFX toolkit:
+- empty vertices → null
+- single straight segment (zero tangents) ⇒ matches vertex bounds exactly
+- symmetric four-segment circle with κ = 0.5522847… handle length ⇒ bounds match the
+  inscribed bounding square to 1e-6
+- two-vertex open path with `outTangent[0]` pushing Y above the vertex hull ⇒ analytical
+  extremum at `t = 1/3` is reproduced
+- short tangent list ⇒ falls back to vertex bounds
+- closed-flag toggle ⇒ closing-segment bulge only contributes when `closed = true`
+
+#### Step 2 — Cascaded `GaussianBlur(60)` (REVERTED)
+A cascade chained via `Effect.setInput` was implemented and tested per the plan's
+specification (quadrature identity, per-pass cap at 63 px, peak-red invariant). It
+**regressed** `interactive_mood_selector_ui` from 95.58 % to **91.39 %** (frame 0 R/G
+went 94.65/95.97 → 86.37/89.97, i.e. back to the pre-fix baseline).
+
+Root cause of the regression: the cascade's target σ ≈ `passRadius` is roughly twice
+the σ ≈ `passRadius/2` that `BoxBlur(passRadius, passRadius, 3)` was effectively
+producing. The thorvg reference matches the box approximation closer than a true
+`σ = passRadius` Gaussian, so making the kernel "more Gaussian-shaped" actually moved
+the FX output *away* from the reference. Both the production cascade code and its tests
+were removed.
+
+#### Step 3 — Precomp `o = 70` opacity (NOT ACTIONED)
+After Step 2 was reverted, Step 3 remained speculative. A code read of
+`LottiePlayer.renderLayer` → `EffectsRenderer.renderWithBoundedBlur` →
+`renderLayerInternal` confirmed that for the bounded-blur path the layer opacity is
+applied **inside** the offscreen render via `gc.setGlobalAlpha(opacity)` *before* the
+blur snapshot is captured. The blur effect is set on the offscreen `GraphicsContext`
+before any shape is drawn, so JavaFX applies it per-draw with the lower alpha already
+in effect. Since blur and scalar alpha multiplication commute (`blur(α · S) = α ·
+blur(S)`), the order issue the plan worried about does not exist for this code path.
+No code change was made for Step 3.
+
+### What did NOT land (and why)
+
+- **No removal of the `Map.entry("json/interactive_mood_selector_ui.json", 95.4)`
+  floor** — the file did not reach 99.5 %, so per the plan's own gating the entry
+  remains in `PER_FILE_FLOOR_OVERRIDE`. The Javadoc comment in
+  `CompareFxViewWithWebViewTest` was updated to document the negative results from
+  Steps 1 and 2 so the next AI loop does not retry the same hypotheses without new
+  evidence.
+
+### Suite state after the change (`calibrate: clean + full suite to log`, 24 files)
+- 24 tests, **0 failures, 0 errors**.
+- `interactive_mood_selector_ui` passes at 95.54 % (floor 95.40 %). Minor frame-by-frame
+  variation around the previous 95.58 measurement is within the normal SKIP-frame
+  noise; well above floor.
+- All eight pre-existing floor entries hold:
+  - `angry_bird` 98.32 (floor 98.20)
+  - `animated_background_patterns` 99.33 (floor 99.20)
+  - `face-peeking` 98.88 (floor 98.60)
+  - `java_duke_flip` 95.84 (floor 95.70)
+  - `java_duke_slidein` 98.98 (floor 98.80)
+  - `lottie_lego` 98.15 (floor 98.00)
+  - `sandy_loading` 99.48 (floor 99.30)
+  - `dot/demo-1.lottie` 99.46 (floor 99.30)
+- Defensively important `gf`-using files not on floors all pass cleanly:
+  - `isometric_data_analysis` 99.69 % (heavy `gf` usage)
+  - `face-exhaling` 99.73 %
+  - `java_duke_fadein` 99.98 %
+
+### Recommendation for the next follow-up
+
+The constant ~4 pp warm-channel skew on the emoji bodies that survives all three
+investigated mechanisms is most likely **per-emoji geometry mismatch** rather than
+gradient, blur or opacity. A productive next plan would:
+
+1. Save the diff-PNG for frame 0 (which the test already does into
+   `target/test-output/.../frame_0_*.png`).
+2. Sample a single emoji body's silhouette in both FX and reference renders.
+3. Compare anchor positions, layer-precomp scale, and any animator-driven path
+   transforms to find the systematic geometric offset.
+
+That investigation is out of scope for this follow-up; it is documented here so the
+work is not lost.
