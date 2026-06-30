@@ -86,54 +86,22 @@ class CompareFxViewWithWebViewTest {
     private static final double TARGET_AVERAGE_SIMILARITY = 99.5;
 
     /**
-     * Per-file override of the average-similarity floor for animations that don't yet
-     * reach {@link #TARGET_AVERAGE_SIMILARITY}. Entries are technical debt — populated
-     * empirically from a calibration run, with a small safety margin below the observed
-     * floor. Driving any entry to &ge; the target means it can be removed from this map.
-     *
-     * <p>The map is intentionally empty by default; populate from CI output after the
-     * first calibration run.</p>
+     * Per-file override of the average-similarity floor. Currently empty: every animation
+     * meets {@link #TARGET_AVERAGE_SIMILARITY} under the regenerated WebView references.
+     * Repopulate only if a re-run of {@link #compareFxAndJsRenderingFullSize} shows an
+     * average below the target — entries are tracked technical debt and should be driven
+     * back to &ge; the target so they can be removed again.
      */
-    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
-            // Each entry is technical debt. Format: file → floor with ~0.5pt safety margin
-            // below the observed average. Driving an entry to ≥ TARGET means it can be removed.
-            // Captured during initial calibration; the third column is the *observed average*
-            // at the time the entry was added so progress can be tracked over time.
-
-            // angry_bird: lots of motion, anti-aliased edges across many limbs. (observed 99.26)
-            Map.entry("json/angry_bird.json", 98.7),
-            // animated_background_patterns used to need an override (frame 90 drop to 81.51).
-            // After the boundary-frame fix it now averages ~99.55% and is removed from this map.
-            // face-peeking: largest gap at -0.78pt; thin curves & strong AA differences.
-            //                                                                 (observed 98.76)
-            Map.entry("json/face-peeking.json", 98.5),
-            // isometric_data_analysis: marginal miss (-0.01pt); should be easy to close.
-            //                                                                 (observed 99.49)
-            Map.entry("json/isometric_data_analysis.json", 98.9),
-            // java_duke_fadein: single-frame min dips to 78.14 — large rendering gap.
-            //                                                                 (observed 97.47)
-            Map.entry("json/java_duke_fadein.json", 97.5),
-            // java_duke_slidein: same 78.14 min as fadein — likely the same off-frame.
-            //                                                                 (observed 98.60)
-            Map.entry("json/java_duke_slidein.json", 98.8),
-            // lottie_lego: brick stacking animation, motion-heavy.            (observed 98.14)
-            Map.entry("json/lottie_lego.json", 97.6),
-            // sandy_loading: spinning shapes, sub-pixel rotation offsets.    (observed 99.39)
-            Map.entry("json/sandy_loading.json", 98.8),
-            // dot/demo-1: dotLottie demo with min 91.00 on one frame.        (observed 99.44)
-            Map.entry("dot/demo-1.lottie", 99.4)
-    );
+    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries();
 
     /**
-     * Per-file override for the half-size variant. Half-size scaling introduces extra
-     * bilinear smoothing on the reference image which inherently lowers SSIM, so it
-     * needs its own override map.
+     * Per-file override for the half-size variant. Currently empty: the single sampled
+     * file meets {@link #TARGET_AVERAGE_SIMILARITY} under the regenerated WebView
+     * references. Half-size scaling introduces extra bilinear smoothing on the reference
+     * image which can inherently lower SSIM, so this map exists as a separate knob —
+     * repopulate only if a re-run regresses below the target.
      */
-    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries(
-            // animated_background_patterns at 50% scale: observed avg ~96.78 on CI due to
-            // expected smoothing differences from bilinear downscaling.
-            Map.entry("json/animated_background_patterns.json", 96.2)
-    );
+    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries();
 
     private static final int CANVAS_WIDTH = 800;
     private static final int CANVAS_HEIGHT = 600;
