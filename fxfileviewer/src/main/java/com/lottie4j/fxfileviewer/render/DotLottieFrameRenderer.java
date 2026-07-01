@@ -23,20 +23,20 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This is the shared rendering path used by both:</p>
  * <ul>
- *   <li>{@code LottieWebView} \u2014 the JavaFX live viewer, which pre-renders all frames into
+ *   <li>{@code LottieWebView} — the JavaFX live viewer, which pre-renders all frames into
  *       an in-memory cache and displays them via {@code ImageView}. JavaFX's bundled WebKit
  *       does not load ES modules from {@code loadContent()}, so we render in Chrome and ship
  *       the pixels into JavaFX instead.</li>
- *   <li>{@code WebViewScreenshotGenerator} \u2014 the one-off reference PNG generator.</li>
+ *   <li>{@code WebViewScreenshotGenerator} — the one-off reference PNG generator.</li>
  * </ul>
  *
  * <p>Lifecycle: instantiate once per consumer, call {@link #load(String, int, int)} per
  * animation (re-uses the underlying browser session), and {@link #close()} when done.
  * The class is not thread-safe; serialize access from a single worker thread.</p>
  *
- * @implNote The renderer is loaded as an ES module from {@link #DOTLOTTIE_WC_URL}. The
- *           animation JSON is passed via a {@code data:application/json;base64,\u2026} URL so
- *           no temporary JSON files are needed.
+ * <p><strong>Implementation note:</strong> the renderer is loaded as an ES module from
+ * {@link #DOTLOTTIE_WC_URL}. The animation JSON is passed via a
+ * {@code data:application/json;base64,\u2026} URL so no temporary JSON files are needed.</p>
  */
 public class DotLottieFrameRenderer implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(DotLottieFrameRenderer.class);
@@ -167,6 +167,8 @@ public class DotLottieFrameRenderer implements AutoCloseable {
     }
 
     /**
+     * Returns the loaded animation width.
+     *
      * @return the loaded animation's width in CSS pixels (only valid after {@link #load}).
      */
     public int width() {
@@ -174,6 +176,8 @@ public class DotLottieFrameRenderer implements AutoCloseable {
     }
 
     /**
+     * Returns the loaded animation height.
+     *
      * @return the loaded animation's height in CSS pixels (only valid after {@link #load}).
      */
     public int height() {

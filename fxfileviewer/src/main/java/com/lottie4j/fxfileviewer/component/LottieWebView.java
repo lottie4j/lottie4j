@@ -38,7 +38,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>JavaFX's bundled WebKit is older than the Chrome that the LottieFiles online preview
  * uses, and it does not reliably load ES modules + WebAssembly from {@code loadContent()}
- * \u2014 so we render the animation in headless Chrome via Selenium (which gives pixel-for-pixel
+ * — so we render the animation in headless Chrome via Selenium (which gives pixel-for-pixel
  * parity with the committed reference PNGs) and ship the rendered frames into JavaFX.</p>
  *
  * <p>Frames are pre-rendered into an in-memory cache on every {@code loadLottie*} call.
@@ -50,10 +50,10 @@ import tools.jackson.databind.ObjectMapper;
  * JavaFX application thread. Background pre-rendering happens on a dedicated worker thread
  * that the class manages internally.</p>
  *
- * @implNote Public method signatures (and the {@code window.*}-style semantics implied by
- *           {@link #waitUntilReady}/{@link #waitUntilFrame}) are preserved from the previous
- *           {@code javafx.scene.web.WebView}-backed implementation so existing callers
- *           ({@code LottieFileDebugViewer}, etc.) compile and behave unchanged.
+ * <p><strong>Implementation note:</strong> public method signatures (and the
+ * {@code window.*}-style semantics implied by {@link #waitUntilReady}/{@link #waitUntilFrame})
+ * are preserved from the previous {@code javafx.scene.web.WebView}-backed implementation so
+ * existing callers ({@code LottieFileDebugViewer}, etc.) compile and behave unchanged.</p>
  */
 public class LottieWebView extends StackPane {
     private static final Logger logger = LoggerFactory.getLogger(LottieWebView.class);
@@ -608,7 +608,7 @@ public class LottieWebView extends StackPane {
     /**
      * Best-effort parse of a raw JSON string to extract {@code ip}, {@code op}, and
      * {@code fr}. Returns {@code null} (and falls back to defaults) when the JSON can't be
-     * parsed as a Lottie animation \u2014 the rendering itself doesn't depend on the parsed
+     * parsed as a Lottie animation — the rendering itself doesn't depend on the parsed
      * model, only the playback timing does.
      */
     private static Animation parseAnimationOrNull(String json) {
