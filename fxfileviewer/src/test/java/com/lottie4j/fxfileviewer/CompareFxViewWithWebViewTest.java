@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -95,27 +94,55 @@ class CompareFxViewWithWebViewTest {
      * <ul>
      *   <li><b>json/interactive_mood_selector_ui.json</b> — lifted from 92.40 → 95.58 by
      *       {@code Fix-rendering-json-interactive-mood.md} (HSL text-animator deltas and
-     *       multi-scale Gaussian blur for radii beyond JavaFX's 63 px single-pass cap). The
-     *       follow-up {@code Follow-up--Close-residual-gap-on.md} investigated the residual
-     *       ~3.9 pp gap and ruled out the two leading hypotheses: (a) the file has no {@code gf}
-     *       gradient fills so the bezier-extent bounds change in {@code PathRenderer} cannot
-     *       help (the lift it provides is preserved as defensive correctness for other files);
-     *       (b) replacing the {@code BoxBlur(passRadius, passRadius, 3)} offscreen pass with a
-     *       cascaded {@code GaussianBlur(60)} chain regressed the file from 95.58 → 91.39
-     *       because a true Gaussian at σ = passRadius produces a wider halo than the
-     *       3-iteration box (whose effective σ ≈ passRadius/2 is closer to thorvg's reference
-     *       output). Closing the remaining gap requires a different approach — probably
-     *       per-emoji body geometry comparison — and is parked here as accepted technical
-     *       debt.</li>
+     *       multi-scale Gaussian blur for radii beyond JavaFX's 63 px single-pass cap). Three
+     *       successive follow-ups have investigated the residual ~3.9 pp gap and ruled out
+     *       five distinct hypotheses:
+     *       <ul>
+     *         <li>{@code Follow-up--Close-residual-gap-on.md} (predecessor 1) verified the
+     *             bezier-extent bounds change in {@code PathRenderer#calculateGeometryBounds}
+     *             does run on this file's {@code gf} fills (contrary to that plan's stated
+     *             conclusion) but produces no measurable gain here.</li>
+     *         <li>Predecessor 1 also showed that replacing {@code BoxBlur(passRadius, passRadius,
+     *             3)} with a cascaded {@code GaussianBlur(60)} chain regressed the file from
+     *             95.58 → 91.39 because a true Gaussian at σ = passRadius produces a wider halo
+     *             than the 3-iteration box (whose effective σ ≈ passRadius is closer to
+     *             thorvg's reference output).</li>
+     *         <li>Same predecessor confirmed layer opacity is applied inside the offscreen blur
+     *             pass so {@code blur(α · S) = α · blur(S)} — ordering doesn't matter.</li>
+     *         <li>Current follow-up ruled out gradient <em>coordinate space</em>: switching
+     *             {@code GradientFillStyle}/{@code GradientStrokeStyle} from JavaFX
+     *             proportional-mode to absolute-mode linear/radial gradients was measurably a
+     *             no-op (identical R/G/B per tile), because the current proportional-mode
+     *             remap {@code (s - shape) / dim} produces the same user-space axis as the
+     *             absolute mode when both use the same shape bbox.</li>
+     *         <li>Current follow-up also ruled out gradient <em>colour-space</em>: adding a
+     *             linear-RGB stop-densification (see {@link com.lottie4j.fxplayer.element.GradientStopParser#parseStopsForLinearRgb})
+     *             so JavaFX's per-pair sRGB interpolation approximates thorvg's linear-RGB
+     *             interpolation. The densification landed and is exercised by all gradient
+     *             renderers (kept as defensive correctness; it is a nice-to-have for
+     *             wide-range gradients), but produced no measurable change on the mood
+     *             selector because the emoji gradients use 9 designer stops packed closely in
+     *             colour space, minimising sRGB-vs-linear midpoint deltas.</li>
+     *       </ul>
+     *       Pixel sampling of frame 0 shows the visible "harder" gradient bands come from
+     *       specific bright tiles (e.g. FX (27,152,194) vs REF (19,115,165)) with a smoother
+     *       halo in the reference — inconsistent with a gradient-interpolation issue. Likely
+     *       remaining candidates are extreme-radius Gaussian-blur (177/700/800) halo shape
+     *       differences between {@code BoxBlur(r,r,3)} and thorvg's true Gaussian at very large
+     *       radii, or a still-unmodelled composite effect.</li>
      * </ul>
      */
      private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE = Map.ofEntries(
             // Lifted from 92.40 → 95.58 by Fix-rendering-json-interactive-mood.md (HSL
             // text-animator deltas + multi-scale Gaussian blur for radii beyond JavaFX's 63 px
-            // single-pass cap). Follow-up--Close-residual-gap-on.md ruled out the bezier-extent
-            // bounds hypothesis (file has no gf fills) and the Gaussian-cascade hypothesis
-            // (regressed the file to 91.39 because BoxBlur(r,r,3) effective σ is closer to
-            // thorvg's reference than σ = passRadius). Residual ~3.9 pp gap remains.
+            // single-pass cap). Follow-up--Close-residual-gap-on.md ruled out the Gaussian-
+            // cascade hypothesis (regressed the file to 91.39 because BoxBlur(r,r,3) effective
+            // σ is closer to thorvg's reference than σ = passRadius). The current follow-up
+            // (Close residual gap on interactive_mood_selector_ui — gradient rendering)
+            // additionally ruled out gradient coordinate-space (proportional↔absolute is a
+            // no-op with matching shape bbox) and gradient colour-space (adding a linear-RGB
+            // stop densification changed the mood selector's frame-0 pixels by ≤ 1 count).
+            // Residual ~3.9 pp gap remains and is likely in blur halo shape at extreme radii.
             Map.entry("json/interactive_mood_selector_ui.json", 95.4),
 
             // Pre-existing failures — explicitly listed as out-of-scope of the mood-selector
@@ -135,13 +162,40 @@ class CompareFxViewWithWebViewTest {
     );
 
     /**
-     * Per-file override for the half-size variant. Currently empty: the single sampled
-     * file meets {@link #TARGET_AVERAGE_SIMILARITY} under the regenerated WebView
-     * references. Half-size scaling introduces extra bilinear smoothing on the reference
-     * image which can inherently lower SSIM, so this map exists as a separate knob —
-     * repopulate only if a re-run regresses below the target.
+     * Per-file override of the average-similarity floor for the half-size variant. The
+     * half-size renderer is now parameterised over the same file list as the full-size
+     * variant, and bilinearly downscaling the reference image before comparison introduces
+     * extra smoothing that inherently lowers SSIM relative to full-size renders. Every
+     * entry below was measured on the first full run of
+     * {@link #compareFxAndJsRenderingHalfSize} across all fixtures and is frozen as
+     * technical debt — drop entries individually as the underlying full-size fixes
+     * cascade into half-size improvements.
+     *
+     * <p>Floors follow the same {@code floor = floor(observed * 10) / 10 - 0.1} rule as
+     * {@link #PER_FILE_FLOOR_OVERRIDE} so a small future regression flips the build red
+     * rather than silently eroding fidelity.</p>
      */
-    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries();
+    private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries(
+            Map.entry("json/angry_bird.json", 93.4),
+            Map.entry("json/animated_background_patterns.json", 96.5),
+            Map.entry("json/face-exhaling.json", 98.8),
+            Map.entry("json/face-peeking.json", 97.5),
+            Map.entry("json/foojay-duke.json", 98.9),
+            Map.entry("json/foojay-reporter.json", 98.6),
+            Map.entry("json/interactive_mood_selector_ui.json", 94.1),
+            Map.entry("json/isometric_data_analysis.json", 98.6),
+            Map.entry("json/java_duke_fadein.json", 95.7),
+            Map.entry("json/java_duke_flip.json", 92.4),
+            Map.entry("json/java_duke_slidein.json", 96.2),
+            Map.entry("json/lottie4j.json", 98.1),
+            Map.entry("json/lottie_lego.json", 97.3),
+            Map.entry("json/pi4j.json", 98.9),
+            Map.entry("json/sandy_loading.json", 97.8),
+            Map.entry("dot/lottie4j.lottie", 98.1),
+            Map.entry("dot/demo-1.lottie", 97.1),
+            Map.entry("dot/demo-2.lottie", 97.5),
+            Map.entry("dot/demo-3.lottie", 98.0)
+    );
 
     private static final int CANVAS_WIDTH = 800;
     private static final int CANVAS_HEIGHT = 600;
@@ -240,13 +294,13 @@ class CompareFxViewWithWebViewTest {
         compareFxWithPreGeneratedImages(fileName, 1.0, PER_FILE_FLOOR_OVERRIDE);
     }
 
-    @Test
-    void compareFxAndJsRenderingHalfSize() throws Exception {
-        // Half-size variant exercises a single file at 50% scale. Reference images get bilinearly
-        // scaled, which inherently lowers SSIM relative to full-size — hence the separate override
-        // map.
-        compareFxWithPreGeneratedImages(
-                lottieJsonFiles().toList().get(1), 0.5, PER_FILE_FLOOR_OVERRIDE_HALF);
+    @ParameterizedTest
+    @MethodSource("lottieJsonFiles")
+    void compareFxAndJsRenderingHalfSize(String fileName) throws Exception {
+        // Half-size variant renders every fixture at 50% scale. Reference images get bilinearly
+        // scaled before comparison, which inherently lowers SSIM relative to full-size — hence
+        // the separate override map {@link #PER_FILE_FLOOR_OVERRIDE_HALF}.
+        compareFxWithPreGeneratedImages(fileName, 0.5, PER_FILE_FLOOR_OVERRIDE_HALF);
     }
 
     // ── Core comparison logic ─────────────────────────────────────────────────
