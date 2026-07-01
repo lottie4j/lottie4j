@@ -1,16 +1,5 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.asset.Asset;
@@ -20,9 +9,12 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
-
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 /**
  * Renderer for precomposition layers in Lottie animations.
@@ -390,7 +382,7 @@ public class PrecompRenderer {
                                             ShapeGroupRenderer shapeGroupRenderer,
                                             ShapeRendererDelegate shapeRendererDelegate) {
         // Check layer opacity first - skip rendering if transparent
-        double layerOpacity = 1.0;
+        double layerOpacity;
         if (layer.transform() != null && layer.transform().opacity() != null) {
             layerOpacity = layer.transform().opacity().getValue(0, frame) / 100.0;
             if (layerOpacity <= 0) {
@@ -623,7 +615,7 @@ public class PrecompRenderer {
             List<Layer> layers = asset.layers() != null ? asset.layers() : List.of();
             for (Layer candidate : layers) {
                 if (candidate.indexLayer() != null) {
-                    layersByIndex.put(candidate.indexLayer().intValue(), candidate);
+                    layersByIndex.put(candidate.indexLayer(), candidate);
                 }
             }
 
@@ -718,82 +710,22 @@ public class PrecompRenderer {
     }
 
     /**
-     * Callback for checking whether a layer should render at a frame.
-     */
-    @FunctionalInterface
-    public interface LayerActivityEvaluator {
-        /**
-         * Determines whether the layer is active at the provided frame.
-         *
-         * @param layer layer to inspect
-         * @param frame frame to evaluate
-         * @return {@code true} if the layer should render
-         */
-        boolean isActive(Layer layer, double frame);
-    }
-
-    /**
-     * Callback for rendering solid-color layers.
-     */
-    @FunctionalInterface
-    public interface SolidColorLayerRenderer {
-        /**
-         * Renders a solid-color layer.
-         *
-         * @param gc    destination graphics context
-         * @param layer layer to render
-         */
-        void render(GraphicsContext gc, Layer layer);
-    }
-
-    /**
-     * Callback for rendering grouped shape content.
-     */
-    @FunctionalInterface
-    public interface ShapeGroupRenderer {
-        /**
-         * Renders a grouped shape item.
-         *
-         * @param gc            destination graphics context
-         * @param shape         group shape item
-         * @param frame         frame to sample
-         * @param layerTrimPath optional trim path inherited from layer context
-         */
-        void render(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath);
-    }
-
-    /**
-     * Callback for rendering primitive shapes.
-     */
-    @FunctionalInterface
-    public interface ShapeRendererDelegate {
-        /**
-         * Renders a shape primitive.
-         *
-         * @param shape       shape primitive to render
-         * @param parentGroup parent group carrying styles/modifiers, or null
-         * @param frame       frame to sample
-         */
-        void render(BaseShape shape, Group parentGroup, double frame);
-    }
-
-    /**
      * Internal method that renders a precomp layer without checking/applying blend modes.
      * This is used both for normal rendering and for rendering to offscreen buffers.
      */
     private void renderPrecompLayerWithoutBlendMode(GraphicsContext gc,
-                                                     Layer layer,
-                                                     double frame,
-                                                     PrecompRenderCache precompRenderCache,
-                                                     Map<String, Asset> assetsById,
-                                                     Animation animation,
-                                                     double parentPrecompWidth,
-                                                     double parentPrecompHeight,
-                                                     double renderResolutionScale,
-                                                     LayerActivityEvaluator layerActivityEvaluator,
-                                                     SolidColorLayerRenderer solidColorLayerRenderer,
-                                                     ShapeGroupRenderer shapeGroupRenderer,
-                                                     ShapeRendererDelegate shapeRendererDelegate) {
+                                                    Layer layer,
+                                                    double frame,
+                                                    PrecompRenderCache precompRenderCache,
+                                                    Map<String, Asset> assetsById,
+                                                    Animation animation,
+                                                    double parentPrecompWidth,
+                                                    double parentPrecompHeight,
+                                                    double renderResolutionScale,
+                                                    LayerActivityEvaluator layerActivityEvaluator,
+                                                    SolidColorLayerRenderer solidColorLayerRenderer,
+                                                    ShapeGroupRenderer shapeGroupRenderer,
+                                                    ShapeRendererDelegate shapeRendererDelegate) {
         gc.save();
 
         // Check layer opacity - skip rendering if transparent
@@ -883,11 +815,10 @@ public class PrecompRenderer {
         double bufferWidth = Math.ceil(Math.max(100, parentPrecompWidth > 0 ? parentPrecompWidth : 400));
         double bufferHeight = Math.ceil(Math.max(100, parentPrecompHeight > 0 ? parentPrecompHeight : 400));
 
-        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
-            renderPrecompLayerWithoutBlendMode(offscreenGc, layer, frame, precompRenderCache, assetsById, animation,
-                    parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
-                    layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate);
-        });
+        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight,
+                offscreenGc -> renderPrecompLayerWithoutBlendMode(offscreenGc, layer, frame, precompRenderCache, assetsById, animation,
+                        parentPrecompWidth, parentPrecompHeight, renderResolutionScale,
+                        layerActivityEvaluator, solidColorLayerRenderer, shapeGroupRenderer, shapeRendererDelegate));
 
         gc.save();
         gc.setGlobalBlendMode(fxBlendMode);
@@ -920,6 +851,66 @@ public class PrecompRenderer {
             case COLOR -> null; // Not supported in JavaFX
             case LUMINOSITY -> null; // Not supported in JavaFX
         };
+    }
+
+    /**
+     * Callback for checking whether a layer should render at a frame.
+     */
+    @FunctionalInterface
+    public interface LayerActivityEvaluator {
+        /**
+         * Determines whether the layer is active at the provided frame.
+         *
+         * @param layer layer to inspect
+         * @param frame frame to evaluate
+         * @return {@code true} if the layer should render
+         */
+        boolean isActive(Layer layer, double frame);
+    }
+
+    /**
+     * Callback for rendering solid-color layers.
+     */
+    @FunctionalInterface
+    public interface SolidColorLayerRenderer {
+        /**
+         * Renders a solid-color layer.
+         *
+         * @param gc    destination graphics context
+         * @param layer layer to render
+         */
+        void render(GraphicsContext gc, Layer layer);
+    }
+
+    /**
+     * Callback for rendering grouped shape content.
+     */
+    @FunctionalInterface
+    public interface ShapeGroupRenderer {
+        /**
+         * Renders a grouped shape item.
+         *
+         * @param gc            destination graphics context
+         * @param shape         group shape item
+         * @param frame         frame to sample
+         * @param layerTrimPath optional trim path inherited from layer context
+         */
+        void render(GraphicsContext gc, BaseShape shape, double frame, TrimPath layerTrimPath);
+    }
+
+    /**
+     * Callback for rendering primitive shapes.
+     */
+    @FunctionalInterface
+    public interface ShapeRendererDelegate {
+        /**
+         * Renders a shape primitive.
+         *
+         * @param shape       shape primitive to render
+         * @param parentGroup parent group carrying styles/modifiers, or null
+         * @param frame       frame to sample
+         */
+        void render(BaseShape shape, Group parentGroup, double frame);
     }
 
     private record PrecompRenderCache(

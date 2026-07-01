@@ -1,18 +1,5 @@
 package com.lottie4j.fxplayer;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.animation.Marker;
@@ -22,14 +9,7 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
-import com.lottie4j.fxplayer.renderer.layer.EffectsRenderer;
-import com.lottie4j.fxplayer.renderer.layer.ImageRenderer;
-import com.lottie4j.fxplayer.renderer.layer.MaskRenderer;
-import com.lottie4j.fxplayer.renderer.layer.MatteRenderer;
-import com.lottie4j.fxplayer.renderer.layer.PrecompRenderer;
-import com.lottie4j.fxplayer.renderer.layer.SolidColorRenderer;
-import com.lottie4j.fxplayer.renderer.layer.TextRenderer;
-import com.lottie4j.fxplayer.renderer.layer.TransformApplier;
+import com.lottie4j.fxplayer.renderer.layer.*;
 import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
 import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
@@ -37,7 +17,6 @@ import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.LayerActivity;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
-
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -47,6 +26,12 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * JavaFX Canvas component for playing Lottie animations
@@ -157,7 +142,7 @@ public class LottiePlayer extends Canvas {
         if (animation.layers() != null) {
             for (Layer layer : animation.layers()) {
                 if (layer.indexLayer() != null) {
-                    layersByIndex.put(layer.indexLayer().intValue(), layer);
+                    layersByIndex.put(layer.indexLayer(), layer);
                 }
             }
         }
@@ -491,7 +476,7 @@ public class LottiePlayer extends Canvas {
 
                 if (elapsedSeconds >= animationDuration) {
                     // Loop: restart from loopStartFrame (= inPoint when no loopStart marker is set)
-                    double loopElapsedSeconds = (loopStartFrame - getInPoint()) / (double) getFramesPerSecond();
+                    double loopElapsedSeconds = (loopStartFrame - getInPoint()) / getFramesPerSecond();
                     startTime = now - (long) (loopElapsedSeconds * 1_000_000_000.0);
                     elapsedSeconds = loopElapsedSeconds;
                 }
@@ -536,7 +521,7 @@ public class LottiePlayer extends Canvas {
             @Override
             public void handle(long now) {
                 double elapsedSeconds = (now - startTime) / 1_000_000_000.0;
-                double totalFrames = getOutPointExclusive() - getInPoint();
+                double totalFrames = (double) getOutPointExclusive() - (double) getInPoint();
                 double animationDuration = totalFrames / getFramesPerSecond();
 
                 if (elapsedSeconds >= animationDuration) {
@@ -1520,12 +1505,11 @@ public class LottiePlayer extends Canvas {
 
         // Use animation dimensions for buffer. Round up to capture sub-pixel
         // coverage on the right/bottom edges instead of silently truncating it.
-        double bufferWidth = Math.ceil(Math.max(100, getAnimationWidth()));
-        double bufferHeight = Math.ceil(Math.max(100, getAnimationHeight()));
+        double bufferWidth = Math.max(100, getAnimationWidth());
+        double bufferHeight = Math.max(100, getAnimationHeight());
 
-        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight, offscreenGc -> {
-            renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame, renderResolutionScale);
-        });
+        WritableImage layerImage = OffscreenRenderer.renderToImage(bufferWidth, bufferHeight,
+                offscreenGc -> renderLayerInternalWithoutBlendMode(offscreenGc, layer, frame, renderResolutionScale));
 
         gc.save();
         gc.setGlobalBlendMode(fxBlendMode);
