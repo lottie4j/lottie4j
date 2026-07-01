@@ -187,15 +187,22 @@ class EffectsRendererTest {
     /**
      * Snapshots the canvas onto a black background so the red channel measures effective coverage
      * (transparent areas → black → red=0). Returns the maximum red value across all pixels.
+     *
+     * <p>The fixture deliberately uses a fairly large opaque source rectangle. With extremely wide
+     * blur radii (for example 800 px), JavaFX's software/headless pipeline can quantize a tiny
+     * 4×4 downsampled source fully to black in an 8-bit snapshot even though the blur path is
+     * functioning correctly. A larger source keeps the smoke test focused on the downsample/crop
+     * behaviour instead of backend-specific rounding.</p>
      */
     private static double samplePeakRed(EffectsRenderer renderer, Layer layer, double blurRadius) {
         return FxTestHelper.callAndWait(() -> {
-            final int size = 64;
+            final int size = 256;
+            final int rectSize = 64;
             Canvas canvas = new Canvas(size, size);
             GraphicsContext gc = canvas.getGraphicsContext2D();
             EffectsRenderer.LayerRenderer redRect = (gc_inner, l, frame) -> {
                 gc_inner.setFill(Color.RED);
-                gc_inner.fillRect((size - 16) / 2.0, (size - 16) / 2.0, 16, 16);
+                gc_inner.fillRect((size - rectSize) / 2.0, (size - rectSize) / 2.0, rectSize, rectSize);
             };
             if (blurRadius == 0.0) {
                 redRect.render(gc, layer, 0.0);
