@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
@@ -58,6 +59,8 @@ public class DotLottieFrameRenderer implements AutoCloseable {
 
     private static final Duration READY_TIMEOUT = Duration.ofSeconds(60);
     private static final long FRAME_SEEK_TIMEOUT_MS = 3_000;
+    private static final Set<PosixFilePermission> PRIVATE_DIR_PERMS = PosixFilePermissions.fromString("rwx------");
+    private static final Set<PosixFilePermission> PRIVATE_FILE_PERMS = PosixFilePermissions.fromString("rw-------");
 
     private final ChromeDriver driver;
     private int width;
@@ -103,7 +106,13 @@ public class DotLottieFrameRenderer implements AutoCloseable {
             if (tempDir == null) {
                 tempDir = createPrivateTempDirectory();
             }
-            pageFile = Files.createTempFile(tempDir, "lottie-renderer-", ".html");
+            if (Files.getFileStore(tempDir).supportsFileAttributeView("posix")) {
+                FileAttribute<Set<PosixFilePermission>> privateFileAttrs =
+                        PosixFilePermissions.asFileAttribute(PRIVATE_FILE_PERMS);
+                pageFile = Files.createTempFile(tempDir, "lottie-renderer-", ".html", privateFileAttrs);
+            } else {
+                pageFile = Files.createTempFile(tempDir, "lottie-renderer-", ".html");
+            }
             pageFile.toFile().deleteOnExit();
         }
         Files.writeString(pageFile, html, StandardCharsets.UTF_8);
@@ -226,16 +235,15 @@ public class DotLottieFrameRenderer implements AutoCloseable {
 
     private static Path createPrivateTempDirectory() throws IOException {
         Path baseDir = Path.of(System.getProperty("user.home"), ".lottie4j", "tmp");
-        Files.createDirectories(baseDir);
-        Path dir = Files.createTempDirectory(baseDir, "renderer-");
-
-        // Restrict directory permissions when POSIX permissions are supported.
-        if (Files.getFileStore(dir).supportsFileAttributeView("posix")) {
-            Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rwx------");
-            Files.setPosixFilePermissions(dir, perms);
+        if (Files.getFileStore(baseDir.getParent()).supportsFileAttributeView("posix")) {
+            FileAttribute<Set<PosixFilePermission>> privateDirAttrs =
+                    PosixFilePermissions.asFileAttribute(PRIVATE_DIR_PERMS);
+            Files.createDirectories(baseDir, privateDirAttrs);
+            Files.setPosixFilePermissions(baseDir, PRIVATE_DIR_PERMS);
+            return Files.createTempDirectory(baseDir, "renderer-", privateDirAttrs);
         }
-
-        return dir;
+        Files.createDirectories(baseDir);
+        return Files.createTempDirectory(baseDir, "renderer-");
     }
 
     private static String buildHtml(String encodedJson, int width, int height) {
