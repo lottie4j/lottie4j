@@ -4,9 +4,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Set;
 
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
@@ -60,6 +64,7 @@ public class DotLottieFrameRenderer implements AutoCloseable {
     private int height;
     private boolean loaded;
     private Path pageFile;
+    private Path tempDir;
 
     /**
      * Creates a new renderer backed by a fresh headless Chrome instance. Throws if Chrome
@@ -95,7 +100,10 @@ public class DotLottieFrameRenderer implements AutoCloseable {
         // data: document are blocked by Chrome's CORS rules, which prevents dotlottie-wc from
         // loading. Recycle a single temp file per renderer instance.
         if (pageFile == null) {
-            pageFile = Files.createTempFile("lottie-renderer-", ".html");
+            if (tempDir == null) {
+                tempDir = createPrivateTempDirectory();
+            }
+            pageFile = Files.createTempFile(tempDir, "lottie-renderer-", ".html");
             pageFile.toFile().deleteOnExit();
         }
         Files.writeString(pageFile, html, StandardCharsets.UTF_8);
@@ -198,6 +206,36 @@ public class DotLottieFrameRenderer implements AutoCloseable {
                 // best-effort cleanup; deleteOnExit will catch anything left behind
             }
         }
+        if (tempDir != null) {
+            try {
+                try (var paths = Files.walk(tempDir)) {
+                    paths.sorted(Comparator.reverseOrder())
+                            .forEach(path -> {
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (IOException ignored) {
+                                    // best-effort cleanup; deleteOnExit covers the page file itself
+                                }
+                            });
+                }
+            } catch (IOException ignored) {
+                // best-effort cleanup for temp dir
+            }
+        }
+    }
+
+    private static Path createPrivateTempDirectory() throws IOException {
+        Path baseDir = Path.of(System.getProperty("user.home"), ".lottie4j", "tmp");
+        Files.createDirectories(baseDir);
+        Path dir = Files.createTempDirectory(baseDir, "renderer-");
+
+        // Restrict directory permissions when POSIX permissions are supported.
+        if (Files.getFileStore(dir).supportsFileAttributeView("posix")) {
+            Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rwx------");
+            Files.setPosixFilePermissions(dir, perms);
+        }
+
+        return dir;
     }
 
     private static String buildHtml(String encodedJson, int width, int height) {
