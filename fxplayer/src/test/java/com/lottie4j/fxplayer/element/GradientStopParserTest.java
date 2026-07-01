@@ -242,6 +242,126 @@ class GradientStopParserTest {
         assertEquals(1.0, stops.get(0).getColor().getOpacity(), EPS);
     }
 
+    // ── Linear-RGB densification ───────────────────────────────────────────
+
+    @Test
+    void densifyReturnsCopyForFewerThanTwoStops() {
+        // Empty input → empty result (never null).
+        assertEquals(0, GradientStopParser.densifyForLinearRgb(List.of(), 4).size());
+
+        // Single-stop input is returned unchanged (defensive copy).
+        Stop only = new Stop(0.0, Color.color(0.5, 0.5, 0.5, 1.0));
+        List<Stop> singleResult = GradientStopParser.densifyForLinearRgb(List.of(only), 4);
+        assertEquals(1, singleResult.size());
+        assertEquals(0.0, singleResult.get(0).getOffset(), EPS);
+    }
+
+    @Test
+    void densifyIsNoOpWhenSubdivisionsZero() {
+        List<Stop> src = List.of(
+                new Stop(0.0, Color.color(1.0, 0.0, 0.0, 1.0)),
+                new Stop(1.0, Color.color(0.0, 0.0, 1.0, 1.0))
+        );
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 0);
+        assertEquals(2, out.size());
+        assertEquals(1.0, out.get(0).getColor().getRed(), 1e-9);
+        assertEquals(1.0, out.get(1).getColor().getBlue(), 1e-9);
+    }
+
+    @Test
+    void densifyPreservesDesignerEndpoints() {
+        // Endpoints must be pixel-exact even after inserting linear-RGB sub-stops.
+        List<Stop> src = List.of(
+                new Stop(0.0, Color.color(1.0, 0.0, 0.0, 1.0)),
+                new Stop(1.0, Color.color(0.0, 0.0, 1.0, 1.0))
+        );
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 4);
+        Color first = out.get(0).getColor();
+        Color last = out.get(out.size() - 1).getColor();
+        assertEquals(1.0, first.getRed(), 1e-9);
+        assertEquals(0.0, first.getGreen(), 1e-9);
+        assertEquals(0.0, first.getBlue(), 1e-9);
+        assertEquals(0.0, last.getRed(), 1e-9);
+        assertEquals(0.0, last.getGreen(), 1e-9);
+        assertEquals(1.0, last.getBlue(), 1e-9);
+    }
+
+    @Test
+    void densifyIsIdempotentForSolidColourGradient() {
+        // Same colour on both sides — every sub-stop must reproduce that colour.
+        Color grey = Color.color(0.5, 0.5, 0.5, 1.0);
+        List<Stop> src = List.of(new Stop(0.0, grey), new Stop(1.0, grey));
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 4);
+        for (Stop s : out) {
+            Color c = s.getColor();
+            assertEquals(0.5, c.getRed(), 1e-6);
+            assertEquals(0.5, c.getGreen(), 1e-6);
+            assertEquals(0.5, c.getBlue(), 1e-6);
+        }
+    }
+
+    @Test
+    void densifyMidpointOfRedWhiteIsBrighterThanSrgbMidpoint() {
+        // For red→white, the sRGB midpoint (t=0.5) is (1.0, 0.5, 0.5). The linear-RGB
+        // midpoint converted back to sRGB should be brighter (both G and B > 0.5).
+        List<Stop> src = List.of(
+                new Stop(0.0, Color.color(1.0, 0.0, 0.0, 1.0)),
+                new Stop(1.0, Color.color(1.0, 1.0, 1.0, 1.0))
+        );
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 1);
+        // With 1 subdivision the middle stop lies at offset 0.5.
+        Stop mid = out.get(1);
+        assertEquals(0.5, mid.getOffset(), 1e-6);
+        Color c = mid.getColor();
+        // Linear midpoint: linear(0.5)*(1-t=0.5) is 0.5 in linear; convert 0.5 linear → sRGB ≈ 0.7354
+        assertTrue(c.getGreen() > 0.7, "linear-RGB midpoint should exceed sRGB midpoint");
+        assertTrue(c.getBlue() > 0.7, "linear-RGB midpoint should exceed sRGB midpoint");
+        assertEquals(1.0, c.getRed(), 1e-9);
+    }
+
+    @Test
+    void densifyProducesExpectedStopCount() {
+        // Two designer stops + 4 sub-stops between them = 6 total.
+        List<Stop> src = List.of(
+                new Stop(0.0, Color.color(0.0, 0.0, 0.0, 1.0)),
+                new Stop(1.0, Color.color(1.0, 1.0, 1.0, 1.0))
+        );
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 4);
+        assertEquals(6, out.size());
+        for (int i = 1; i < out.size(); i++) {
+            assertTrue(out.get(i).getOffset() > out.get(i - 1).getOffset(),
+                    "densified stops must be strictly sorted by offset");
+        }
+    }
+
+    @Test
+    void densifyAlphaIsLinearlyInterpolated() {
+        // Alpha 1.0 → 0.0 across the gradient. Midpoint alpha should be linear (0.5),
+        // not sRGB-adjusted.
+        List<Stop> src = List.of(
+                new Stop(0.0, Color.color(1.0, 1.0, 1.0, 1.0)),
+                new Stop(1.0, Color.color(1.0, 1.0, 1.0, 0.0))
+        );
+        List<Stop> out = GradientStopParser.densifyForLinearRgb(src, 1);
+        Stop mid = out.get(1);
+        assertEquals(0.5, mid.getColor().getOpacity(), 1e-9);
+    }
+
+    @Test
+    void parseStopsForLinearRgbDensifiesTwoStops() {
+        // Same input as twoColorStopsNoAlphaTail, but through the linear-RGB path.
+        Animated data = animatedFlat(
+                0.0, 1.0, 0.0, 0.0,
+                1.0, 0.0, 0.0, 1.0
+        );
+        List<Stop> stops = GradientStopParser.parseStopsForLinearRgb(data, 2);
+        // 2 designer stops + 4 sub-stops = 6.
+        assertEquals(2 + GradientStopParser.LINEAR_RGB_SUBDIVISIONS, stops.size());
+        // Endpoints match designer exactly.
+        assertEquals(1.0, stops.get(0).getColor().getRed(), 1e-9);
+        assertEquals(1.0, stops.get(stops.size() - 1).getColor().getBlue(), 1e-9);
+    }
+
     private static void assertStop(Stop stop, double offset,
                                    double r, double g, double b, double alpha) {
         assertEquals(offset, stop.getOffset(), EPS);

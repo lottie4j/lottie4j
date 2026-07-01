@@ -70,11 +70,15 @@ public class GradientFillStyle {
         // optionally followed by alpha stops [pos1, a1, ..., posM, aM] where the
         // alpha offsets are independent from the colour offsets. Delegate to the
         // dedicated parser so colour and alpha tracks are merged at every offset.
+        // The parser also densifies each adjacent stop-pair with linearly-interpolated
+        // sub-stops sampled in linear-RGB space so the resulting JavaFX gradient
+        // approximates thorvg's / lottie-web's linear-RGB midpoints even though
+        // JavaFX itself always interpolates in sRGB.
         List<Stop> stops;
         if (gradientFill.colors().colors() != null) {
             Integer numColorsBoxed = gradientFill.colors().numberOfColors();
             int numColors = numColorsBoxed != null ? numColorsBoxed : 0;
-            stops = GradientStopParser.parseStops(gradientFill.colors().colors(), numColors);
+            stops = GradientStopParser.parseStopsForLinearRgb(gradientFill.colors().colors(), numColors);
         } else {
             stops = List.of();
         }

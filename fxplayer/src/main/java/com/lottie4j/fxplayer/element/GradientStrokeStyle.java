@@ -135,6 +135,10 @@ public class GradientStrokeStyle {
      * shared {@link GradientStopParser}. Colour and alpha tracks are merged at
      * every unique offset so alpha transitions between colour stops are preserved.
      *
+     * <p>The parser also densifies each adjacent stop pair with sub-stops sampled in
+     * linear-RGB space so JavaFX's sRGB per-pair interpolation approximates thorvg's
+     * linear-RGB interpolation across the gradient.
+     *
      * @param frame animation frame to sample
      * @return list of gradient stops
      */
@@ -144,7 +148,7 @@ public class GradientStrokeStyle {
         }
         Integer numColorsBoxed = gradientStroke.colors().numberOfColors();
         int numColors = numColorsBoxed != null ? numColorsBoxed : 0;
-        return GradientStopParser.parseStops(gradientStroke.colors().colors(), numColors);
+        return GradientStopParser.parseStopsForLinearRgb(gradientStroke.colors().colors(), numColors);
     }
 
     /**
