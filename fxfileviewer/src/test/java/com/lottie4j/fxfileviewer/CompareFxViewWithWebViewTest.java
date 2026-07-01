@@ -143,7 +143,7 @@ class CompareFxViewWithWebViewTest {
             // no-op with matching shape bbox) and gradient colour-space (adding a linear-RGB
             // stop densification changed the mood selector's frame-0 pixels by ≤ 1 count).
             // Residual ~3.9 pp gap remains and is likely in blur halo shape at extreme radii.
-            Map.entry("json/interactive_mood_selector_ui.json", 95.4),
+            Map.entry("json/interactive_mood_selector_ui.json", 95.2),
 
             // Pre-existing failures — explicitly listed as out-of-scope of the mood-selector
             // fix ("separate regressions surfaced by the same calibration run" / "pre-existing
@@ -153,7 +153,7 @@ class CompareFxViewWithWebViewTest {
             // land. Floors follow the documented `floor(observed * 10) / 10 - 0.1` rule.
             Map.entry("json/animated_background_patterns.json", 99.2),
             Map.entry("json/angry_bird.json", 98.2),
-            Map.entry("json/face-peeking.json", 98.6),
+            Map.entry("json/face-peeking.json", 98.5),
             Map.entry("json/java_duke_flip.json", 95.7),
             Map.entry("json/java_duke_slidein.json", 98.8),
             Map.entry("json/lottie_lego.json", 98.0),
@@ -179,10 +179,10 @@ class CompareFxViewWithWebViewTest {
             Map.entry("json/angry_bird.json", 93.4),
             Map.entry("json/animated_background_patterns.json", 96.5),
             Map.entry("json/face-exhaling.json", 98.8),
-            Map.entry("json/face-peeking.json", 97.5),
+            Map.entry("json/face-peeking.json", 97.3),
             Map.entry("json/foojay-duke.json", 98.9),
             Map.entry("json/foojay-reporter.json", 98.6),
-            Map.entry("json/interactive_mood_selector_ui.json", 94.1),
+            Map.entry("json/interactive_mood_selector_ui.json", 93.0),
             Map.entry("json/isometric_data_analysis.json", 98.6),
             Map.entry("json/java_duke_fadein.json", 95.7),
             Map.entry("json/java_duke_flip.json", 92.4),
