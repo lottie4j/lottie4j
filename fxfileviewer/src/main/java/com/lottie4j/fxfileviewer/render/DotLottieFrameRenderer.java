@@ -235,7 +235,8 @@ public class DotLottieFrameRenderer implements AutoCloseable {
 
     private static Path createPrivateTempDirectory() throws IOException {
         Path baseDir = Path.of(System.getProperty("user.home"), ".lottie4j", "tmp");
-        if (Files.getFileStore(baseDir.getParent()).supportsFileAttributeView("posix")) {
+        Path homeDir = Path.of(System.getProperty("user.home"));
+        if (Files.getFileStore(homeDir).supportsFileAttributeView("posix")) {
             FileAttribute<Set<PosixFilePermission>> privateDirAttrs =
                     PosixFilePermissions.asFileAttribute(PRIVATE_DIR_PERMS);
             Files.createDirectories(baseDir, privateDirAttrs);
