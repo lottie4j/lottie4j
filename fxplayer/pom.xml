@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.lottie4j</groupId>
         <artifactId>lottie4j</artifactId>
-        <version>1.2.1-SNAPSHOT</version>
+        <version>1.2.6-SNAPSHOT</version>
     </parent>
 
     <artifactId>fxplayer</artifactId>
@@ -16,7 +16,7 @@
         <dependency>
             <groupId>com.lottie4j</groupId>
             <artifactId>core</artifactId>
-            <version>1.2.1-SNAPSHOT</version>
+            <version>1.2.6-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
 
@@ -49,7 +49,12 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M5</version>
                 <configuration>
-                    <argLine>--add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.util=ALL-UNNAMED --add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.layer=ALL-UNNAMED --add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.shape=ALL-UNNAMED --add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.style=ALL-UNNAMED --add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.element=ALL-UNNAMED ${surefire.argLine.headless}</argLine>
+                    <argLine>--add-opens com.lottie4j.fxplayer/com.lottie4j.fxplayer.util=ALL-UNNAMED --add-opens
+                        com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.layer=ALL-UNNAMED --add-opens
+                        com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.shape=ALL-UNNAMED --add-opens
+                        com.lottie4j.fxplayer/com.lottie4j.fxplayer.renderer.style=ALL-UNNAMED --add-opens
+                        com.lottie4j.fxplayer/com.lottie4j.fxplayer.element=ALL-UNNAMED ${surefire.argLine.headless}
+                    </argLine>
                 </configuration>
             </plugin>
 
