@@ -455,7 +455,7 @@ public class LottiePlayer extends Canvas {
     public void play() {
         if (isPlaying) return;
 
-        logger.info("Starting animation");
+        logger.debug("Starting animation");
         isPlaying = true;
         lastDebugRenderNanos = 0L;
 
@@ -509,7 +509,7 @@ public class LottiePlayer extends Canvas {
             stop();
         }
 
-        logger.info("Starting animation (play once from start)");
+        logger.debug("Starting animation (play once from start)");
         isPlaying = true;
         lastDebugRenderNanos = 0L;
 
@@ -551,7 +551,7 @@ public class LottiePlayer extends Canvas {
         if (animationTimer != null) {
             animationTimer.stop();
         }
-        logger.info("Animation stopped");
+        logger.debug("Animation stopped");
         isPlaying = false;
         lastDebugRenderNanos = 0L;
     }
@@ -1500,7 +1500,7 @@ public class LottiePlayer extends Canvas {
         }
 
         if (frame == 0.0) {
-            logger.info("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
+            logger.debug("Layer '{}' rendering with blend mode {} using offscreen buffer", layer.name(), fxBlendMode);
         }
 
         // Use animation dimensions for buffer. Round up to capture sub-pixel
