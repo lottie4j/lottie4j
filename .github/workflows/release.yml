@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+env:
+  # Retry transient HTTP errors (e.g. 502 from Maven Central) instead of failing the release
+  MAVEN_RETRY_ARGS: -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=10000 -Daether.connector.http.retryHandler.serviceUnavailable=429,502,503,504
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -41,10 +45,10 @@ jobs:
 
       - name: Update version in POM
         run: |
-          mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+          mvn -ntp -B $MAVEN_RETRY_ARGS versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
 
       - name: Build and publish release
-        run: mvn -ntp -B -Dmaven.test.skip=true -Prelease clean deploy
+        run: mvn -ntp -B $MAVEN_RETRY_ARGS -Dmaven.test.skip=true -Prelease clean deploy
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
