@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.lottie4j</groupId>
         <artifactId>lottie4j</artifactId>
-        <version>1.2.6-SNAPSHOT</version>
+        <version>1.2.8-SNAPSHOT</version>
     </parent>
 
     <artifactId>core</artifactId>
@@ -15,8 +15,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependencies -->
-        <jackson.version>3.1.1</jackson.version>
-        <jackson.annotations.version>2.21</jackson.annotations.version>
+        <jackson.version>3.2.3</jackson.version>
+        <jackson.annotations.version>2.22</jackson.annotations.version>
 
         <!-- Test dependencies -->
         <jsonassert.version>1.5.3</jsonassert.version>
@@ -56,22 +56,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M8</version>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
