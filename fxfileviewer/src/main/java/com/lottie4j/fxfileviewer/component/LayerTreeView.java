@@ -336,6 +336,7 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
         private final CheckBox checkBox;
         private final Label label;
         private final Button previewButton;
+        private BooleanProperty boundVisibleProperty;
 
         /**
          * Creates a layer tree cell with checkbox and preview button.
@@ -364,14 +365,20 @@ public class LayerTreeView extends TreeView<LayerTreeView.LayerNode> {
         protected void updateItem(LayerNode item, boolean empty) {
             super.updateItem(item, empty);
 
+            // Cells are reused for other items, so release the binding to the previous layer first
+            if (boundVisibleProperty != null) {
+                checkBox.selectedProperty().unbindBidirectional(boundVisibleProperty);
+                boundVisibleProperty = null;
+            }
+
             if (empty || item == null) {
                 setText(null);
                 setGraphic(null);
             } else {
                 if (item.getType() == LayerNodeType.LAYER) {
                     // Layer node with checkbox and preview button
-                    checkBox.setSelected(item.getVisibleProperty().get());
-                    checkBox.selectedProperty().bindBidirectional(item.getVisibleProperty());
+                    boundVisibleProperty = item.getVisibleProperty();
+                    checkBox.selectedProperty().bindBidirectional(boundVisibleProperty);
 
                     // Warn if layer is a matte source
                     if (item.getLayer().matteTarget() != null && item.getLayer().matteTarget() == 1) {

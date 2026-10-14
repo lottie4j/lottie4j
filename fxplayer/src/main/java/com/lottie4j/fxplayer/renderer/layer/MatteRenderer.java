@@ -9,8 +9,7 @@ import com.lottie4j.core.model.layer.Layer;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
@@ -22,11 +21,23 @@ public class MatteRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(MatteRenderer.class);
 
+    private final SnapshotParameters snapshotParameters = new SnapshotParameters();
+
+    // Reused between frames while the matte size is unchanged (outermost call only, see renderDepth)
+    private Canvas matteCanvas;
+    private Canvas contentCanvas;
+    private WritableImage matteSnapshot;
+    private WritableImage contentSnapshot;
+    private int[] contentBuffer;
+    private int[] matteBuffer;
+    private int[] resultBuffer;
+    private int renderDepth = 0;
+
     /**
      * Creates a new MatteRenderer.
      */
     public MatteRenderer() {
-        // Constructor for MatteRenderer
+        snapshotParameters.setFill(Color.TRANSPARENT);
     }
 
     /**
@@ -89,112 +100,162 @@ public class MatteRenderer {
         double width = Math.max(1, animationWidth);
         double height = Math.max(1, animationHeight);
         double scale = Math.clamp(renderResolutionScale, 0.1, 1.0);
-        double matteWidth = Math.max(1, Math.round(width * scale));
-        double matteHeight = Math.max(1, Math.round(height * scale));
+        int matteWidth = (int) Math.max(1, Math.round(width * scale));
+        int matteHeight = (int) Math.max(1, Math.round(height * scale));
 
-        // Create off-screen canvases for matte and content
-        Canvas matteCanvas = new Canvas(matteWidth, matteHeight);
-        Canvas contentCanvas = new Canvas(matteWidth, matteHeight);
-        GraphicsContext matteGc = matteCanvas.getGraphicsContext2D();
-        GraphicsContext contentGc = contentCanvas.getGraphicsContext2D();
+        // Nested mattes (a matted precomp containing matted layers) render while the outer call is still
+        // using the reusable buffers, so only the outermost call may use them.
+        boolean reuseBuffers = renderDepth == 0;
+        renderDepth++;
+        try {
+            Canvas matteCanvas = reuseBuffers ? reusableMatteCanvas(matteWidth, matteHeight) : new Canvas(matteWidth, matteHeight);
+            Canvas contentCanvas = reuseBuffers ? reusableContentCanvas(matteWidth, matteHeight) : new Canvas(matteWidth, matteHeight);
+            MatteMode matteMode = matteUser.matteMode();
 
-        // Scale the rendering
-        matteGc.scale(scale, scale);
-        contentGc.scale(scale, scale);
+            // Render the matte source and the content layer (WITH parent transforms for proper positioning)
+            if (logger.isDebugEnabled()) {
+                logger.debug("Rendering matte source layer: {} (shapes: {}), parent: {}, scale={}",
+                        matteSource.name(), (matteSource.shapes() != null ? matteSource.shapes().size() : 0), matteSource.indexParent(), scale);
+            }
+            renderScaled(matteCanvas, matteSource, frame, scale, layerRenderer);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Rendering matte user layer: {} (shapes: {}), parent: {}, scale={}",
+                        matteUser.name(), (matteUser.shapes() != null ? matteUser.shapes().size() : 0), matteUser.indexParent(), scale);
+            }
+            renderScaled(contentCanvas, matteUser, frame, scale, layerRenderer);
 
-        // Render the matte source to the matte canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte source layer: {} (shapes: {}), parent: {}, scale={}",
-                matteSource.name(), (matteSource.shapes() != null ? matteSource.shapes().size() : 0), matteSource.indexParent(), scale);
-        layerRenderer.render(matteGc, matteSource, frame);
+            // Snapshot both canvases with transparent background (into the previous images when the size is unchanged)
+            WritableImage matteImage = matteCanvas.snapshot(snapshotParameters, reuseBuffers ? matteSnapshot : null);
+            WritableImage contentImage = contentCanvas.snapshot(snapshotParameters, reuseBuffers ? contentSnapshot : null);
+            if (reuseBuffers) {
+                matteSnapshot = matteImage;
+                contentSnapshot = contentImage;
+            }
 
-        // Render the content layer to the content canvas (WITH parent transforms for proper positioning)
-        logger.debug("Rendering matte user layer: {} (shapes: {}), parent: {}, scale={}",
-                matteUser.name(), (matteUser.shapes() != null ? matteUser.shapes().size() : 0), matteUser.indexParent(), scale);
-        layerRenderer.render(contentGc, matteUser, frame);
+            if (logger.isDebugEnabled()) {
+                logDebugSamples(matteImage, contentImage, matteMode);
+            }
 
-        // Get the matte mode
-        MatteMode matteMode = matteUser.matteMode();
-        logger.debug("Applying matte mode: {}", matteMode);
+            // Apply matte composition. The result must be a new image: the canvas only records the draw command
+            // and reads the pixels when it renders, possibly after another matte in the same frame.
+            WritableImage result = applyMatte(contentImage, matteImage, matteMode, reuseBuffers);
 
-        // Snapshot both canvases with transparent background
-        SnapshotParameters params = new SnapshotParameters();
-        params.setFill(Color.TRANSPARENT);
-        WritableImage matteImage = matteCanvas.snapshot(params, null);
-        WritableImage contentImage = contentCanvas.snapshot(params, null);
+            // IMPORTANT: Save the current composite operation and use SRC_OVER
+            // This ensures transparent pixels in the matted result don't obscure
+            // content below (which was showing as white background)
+            gc.save();
+            gc.setGlobalAlpha(1.0); // Full opacity for the matted result itself
 
-        // DEBUG: Check if content and matte have actual pixels
-        logger.debug("Matte image size: {}x{}", matteImage.getWidth(), matteImage.getHeight());
-        logger.debug("Content image size: {}x{}", contentImage.getWidth(), contentImage.getHeight());
+            // Draw the result to the main canvas, scaling back up if needed
+            // The SRC_OVER blend mode (default) will properly composite transparent pixels
+            gc.drawImage(result,
+                    0, 0, matteWidth, matteHeight,
+                    0, 0, width, height);
+            gc.restore();
+        } finally {
+            renderDepth--;
+        }
 
-        // Sample multiple pixels to see what we're working with
-        PixelReader matteReader = matteImage.getPixelReader();
-        PixelReader contentReader = contentImage.getPixelReader();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Matte rendering took: {}ms (scale={}, size={}x{})",
+                    ((System.nanoTime() - startTime) / 1_000_000), scale, matteWidth, matteHeight);
+        }
+    }
 
-        // Sample at different positions
-        Color matteCenter = matteReader.getColor((int) matteImage.getWidth() / 2, (int) matteImage.getHeight() / 2);
-        Color contentCenter = contentReader.getColor((int) contentImage.getWidth() / 2, (int) contentImage.getHeight() / 2);
+    /**
+     * Renders a layer into an off-screen canvas at the given scale, leaving the canvas' base state untouched.
+     */
+    private void renderScaled(Canvas canvas, Layer layer, double frame, double scale, LayerRenderer layerRenderer) {
+        GraphicsContext offscreenGc = canvas.getGraphicsContext2D();
+        offscreenGc.save();
+        offscreenGc.scale(scale, scale);
+        layerRenderer.render(offscreenGc, layer, frame);
+        offscreenGc.restore();
+    }
 
-        logger.debug("  Matte center [{},{}]: {}",
-                ((int) matteImage.getWidth() / 2), ((int) matteImage.getHeight() / 2), matteCenter);
-        logger.debug("  Content center [{},{}]: {}",
-                ((int) contentImage.getWidth() / 2), ((int) contentImage.getHeight() / 2), contentCenter);
+    private Canvas reusableMatteCanvas(int width, int height) {
+        matteCanvas = prepareCanvas(matteCanvas, width, height);
+        return matteCanvas;
+    }
 
-        // Apply matte composition
-        WritableImage result = applyMatte(contentImage, matteImage, matteMode);
+    private Canvas reusableContentCanvas(int width, int height) {
+        contentCanvas = prepareCanvas(contentCanvas, width, height);
+        return contentCanvas;
+    }
 
-        // IMPORTANT: Save the current composite operation and use SRC_OVER
-        // This ensures transparent pixels in the matted result don't obscure
-        // content below (which was showing as white background)
-        gc.save();
-        gc.setGlobalAlpha(1.0); // Full opacity for the matted result itself
+    /**
+     * Returns a cleared canvas of the requested size, reusing the given one when the size matches.
+     * A full clear with an identity transform also resets the canvas' recorded command buffer.
+     */
+    private static Canvas prepareCanvas(Canvas canvas, int width, int height) {
+        if (canvas == null || (int) canvas.getWidth() != width || (int) canvas.getHeight() != height) {
+            return new Canvas(width, height);
+        }
+        GraphicsContext offscreenGc = canvas.getGraphicsContext2D();
+        offscreenGc.setTransform(1, 0, 0, 1, 0, 0);
+        offscreenGc.clearRect(0, 0, width, height);
+        return canvas;
+    }
 
-        // Draw the result to the main canvas, scaling back up if needed
-        // The SRC_OVER blend mode (default) will properly composite transparent pixels
-        gc.drawImage(result,
-                0, 0, matteWidth, matteHeight,
-                0, 0, width, height);
-        gc.restore();
-
-        long endTime = System.nanoTime();
-        logger.debug("Matte rendering took: {}ms (scale={}, size={}x{})",
-                ((endTime - startTime) / 1_000_000), scale, matteWidth, matteHeight);
+    /**
+     * Logs a few sampled pixels of the matte and content images. Only called when debug logging is enabled,
+     * as each sample is a pixel read.
+     */
+    private void logDebugSamples(WritableImage matteImage, WritableImage contentImage, MatteMode matteMode) {
+        int centerX = (int) matteImage.getWidth() / 2;
+        int centerY = (int) matteImage.getHeight() / 2;
+        logger.debug("Applying matte mode: {}, image size: {}x{}", matteMode, matteImage.getWidth(), matteImage.getHeight());
+        logger.debug("  Matte center [{},{}]: {}", centerX, centerY, matteImage.getPixelReader().getColor(centerX, centerY));
+        logger.debug("  Content center [{},{}]: {}", centerX, centerY, contentImage.getPixelReader().getColor(centerX, centerY));
     }
 
     /**
      * Applies matte composition at the pixel level.
      *
-     * @param content   content image
-     * @param matte     matte image
-     * @param matteMode matte composition mode
+     * @param content      content image
+     * @param matte        matte image
+     * @param matteMode    matte composition mode
+     * @param reuseBuffers whether the cached pixel buffers may be used
      * @return composited image with matte applied
      */
-    private WritableImage applyMatte(WritableImage content, WritableImage matte, MatteMode matteMode) {
+    private WritableImage applyMatte(WritableImage content, WritableImage matte, MatteMode matteMode, boolean reuseBuffers) {
         int width = (int) content.getWidth();
         int height = (int) content.getHeight();
+        int pixelCount = width * height;
 
+        int[] contentPixels;
+        int[] mattePixels;
+        int[] resultPixels;
+        if (reuseBuffers) {
+            if (contentBuffer == null || contentBuffer.length != pixelCount) {
+                contentBuffer = new int[pixelCount];
+                matteBuffer = new int[pixelCount];
+                resultBuffer = new int[pixelCount];
+            }
+            contentPixels = contentBuffer;
+            mattePixels = matteBuffer;
+            resultPixels = resultBuffer;
+        } else {
+            contentPixels = new int[pixelCount];
+            mattePixels = new int[pixelCount];
+            resultPixels = new int[pixelCount];
+        }
+
+        content.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), contentPixels, 0, width);
+        matte.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), mattePixels, 0, width);
+
+        composeMatte(contentPixels, mattePixels, resultPixels, matteMode);
+
+        // setPixels copies the buffer, so the result buffer can be reused on the next call
         WritableImage result = new WritableImage(width, height);
-        PixelReader contentReader = content.getPixelReader();
-        PixelReader matteReader = matte.getPixelReader();
-        PixelWriter resultWriter = result.getPixelWriter();
-
-        // Use pixel buffer for better performance
-        int[] contentBuffer = new int[width * height];
-        int[] matteBuffer = new int[width * height];
-        int[] resultBuffer = new int[width * height];
-
-        contentReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), contentBuffer, 0, width);
-        matteReader.getPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), matteBuffer, 0, width);
-
-        composeMatte(contentBuffer, matteBuffer, resultBuffer, matteMode);
-
-        resultWriter.setPixels(0, 0, width, height, javafx.scene.image.PixelFormat.getIntArgbInstance(), resultBuffer, 0, width);
+        result.getPixelWriter().setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), resultPixels, 0, width);
         return result;
     }
 
     /**
      * Composites a content buffer with a matte buffer in-place into {@code resultBuffer}.
      *
-     * <p>This is the pure, pixel-level core of {@link #applyMatte(WritableImage, WritableImage, MatteMode)}
+     * <p>This is the pure, pixel-level core of {@link #applyMatte(WritableImage, WritableImage, MatteMode, boolean)}
      * extracted so it can be unit-tested without a JavaFX runtime. All buffers are straight-alpha
      * ARGB (as produced by {@code PixelFormat.getIntArgbInstance()}).</p>
      *

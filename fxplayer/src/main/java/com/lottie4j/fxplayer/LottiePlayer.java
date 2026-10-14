@@ -178,6 +178,9 @@ public class LottiePlayer extends Canvas {
         precompRenderer.clearRenderCaches();
         precompRenderer.warmUpRenderCaches(assetsById);
 
+        imageRenderer.clearCache();
+        imageRenderer.preloadImages(animation);
+
         for (Layer layer : animation.layers()) {
             layerTrimPathCache.put(layer, resolveLayerTrimPath(layer));
             skipDueToParentCache.put(layer, computeSkipDueToParent(layer));

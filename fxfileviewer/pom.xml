@@ -98,6 +98,7 @@
                     <argLine>
                         --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer=ALL-UNNAMED
                         --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer.util=ALL-UNNAMED
+                        --add-opens com.lottie4j.fxfileviewer/com.lottie4j.fxfileviewer.component=ALL-UNNAMED
                         ${surefire.argLine.headless}
                     </argLine>
                 </configuration>

@@ -18,6 +18,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -159,5 +162,52 @@ class ImageRendererTest {
 
         assertUnchangedAfterRender(renderer, layer, animation);
     }
-}
 
+    @Test
+    void decodesEmbeddedImageOnlyOnce() {
+        ImageRenderer renderer = new ImageRenderer();
+        Layer layer = imageLayer("asset-red", 3, 3);
+        Animation animation = animationWithAssets(List.of(imageAsset("asset-red", dataUri(1, 1, 0xFFFF0000))));
+
+        javafx.scene.image.Image[] images = FxTestHelper.callAndWait(() -> {
+            javafx.scene.image.Image first = renderer.getImage("asset-red", animation);
+            Canvas canvas = blackCanvas(6, 6);
+            for (int frame = 0; frame < 10; frame++) {
+                renderer.render(canvas.getGraphicsContext2D(), layer, animation);
+            }
+            return new javafx.scene.image.Image[]{first, renderer.getImage("asset-red", animation)};
+        });
+
+        assertNotNull(images[0]);
+        assertSame(images[0], images[1], "The asset must be decoded once and reused for every frame");
+    }
+
+    @Test
+    void preloadDecodesImageAssetsBeforeFirstRender() {
+        ImageRenderer renderer = new ImageRenderer();
+        Animation animation = animationWithAssets(List.of(imageAsset("asset-red", dataUri(1, 1, 0xFFFF0000))));
+
+        javafx.scene.image.Image[] images = FxTestHelper.callAndWait(() -> {
+            renderer.preloadImages(animation);
+            javafx.scene.image.Image preloaded = renderer.getImage("asset-red", animation);
+            renderer.clearCache();
+            return new javafx.scene.image.Image[]{preloaded, renderer.getImage("asset-red", animation)};
+        });
+
+        assertNotNull(images[0]);
+        assertNotNull(images[1]);
+        assertTrue(images[0] != images[1], "clearCache must force a new decode");
+    }
+
+    @Test
+    void cachesFailedDecodes() {
+        ImageRenderer renderer = new ImageRenderer();
+        Animation animation = animationWithAssets(List.of(imageAsset("asset-invalid", "data:image/png;base64,INVALID")));
+
+        FxTestHelper.runAndWait(() -> {
+            assertNull(renderer.getImage("asset-invalid", animation));
+            assertNull(renderer.getImage("asset-invalid", animation));
+            assertNull(renderer.getImage("missing", animation));
+        });
+    }
+}

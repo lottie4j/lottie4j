@@ -90,7 +90,8 @@ public class LottieWebView extends StackPane {
 
     // Background rendering. The renderer + its thread are kept alive across loads so we only
     // pay ChromeDriver's startup cost once per LottieWebView lifetime.
-    private DotLottieFrameRenderer renderer;
+    // Volatile: created on the render thread, closed on the shutdown thread
+    private volatile DotLottieFrameRenderer renderer;
     private Thread renderThread;
     private final AtomicBoolean cancelRender = new AtomicBoolean(false);
     private final AnimationTimer playbackTimer;
@@ -357,22 +358,44 @@ public class LottieWebView extends StackPane {
     /**
      * Shuts down the background ChromeDriver instance. Idempotent. Call from your scene's
      * cleanup path to release the headless browser when the viewer closes.
+     * <p>
+     * Returns immediately: quitting ChromeDriver can take many seconds (Selenium timeouts when the
+     * driver is unavailable or unresponsive), so it runs on a separate thread instead of blocking
+     * the JavaFX thread. That thread is not a daemon, so the JVM waits for Chrome to be closed
+     * instead of leaving browser processes behind.
      */
     public void shutdown() {
         cancelRender.set(true);
         playbackTimer.stop();
-        if (renderThread != null) {
-            renderThread.interrupt();
-            try {
-                renderThread.join(2_000);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
+        final Thread renderThreadToStop = renderThread;
+        renderThread = null;
+        if (renderThreadToStop == null && renderer == null) {
+            return;
+        }
+        if (renderThreadToStop != null) {
+            renderThreadToStop.interrupt();
+        }
+        Thread shutdownThread = new Thread(() -> {
+            if (renderThreadToStop != null) {
+                try {
+                    // Wait for the render thread first: it may still be creating the renderer
+                    renderThreadToStop.join(10_000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                if (renderThreadToStop.isAlive()) {
+                    logger.warn("Render thread did not stop within 10 s, closing the renderer anyway");
+                }
             }
-        }
-        if (renderer != null) {
-            renderer.close();
+            DotLottieFrameRenderer rendererToClose = renderer;
             renderer = null;
-        }
+            if (rendererToClose != null) {
+                long t0 = System.currentTimeMillis();
+                rendererToClose.close();
+                logger.info("ChromeDriver closed in {} ms", System.currentTimeMillis() - t0);
+            }
+        }, "lottie-webview-shutdown");
+        shutdownThread.start();
     }
 
     // ── Internal: loading + rendering ─────────────────────────────────────────
@@ -434,6 +457,10 @@ public class LottieWebView extends StackPane {
                 long t0 = System.currentTimeMillis();
                 renderer = new DotLottieFrameRenderer();
                 logger.info("ChromeDriver up in {} ms", System.currentTimeMillis() - t0);
+            }
+            if (cancelRender.get() || Thread.currentThread().isInterrupted()) {
+                // Shut down or replaced while Chrome was starting; the shutdown thread closes the renderer
+                return;
             }
             logger.info("Loading animation into dotlottie-wc ({}x{})…", width, height);
             Platform.runLater(() -> updateStatus("Loading animation…"));

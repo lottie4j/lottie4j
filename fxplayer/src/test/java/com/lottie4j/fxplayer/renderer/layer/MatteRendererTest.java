@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * Unit tests for MatteRenderer.
@@ -358,5 +359,83 @@ class MatteRendererTest {
             assertEquals(100, b(pixel));
         }
     }
+    
+    // --- renderLayerWithMatte with reused off-screen buffers ---
+
+    private static com.lottie4j.core.model.layer.Layer layer(String name, MatteMode matteMode) {
+        return new com.lottie4j.core.model.layer.Layer(
+                name, null, null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null, matteMode, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
     }
 
+    /**
+     * Renders a 10x10 alpha matte: the content is solid red, the matte covers the columns [matteX, matteX + 5).
+     * Returns the red channel of the pixels at x=2 and x=7 (row 5).
+     */
+    private static double[] renderAlphaMatte(MatteRenderer renderer, int matteX, MatteRenderer.LayerRenderer contentExtra) {
+        var content = layer("content", MatteMode.ALPHA);
+        var matte = layer("matte", null);
+        return FxTestHelper.callAndWait(() -> {
+            Canvas canvas = new Canvas(10, 10);
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            gc.setFill(javafx.scene.paint.Color.BLACK);
+            gc.fillRect(0, 0, 10, 10);
+            renderer.renderLayerWithMatte(gc, content, matte, 0, 10, 10, 1.0, (targetGc, targetLayer, frame) -> {
+                if (targetLayer == matte) {
+                    targetGc.setFill(javafx.scene.paint.Color.WHITE);
+                    targetGc.fillRect(matteX, 0, 5, 10);
+                } else {
+                    targetGc.setFill(javafx.scene.paint.Color.RED);
+                    targetGc.fillRect(0, 0, 10, 10);
+                    if (contentExtra != null) {
+                        contentExtra.render(targetGc, targetLayer, frame);
+                    }
+                }
+            });
+            var image = canvas.snapshot(new javafx.scene.SnapshotParameters(), null);
+            return new double[]{
+                    image.getPixelReader().getColor(2, 5).getRed(),
+                    image.getPixelReader().getColor(7, 5).getRed()
+            };
+        });
+    }
+
+    @Test
+    void renderLayerWithMatte_reusedBuffersDoNotKeepPreviousFrame() {
+        assumeFalse("headless".equalsIgnoreCase(System.getProperty("glass.platform")),
+                "Pixel-level canvas rendering is not reliable in headless mode");
+        MatteRenderer renderer = new MatteRenderer();
+
+        double[] first = renderAlphaMatte(renderer, 0, null);
+        assertTrue(first[0] > 0.9, "left half visible through matte");
+        assertTrue(first[1] < 0.1, "right half masked out");
+
+        // Second call reuses the canvases and buffers; the old matte must be gone
+        double[] second = renderAlphaMatte(renderer, 5, null);
+        assertTrue(second[0] < 0.1, "left half masked out after matte moved");
+        assertTrue(second[1] > 0.9, "right half visible after matte moved");
+    }
+
+    @Test
+    void renderLayerWithMatte_nestedMatteDoesNotCorruptOuterMatte() {
+        assumeFalse("headless".equalsIgnoreCase(System.getProperty("glass.platform")),
+                "Pixel-level canvas rendering is not reliable in headless mode");
+        MatteRenderer renderer = new MatteRenderer();
+        var innerContent = layer("inner-content", MatteMode.ALPHA);
+        var innerMatte = layer("inner-matte", null);
+
+        // While rendering the outer content, render a nested matte with the same renderer (as precomps do)
+        double[] result = renderAlphaMatte(renderer, 0, (gc, l, frame) ->
+                renderer.renderLayerWithMatte(gc, innerContent, innerMatte, frame, 10, 10, 1.0, (innerGc, innerLayer, f) -> {
+                    innerGc.setFill(javafx.scene.paint.Color.RED);
+                    innerGc.fillRect(0, 0, 10, 10);
+                }));
+
+        assertTrue(result[0] > 0.9, "outer matte still shows the left half");
+        assertTrue(result[1] < 0.1, "outer matte still masks the right half");
+    }
+}

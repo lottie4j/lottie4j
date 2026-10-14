@@ -82,6 +82,7 @@ public class LottieFileDebugViewer extends Application {
     private CheckBox adaptiveOffscreenScalingCheckBox;
     private LayerTreeView layerTreeView;
     private LayerTileView layerTileView;
+    private Thread screenshotAllThread;
 
     /**
      * Creates a new LottieFileDebugViewer.
@@ -161,6 +162,7 @@ public class LottieFileDebugViewer extends Application {
      */
     @Override
     public void stop() {
+        cancelScreenshotAll();
         if (lottiePlayer != null) {
             lottiePlayer.stop();
             playLoopButton.setDisable(false);
@@ -344,6 +346,9 @@ public class LottieFileDebugViewer extends Application {
      * @param file the Lottie animation file to load
      */
     private void loadAnimation(File file) {
+        // Stop a running "Screenshot All" capture of the previous file
+        cancelScreenshotAll();
+
         // Pause any currently playing animation
         if (lottiePlayer != null && lottiePlayer.isPlaying()) {
             pauseAnimation();
@@ -584,22 +589,21 @@ public class LottieFileDebugViewer extends Application {
         }
 
         // Pause animation if playing
-        boolean wasPlaying = lottiePlayer.isPlaying();
-        if (wasPlaying) {
+        if (lottiePlayer.isPlaying()) {
             pauseAnimation();
         }
 
-        // Disable buttons during screenshot capture
-        screenshotButton.setDisable(true);
-        screenshotAllButton.setDisable(true);
+        // Disable controls that would interfere with the capture
+        setCaptureControlsDisabled(true);
 
-        // Run screenshot capture in separate thread
-        new Thread(() -> {
+        // Read everything the worker needs here, on the JavaFX thread
+        final LottiePlayer player = lottiePlayer;
+        final int startFrame = getInPoint();
+        final int endFrame = getOutPoint();
+
+        // Run screenshot capture in separate thread, cancelled by stop() or when another file is loaded
+        screenshotAllThread = new Thread(() -> {
             try {
-                int startFrame = getInPoint();
-                int endFrame = getOutPoint();
-
-                // Save all frames
                 for (int frame = startFrame; frame <= endFrame; frame++) {
                     final int finalCurrentFrame = frame;
                     CountDownLatch latch = new CountDownLatch(1);
@@ -607,6 +611,10 @@ public class LottieFileDebugViewer extends Application {
                     // Update UI on JavaFX thread
                     Platform.runLater(() -> {
                         try {
+                            // Skip if the capture was cancelled and another file is loaded in the meantime
+                            if (player != lottiePlayer) {
+                                return;
+                            }
                             this.currentFrame = finalCurrentFrame;
                             lottiePlayer.seekToFrame(currentFrame);
                             frameSlider.setValue(currentFrame);
@@ -630,7 +638,9 @@ public class LottieFileDebugViewer extends Application {
 
                     Platform.runLater(() -> {
                         try {
-                            takeScreenshotPlayers();
+                            if (player == lottiePlayer) {
+                                takeScreenshotPlayers();
+                            }
                         } finally {
                             screenshotLatch.countDown();
                         }
@@ -643,21 +653,48 @@ public class LottieFileDebugViewer extends Application {
                 int totalFrames = endFrame - startFrame + 1;
                 logger.info("All screenshots saved ({} frames)", totalFrames);
 
-                // Re-enable buttons on JavaFX thread
+                // Re-enable controls on JavaFX thread
                 Platform.runLater(() -> {
-                    screenshotButton.setDisable(false);
-                    screenshotAllButton.setDisable(false);
+                    if (player == lottiePlayer) {
+                        setCaptureControlsDisabled(false);
+                    }
                 });
-
             } catch (InterruptedException e) {
-                logger.error("Failed to save screenshots: {}", e.getMessage());
-                Platform.runLater(() -> {
-                    AlertHelper.showError("Failed to save screenshots: " + e.getMessage());
-                    screenshotButton.setDisable(false);
-                    screenshotAllButton.setDisable(false);
-                });
+                // Cancelled by stop() or by loading another file, which also resets the controls
+                logger.info("Screenshot capture cancelled");
+                Thread.currentThread().interrupt();
             }
-        }).start();
+        }, "lottie4j-screenshot-all");
+        screenshotAllThread.setDaemon(true);
+        screenshotAllThread.start();
+    }
+
+    /**
+     * Cancels a running "Screenshot All" capture, if any.
+     */
+    private void cancelScreenshotAll() {
+        if (screenshotAllThread != null) {
+            if (screenshotAllThread.isAlive()) {
+                screenshotAllThread.interrupt();
+                // Re-enable the controls, also when the file that is loaded next fails to load
+                setCaptureControlsDisabled(false);
+            }
+            screenshotAllThread = null;
+        }
+    }
+
+    /**
+     * Enables or disables the controls that must not be used while all frames are being captured.
+     *
+     * @param disabled true while capturing
+     */
+    private void setCaptureControlsDisabled(boolean disabled) {
+        screenshotButton.setDisable(disabled);
+        screenshotAllButton.setDisable(disabled);
+        playLoopButton.setDisable(disabled);
+        playOnceButton.setDisable(disabled);
+        frameSlider.setDisable(disabled);
+        pauseButton.setDisable(true);
     }
 
     /**

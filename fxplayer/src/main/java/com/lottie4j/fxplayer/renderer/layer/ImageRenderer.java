@@ -10,14 +10,23 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Renders image layers from Lottie animations.
  * Supports both external image files and embedded base64 data URIs.
+ * <p>
+ * Decoded images are cached per asset id, so each asset is decoded only once per renderer.
+ * Failed lookups are cached as well, to avoid retrying (and logging) on every frame.
+ * One renderer instance is expected per animation, as asset ids are only unique within an animation.
  */
 public class ImageRenderer {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageRenderer.class);
+
+    private final Map<String, Optional<Image>> imageCache = new HashMap<>();
 
     /**
      * Creates a new ImageRenderer.
@@ -39,21 +48,8 @@ public class ImageRenderer {
             return;
         }
 
-        // Find the asset with matching ID
-        Asset asset = animation.assets().stream()
-                .filter(a -> layer.referenceId().equals(a.id()))
-                .findFirst()
-                .orElse(null);
-
-        if (asset == null) {
-            logger.warn("Could not find asset with ID: {}", layer.referenceId());
-            return;
-        }
-
-        // Get the image data from the asset
-        Image image = getImageFromAsset(asset);
+        Image image = getImage(layer.referenceId(), animation);
         if (image == null) {
-            logger.warn("Could not load image from asset: {}", asset.id());
             return;
         }
 
@@ -65,6 +61,54 @@ public class ImageRenderer {
         gc.drawImage(image, 0, 0, width, height);
 
         logger.debug("Rendered image layer: {} ({},{})", layer.name(), width, height);
+    }
+
+    /**
+     * Decodes all image assets of the animation up front, so the first rendered frame doesn't stall.
+     *
+     * @param animation the animation containing the assets
+     */
+    public void preloadImages(Animation animation) {
+        if (animation.assets() == null) {
+            return;
+        }
+        for (Asset asset : animation.assets()) {
+            if (asset.id() != null && asset.layers() == null && asset.fileName() != null) {
+                getImage(asset.id(), animation);
+            }
+        }
+    }
+
+    /**
+     * Clears all cached images, e.g. after the assets of the animation have been changed.
+     */
+    public void clearCache() {
+        imageCache.clear();
+    }
+
+    /**
+     * Returns the decoded image for an asset id, decoding it on the first request only.
+     *
+     * @param referenceId the asset id
+     * @param animation   the animation containing the asset
+     * @return the decoded image, or {@code null} when the asset is missing or can't be decoded
+     */
+    Image getImage(String referenceId, Animation animation) {
+        return imageCache.computeIfAbsent(referenceId, id -> {
+            Asset asset = animation.assets().stream()
+                    .filter(a -> id.equals(a.id()))
+                    .findFirst()
+                    .orElse(null);
+            if (asset == null) {
+                logger.warn("Could not find asset with ID: {}", id);
+                return Optional.empty();
+            }
+            Image image = getImageFromAsset(asset);
+            if (image == null) {
+                logger.warn("Could not load image from asset: {}", id);
+            }
+            return Optional.ofNullable(image);
+        }).orElse(null);
     }
 
     /**

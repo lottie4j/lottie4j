@@ -104,12 +104,17 @@ public class LottieFileSimpleViewer extends Application {
     /**
      * Loads and displays a Lottie animation file.
      * Creates a new LottiePlayer instance and starts playback automatically.
+     * The previous player is stopped first, as a running player stays referenced by its animation timer.
      *
      * @param file the Lottie animation file to load
      */
     private void loadAnimation(File file) {
         try {
-            lottiePlayer = new LottiePlayer(LottieFileLoader.load(file));
+            var animation = LottieFileLoader.load(file);
+            if (lottiePlayer != null) {
+                lottiePlayer.stop();
+            }
+            lottiePlayer = new LottiePlayer(animation);
             lottiePlayer.setAdaptiveOffscreenScalingEnabled(adaptiveOffscreenScalingEnabled);
             lottiePlayer.setInvertColorsEnabled(invertColorsEnabled);
             lottiePlayer.setDebugInfoVisible(viewerMenuBar != null && viewerMenuBar.isDebugInfoSelected());
@@ -118,6 +123,17 @@ public class LottieFileSimpleViewer extends Application {
             lottiePlayer.play();
         } catch (LottieFileException e) {
             AlertHelper.showError("Can't load animation:\n\n" + e.getMessage());
+        }
+    }
+
+    /**
+     * Called when the application is being stopped.
+     * Stops the playing animation.
+     */
+    @Override
+    public void stop() {
+        if (lottiePlayer != null) {
+            lottiePlayer.stop();
         }
     }
 
