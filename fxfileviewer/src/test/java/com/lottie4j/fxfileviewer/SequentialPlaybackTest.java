@@ -51,11 +51,11 @@ class SequentialPlaybackTest {
         Animation animation = LottieFileLoader.load(new File(resource.getFile()));
 
         runOnFxThread(() -> {
-            LottiePlayer sequential = new LottiePlayer(animation, SIZE, SIZE);
+            LottiePlayer sequential = newPlayer(animation);
             List<String> differingFrames = new ArrayList<>();
             for (int frame = animation.inPoint(); frame < animation.outPoint(); frame++) {
                 sequential.seekToFrame(frame);
-                LottiePlayer fresh = new LottiePlayer(animation, SIZE, SIZE);
+                LottiePlayer fresh = newPlayer(animation);
                 fresh.seekToFrame(frame);
 
                 int differing = countDifferingPixels(pixels(sequential), pixels(fresh));
@@ -66,6 +66,16 @@ class SequentialPlaybackTest {
             assertTrue(differingFrames.isEmpty(),
                     "Sequential playback differs from a fresh seek on " + differingFrames);
         });
+    }
+
+    /**
+     * Adaptive scaling depends on how long the previous frames took to render, so it would differ
+     * between the sequential and the fresh player independent of the cached buffers.
+     */
+    private static LottiePlayer newPlayer(Animation animation) {
+        LottiePlayer player = new LottiePlayer(animation, SIZE, SIZE);
+        player.setAdaptiveOffscreenScalingEnabled(false);
+        return player;
     }
 
     private static int[] pixels(LottiePlayer player) {
