@@ -125,8 +125,10 @@ public class MatteRenderer {
             renderScaled(contentCanvas, matteUser, frame, scale, layerRenderer);
 
             // Snapshot both canvases with transparent background (into the previous images when the size is unchanged)
-            WritableImage matteImage = matteCanvas.snapshot(snapshotParameters, reuseBuffers ? matteSnapshot : null);
-            WritableImage contentImage = contentCanvas.snapshot(snapshotParameters, reuseBuffers ? contentSnapshot : null);
+            WritableImage matteImage = matteCanvas.snapshot(snapshotParameters,
+                    reuseBuffers ? reusableSnapshot(matteSnapshot, matteWidth, matteHeight) : null);
+            WritableImage contentImage = contentCanvas.snapshot(snapshotParameters,
+                    reuseBuffers ? reusableSnapshot(contentSnapshot, matteWidth, matteHeight) : null);
             if (reuseBuffers) {
                 matteSnapshot = matteImage;
                 contentSnapshot = contentImage;
@@ -195,6 +197,15 @@ public class MatteRenderer {
         offscreenGc.setTransform(1, 0, 0, 1, 0, 0);
         offscreenGc.clearRect(0, 0, width, height);
         return canvas;
+    }
+
+    /**
+     * Returns the given image when its size matches, or null so a new snapshot image is created.
+     * A snapshot into an existing image only renders the area of that image, so a cached image of another
+     * size would crop (or pad) the snapshot when mattes of different sizes are rendered.
+     */
+    private static WritableImage reusableSnapshot(WritableImage image, int width, int height) {
+        return image != null && (int) image.getWidth() == width && (int) image.getHeight() == height ? image : null;
     }
 
     /**
