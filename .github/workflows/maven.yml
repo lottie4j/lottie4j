@@ -15,9 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: test
-        run: echo "${{ secrets.GPG_PASSPHRASE }}" | base64
-
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
