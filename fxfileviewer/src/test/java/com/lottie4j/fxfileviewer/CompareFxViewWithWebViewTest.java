@@ -366,6 +366,10 @@ class CompareFxViewWithWebViewTest {
         Platform.runLater(() -> {
             try {
                 LottiePlayer fxPlayer = new LottiePlayer(animation, animWidth, animHeight);
+                // Adaptive scaling lowers the off-screen resolution when frames render slowly, which
+                // made heavy files (e.g. the blurs of interactive_mood_selector_ui) score lower on a
+                // busy CI runner. Disable it so the score only depends on the rendering itself.
+                fxPlayer.setAdaptiveOffscreenScalingEnabled(false);
                 fxPlayer.resizeRenderPercent(scale * 100.0);
                 primaryStage.setScene(new Scene(new StackPane(fxPlayer), scaledWidth, scaledHeight));
 
