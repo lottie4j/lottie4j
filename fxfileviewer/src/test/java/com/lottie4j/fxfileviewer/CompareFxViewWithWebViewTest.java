@@ -160,7 +160,13 @@ class CompareFxViewWithWebViewTest {
             Map.entry("json/java_duke_slidein.json", 98.8),
             Map.entry("json/lottie_lego.json", 98.0),
             Map.entry("json/sandy_loading.json", 99.3),
-            Map.entry("dot/demo-1.lottie", 99.3)
+            Map.entry("dot/demo-1.lottie", 99.3),
+
+            // Added with the fix for issue #12 (reused matte snapshot of the wrong size; covered
+            // exactly by SequentialPlaybackTest). The remaining gap to thorvg is unrelated: it
+            // grows from frame ~40 on, mostly in the blue channel (not yet investigated).
+            // Observed 97.70 → floor(97.70 * 10) / 10 - 0.1 = 97.6.
+            Map.entry("json/collision.json", 97.6)
     );
 
     /**
@@ -180,6 +186,7 @@ class CompareFxViewWithWebViewTest {
     private static final Map<String, Double> PER_FILE_FLOOR_OVERRIDE_HALF = Map.ofEntries(
             Map.entry("json/angry_bird.json", 93.4),
             Map.entry("json/animated_background_patterns.json", 96.5),
+            Map.entry("json/collision.json", 96.5),
             Map.entry("json/face-exhaling.json", 98.8),
             Map.entry("json/face-peeking.json", 97.3),
             Map.entry("json/foojay-duke.json", 98.9),
@@ -232,6 +239,7 @@ class CompareFxViewWithWebViewTest {
                 "json/angry_bird.json",
                 "json/animated_background_patterns.json",
                 "json/box-moving-changing-color.json",
+                "json/collision.json",
                 "json/face-exhaling.json",
                 "json/face-peeking.json",
                 "json/foojay-duke.json",
