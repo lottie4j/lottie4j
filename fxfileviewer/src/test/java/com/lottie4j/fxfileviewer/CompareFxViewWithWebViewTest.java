@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
 import com.lottie4j.core.file.LottieFileLoader;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.fxfileviewer.util.ImageSaver;
-import com.lottie4j.fxfileviewer.util.ImageSimilarity;
 import com.lottie4j.fxplayer.LottiePlayer;
+import com.lottie4j.fxplayer.util.ImageSimilarity;
 
 import javafx.application.Platform;
 import javafx.scene.Scene;

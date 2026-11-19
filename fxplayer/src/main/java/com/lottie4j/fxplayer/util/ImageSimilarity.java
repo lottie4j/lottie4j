@@ -1,4 +1,4 @@
-package com.lottie4j.fxfileviewer.util;
+package com.lottie4j.fxplayer.util;
 
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;

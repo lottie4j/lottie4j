@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.layer.Layer;
@@ -23,7 +22,7 @@ import java.util.List;
  * Images contain dimensional properties (width, height) and can be either embedded or
  * externally referenced. Image sequences are supported through the type field.
  * <p>
- * Audio assets (sounds) reference external audio files through the fileName and shapeType
+ * Audio assets (sounds) reference external audio files through the fileName and directory
  * properties.
  * <p>
  * Precompositions represent nested animation layers with their own layer hierarchy,
@@ -39,7 +38,8 @@ import java.util.List;
  *
  * @param id the unique identifier for the asset
  * @param name the display name of the asset
- * @param shapeType the shape type or path reference
+ * @param directory the directory that contains an externally stored image or sound file, such as
+ *                  {@code "images/"}; empty when the file is embedded
  * @param fileName the file name (Boolean or String URI)
  * @param embedded flag indicating if the asset is embedded
  * @param width the width in pixels (for images)
@@ -57,7 +57,7 @@ public record Asset(
         @JsonProperty("nm") String name,
 
         // Generic for Image, Sound, Datasource
-        @JsonProperty("u") ShapeType shapeType,
+        @JsonProperty("u") String directory,
         @JsonProperty("p") Object fileName,  // Can be Boolean (true/false) or String (base64 data URI)
         @JsonProperty("e") Integer embedded,
 
@@ -80,7 +80,7 @@ public record Asset(
     public PropertyListingList getList() {
         var list = new PropertyListingList("Asset");
         list.add("ID", id());
-        list.add("Path", shapeType);
+        list.add("Directory", directory);
         list.add("File name", fileName != null ? fileName.toString() : null);
         list.add("Embedded", embedded());
         list.add("Width", width());

@@ -1,4 +1,4 @@
-package com.lottie4j.fxfileviewer.util;
+package com.lottie4j.fxplayer.util;
 
 import javafx.application.Platform;
 import javafx.scene.image.PixelFormat;

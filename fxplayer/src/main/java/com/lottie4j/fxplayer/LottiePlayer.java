@@ -20,6 +20,7 @@ import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.PixelReader;
@@ -586,6 +587,25 @@ public class LottiePlayer extends Canvas {
      */
     public void render(double frame) {
         render(frame, null);
+    }
+
+    /**
+     * Renders a frame and returns it as an image of the size of this player, for tests, thumbnails
+     * and visual comparison. Unlike {@link #render(double)} followed by a {@code snapshot} of the
+     * node, it does not depend on the player being part of a scene. The background color of the
+     * player is part of the image: white by default, so call
+     * {@code setBackgroundColor(Color.TRANSPARENT)} first for an image with an alpha channel.
+     * <p>
+     * Must be called on the JavaFX application thread.
+     *
+     * @param frame frame number to render
+     * @return the rendered frame
+     */
+    public WritableImage snapshotFrame(double frame) {
+        render(frame);
+        SnapshotParameters parameters = new SnapshotParameters();
+        parameters.setFill(Color.TRANSPARENT);
+        return snapshot(parameters, null);
     }
 
     /**
