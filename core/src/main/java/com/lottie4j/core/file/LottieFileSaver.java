@@ -8,7 +8,18 @@ import com.lottie4j.core.model.layer.Layer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.lottie4j.core.exception.LottieFileException;
+import com.lottie4j.core.model.dot.DotLottie;
+import com.lottie4j.core.model.dot.Manifest;
+import com.lottie4j.core.model.dot.ManifestAnimation;
+
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +36,11 @@ public class LottieFileSaver {
     /**
      * Prevents instantiation of this utility class.
      */
+    private static final String IO_ERROR = "I/O error: ";
+    private static final String JSON_EXTENSION = ".json";
+    private static final String VERSION_2 = "2";
+    private static final String GENERATOR = "lottie4j";
+
     private LottieFileSaver() {
         // Hide constructor
     }
@@ -112,5 +128,134 @@ public class LottieFileSaver {
                 }
             }
         }
+    }
+
+    /**
+     * Writes an animation as Lottie JSON.
+     *
+     * @param animation the animation
+     * @param file      the file to write, usually with the extension {@code .json}
+     * @throws LottieFileException if the animation cannot be written
+     */
+    public static void save(Animation animation, File file) throws LottieFileException {
+        try (OutputStream out = Files.newOutputStream(file.toPath())) {
+            save(animation, out);
+        } catch (IOException e) {
+            throw new LottieFileException(IO_ERROR + e.getMessage());
+        }
+    }
+
+    /**
+     * Writes an animation as Lottie JSON. The stream is not closed.
+     *
+     * @param animation the animation
+     * @param out       the stream to write to
+     * @throws LottieFileException if the animation cannot be written
+     */
+    public static void save(Animation animation, OutputStream out) throws LottieFileException {
+        try {
+            out.write(json(animation));
+        } catch (IOException e) {
+            throw new LottieFileException(IO_ERROR + e.getMessage());
+        }
+    }
+
+    /**
+     * Writes one animation as a dotLottie archive of version 2: a manifest that names the
+     * animation and the animation itself. Images and sounds stay where the animation has them,
+     * which for a file that is to be complete means embedded as data URIs.
+     *
+     * @param animation the animation
+     * @param id        the id of the animation in the archive; it becomes a file name
+     * @param out       the stream to write to; it is not closed
+     * @throws LottieFileException if the archive cannot be written
+     */
+    public static void saveDotLottie(Animation animation, String id, OutputStream out) throws LottieFileException {
+        Manifest manifest = new Manifest(VERSION_2, GENERATOR, null,
+                List.of(new ManifestAnimation(id, null, null, null, null, null, null, null, null)), null, null,
+                null);
+        saveDotLottie(new DotLottie(manifest, List.of(animation), null, null, null, null), out);
+    }
+
+    /**
+     * Writes a dotLottie archive.
+     *
+     * @param dotLottie the content of the archive
+     * @param file      the file to write, usually with the extension {@code .lottie}
+     * @throws LottieFileException if the archive cannot be written
+     */
+    public static void saveDotLottie(DotLottie dotLottie, File file) throws LottieFileException {
+        try (OutputStream out = Files.newOutputStream(file.toPath())) {
+            saveDotLottie(dotLottie, out);
+        } catch (IOException e) {
+            throw new LottieFileException(IO_ERROR + e.getMessage());
+        }
+    }
+
+    /**
+     * Writes a dotLottie archive: {@code manifest.json}, one JSON file per animation the manifest
+     * lists, and the themes, state machines, images and fonts. A manifest of version 1 gets the
+     * directories of that version ({@code animations/}, {@code images/}), any other the short
+     * ones of version 2 ({@code a/}, {@code i/}).
+     *
+     * @param dotLottie the content of the archive; the manifest must list as many animations as there are
+     * @param out       the stream to write to; it is not closed
+     * @throws LottieFileException if the content is incomplete or the archive cannot be written
+     */
+    public static void saveDotLottie(DotLottie dotLottie, OutputStream out) throws LottieFileException {
+        Manifest manifest = dotLottie.manifest();
+        List<Animation> animations = dotLottie.animations();
+        if (manifest == null || manifest.animations() == null || manifest.animations().isEmpty()) {
+            throw new LottieFileException("manifest has no animations");
+        }
+        if (animations == null || animations.size() != manifest.animations().size()) {
+            throw new LottieFileException("manifest does not list one entry per animation");
+        }
+        boolean legacy = manifest.version() != null && manifest.version().startsWith("1");
+        ZipOutputStream zip = new ZipOutputStream(out);
+        try {
+            entry(zip, "manifest.json", mapper.writeValueAsBytes(manifest));
+            for (int i = 0; i < animations.size(); i++) {
+                String id = manifest.animations().get(i) == null ? null : manifest.animations().get(i).id();
+                if (id == null || id.isBlank() || id.contains("/") || id.contains("\\") || id.contains("..")) {
+                    throw new LottieFileException("manifest contains animation with missing or unusable id");
+                }
+                entry(zip, (legacy ? "animations/" : "a/") + id + JSON_EXTENSION, json(animations.get(i)));
+            }
+            entries(zip, "t/", JSON_EXTENSION, dotLottie.themes());
+            entries(zip, "s/", JSON_EXTENSION, dotLottie.stateMachines());
+            entries(zip, legacy ? "images/" : "i/", "", dotLottie.imageAssets());
+            entries(zip, "f/", "", dotLottie.fontAssets());
+            zip.finish();
+        } catch (IOException e) {
+            throw new LottieFileException(IO_ERROR + e.getMessage());
+        }
+    }
+
+    private static byte[] json(Animation animation) throws LottieFileException {
+        if (animation == null) {
+            throw new LottieFileException("no animation to write");
+        }
+        try {
+            return mapper.writeValueAsBytes(animation);
+        } catch (RuntimeException e) {
+            throw new LottieFileException("JSON could not be written: " + e.getMessage());
+        }
+    }
+
+    private static void entries(ZipOutputStream zip, String directory, String extension, Map<String, byte[]> files)
+            throws IOException {
+        if (files == null) {
+            return;
+        }
+        for (Map.Entry<String, byte[]> file : files.entrySet()) {
+            entry(zip, directory + file.getKey() + extension, file.getValue());
+        }
+    }
+
+    private static void entry(ZipOutputStream zip, String name, byte[] content) throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content);
+        zip.closeEntry();
     }
 }

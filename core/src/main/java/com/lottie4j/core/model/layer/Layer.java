@@ -73,13 +73,14 @@ import java.util.Map;
  * @param solidWidth    the width of the rectangle of a solid color layer
  * @param solidHeight   the height of the rectangle of a solid color layer
  * @param styles        the layer styles, each as the members of its JSON object; they are not rendered
+ * @param audioSettings the audio settings of an audio layer; sound is not played
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
     "ddd", "ind", "ty", "nm", "mn", "tt", "td", "sr", "ks", "ao",
     "hasMask", "masksProperties", "ef", "shapes", "ip", "op", "st", "bm",
-    "refId", "w", "h", "tm", "sc", "sw", "sh", "sy", "t", "parent", "cl", "ln", "tg", "hix", "ct", "tp", "hd"
+    "refId", "w", "h", "tm", "sc", "sw", "sh", "sy", "au", "t", "parent", "cl", "ln", "tg", "hix", "ct", "tp", "hd"
 })
 public record Layer(
         @JsonProperty("nm") String name,
@@ -131,8 +132,65 @@ public record Layer(
         @JsonProperty("sh") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double solidHeight,
 
         // Layer styles (drop shadow, stroke, glow... as set in the Layer Styles of After Effects)
-        @JsonProperty("sy") List<Map<String, Object>> styles
+        @JsonProperty("sy") List<Map<String, Object>> styles,
+
+        // Audio Layer
+        @JsonProperty("au") AudioSettings audioSettings
 ) implements PropertyListing {
+
+    /**
+     * Creates a layer without audio settings.
+     *
+     * @param name          the display name of the layer
+     * @param matchName     the match name used for expressions and identification
+     * @param has3dLayers   indicator for 3D layer capabilities (0 for 2D, 1 for 3D)
+     * @param hidden        whether the layer is hidden from rendering
+     * @param layerType     the type of layer defining its content and behavior
+     * @param indexLayer    the unique index identifying this layer in the composition
+     * @param indexParent   the index of the parent layer for hierarchical transformations, null if no parent
+     * @param timeStretch   the time stretch factor applied to the layer's animation speed
+     * @param inPoint       the frame number when the layer becomes active in the timeline
+     * @param outPoint      the frame number when the layer becomes inactive in the timeline
+     * @param startTime     the offset in frames for when the layer's content starts playing
+     * @param blendMode     the blend mode determining how this layer composites with layers below
+     * @param clazz         the CSS class attribute for HTML rendering contexts
+     * @param idAttribute   the ID attribute for HTML rendering contexts
+     * @param tagName       the HTML tag name for HTML rendering contexts
+     * @param matteMode     the matte mode defining how this layer affects or is affected by adjacent layers
+     * @param matteTarget   indicates if this layer is the target of a matte operation
+     * @param hasMask       indicates whether this layer has masks
+     * @param masks         the list of masks applied to this layer for clipping or alpha operations
+     * @param effects       the list of effects applied to this layer
+     * @param transform     the transformation properties controlling position, rotation, scale, and opacity
+     * @param autoRotate    whether the layer automatically orients along a motion path
+     * @param hix           unknown property, potentially for internal use
+     * @param ct            unknown property, potentially for internal use
+     * @param tp            unknown property, potentially for internal use
+     * @param shapes        the list of shapes contained in a shape layer
+     * @param referenceId   the ID referencing a precomposition asset
+     * @param width         the width of a precomposition layer in pixels
+     * @param height        the height of a precomposition layer in pixels
+     * @param timeRemapping animated property for remapping time in precomposition layers
+     * @param solidColor    the hex color string for solid color layers
+     * @param textData      the text content and styling information for text layers
+     * @param solidWidth    the width of the rectangle of a solid color layer
+     * @param solidHeight   the height of the rectangle of a solid color layer
+     * @param styles        the layer styles, each as the members of its JSON object; they are not rendered
+     */
+    @SuppressWarnings("java:S107") // mirrors the record, which has one component per Lottie member
+    public Layer(String name, String matchName, Integer has3dLayers, Boolean hidden, LayerType layerType,
+                 Integer indexLayer, Integer indexParent, Double timeStretch, Double inPoint, Double outPoint,
+                 Double startTime, BlendMode blendMode, String clazz, String idAttribute, String tagName,
+                 MatteMode matteMode, Integer matteTarget, Boolean hasMask, List<Mask> masks, List<Effect> effects,
+                 Transform transform, Integer autoRotate, Integer hix, Integer ct, Integer tp,
+                 List<BaseShape> shapes, String referenceId, Integer width, Integer height, Animated timeRemapping,
+                 String solidColor, TextData textData, Double solidWidth, Double solidHeight,
+                 List<Map<String, Object>> styles) {
+        this(name, matchName, has3dLayers, hidden, layerType, indexLayer, indexParent, timeStretch, inPoint,
+                outPoint, startTime, blendMode, clazz, idAttribute, tagName, matteMode, matteTarget, hasMask, masks,
+                effects, transform, autoRotate, hix, ct, tp, shapes, referenceId, width, height, timeRemapping,
+                solidColor, textData, solidWidth, solidHeight, styles, null);
+    }
 
     /**
      * A copy of this layer with other shapes.
@@ -144,7 +202,7 @@ public record Layer(
         return new Layer(name, matchName, has3dLayers, hidden, layerType, indexLayer, indexParent, timeStretch,
                 inPoint, outPoint, startTime, blendMode, clazz, idAttribute, tagName, matteMode, matteTarget,
                 hasMask, masks, effects, transform, autoRotate, hix, ct, tp, shapes, referenceId, width, height,
-                timeRemapping, solidColor, textData, solidWidth, solidHeight, styles);
+                timeRemapping, solidColor, textData, solidWidth, solidHeight, styles, audioSettings);
     }
 
     /**
