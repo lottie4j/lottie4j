@@ -80,7 +80,7 @@ public class LottieWebView extends StackPane {
     private final List<Image> frameCache = new ArrayList<>();
     private int inPoint;
     private int outPoint;
-    private int framesPerSecond = 30;
+    private double framesPerSecond = 30;
     private int currentFrame;
     private boolean ready;
     private boolean playing;
@@ -415,8 +415,9 @@ public class LottieWebView extends StackPane {
         // Resolve frame range + FPS from the parsed Animation when available. Fallbacks
         // mirror what LottieFileDebugViewer uses elsewhere.
         if (parsedAnimation != null) {
-            this.inPoint = parsedAnimation.inPoint() != null ? parsedAnimation.inPoint() : 0;
-            this.outPoint = parsedAnimation.outPoint() != null ? parsedAnimation.outPoint() : 60;
+            this.inPoint = parsedAnimation.inPoint() != null ? (int) Math.round(parsedAnimation.inPoint()) : 0;
+            this.outPoint = parsedAnimation.outPoint() != null
+                    ? (int) Math.round(parsedAnimation.outPoint()) : 60;
             this.framesPerSecond = parsedAnimation.framesPerSecond() != null
                     ? parsedAnimation.framesPerSecond() : 30;
         } else {

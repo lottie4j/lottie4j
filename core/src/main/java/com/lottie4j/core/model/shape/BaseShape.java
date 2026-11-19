@@ -41,7 +41,7 @@ import com.lottie4j.core.model.shape.style.*;
  * Implementing classes are responsible for defining their specific properties and behavior
  * while adhering to the common shape contract defined by this interface.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty", defaultImpl = UnknownShape.class)
 @JsonSubTypes({
         @JsonSubTypes.Type(name = "el", value = Ellipse.class),
         @JsonSubTypes.Type(name = "fl", value = Fill.class),

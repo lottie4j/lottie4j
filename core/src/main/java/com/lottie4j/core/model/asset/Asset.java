@@ -4,9 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.helper.DoubleAsIntegerIfWholeSerializer;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.layer.Layer;
+
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.List;
 
@@ -67,7 +70,7 @@ public record Asset(
 
         // Precomposition
         @JsonProperty("layers") List<Layer> layers,
-        @JsonProperty("fr") Integer frameRate,
+        @JsonProperty("fr") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double frameRate,
         @JsonProperty("xt") Integer extraComposition,
 
         // Used for Image and Datasource

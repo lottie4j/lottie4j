@@ -2,7 +2,6 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.lottie4j.core.exception.LottieModelDefinitionException;
 import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
@@ -61,15 +60,14 @@ public enum StrokeDashType implements DefinitionWithLabel {
      * Creates a StrokeDashType from its string value.
      *
      * @param value the string representation of the stroke dash type
-     * @return the StrokeDashType corresponding to the given value
-     * @throws LottieModelDefinitionException if the value doesn't match any StrokeDashType
+     * @return the StrokeDashType corresponding to the given value, or {@code null} if the value is not a known one
      */
     @JsonCreator
-    public static StrokeDashType fromValue(String value) throws LottieModelDefinitionException {
+    public static StrokeDashType fromValue(String value) {
         return Arrays.stream(StrokeDashType.values()).sequential()
                 .filter(v -> String.valueOf(v.value).equals(value))
                 .findFirst()
-                .orElseThrow(() -> new LottieModelDefinitionException(StrokeDashType.class, value));
+                .orElseGet(() -> UnknownDefinition.report(StrokeDashType.class, value));
     }
 
     /**

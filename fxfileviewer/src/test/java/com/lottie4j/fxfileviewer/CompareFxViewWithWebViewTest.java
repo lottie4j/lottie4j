@@ -339,8 +339,8 @@ class CompareFxViewWithWebViewTest {
         int scaledWidth = Math.max(1, (int) Math.round(animWidth * scale));
         int scaledHeight = Math.max(1, (int) Math.round(animHeight * scale));
 
-        int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
-        int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
+        int inPoint = animation.inPoint() != null ? (int) Math.round(animation.inPoint()) : 0;
+        int outPoint = animation.outPoint() != null ? (int) Math.round(animation.outPoint()) : 60;
         // dotlottie-web/thorvg (and lottie-web before it) treat outPoint as exclusive: the last
         // rendered frame is op - 1, and the JavaFX player clamps seekToFrame to op - 1 (see
         // FrameTiming.getLastRenderableFrame). Sampling frame == op would compare two

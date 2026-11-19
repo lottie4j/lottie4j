@@ -43,13 +43,21 @@ public class SolidColorRenderer {
             return;
         }
 
-        // Get the layer dimensions if specified, otherwise use animation dimensions
+        gc.setFill(color);
+        if (layer.solidWidth() != null && layer.solidHeight() != null) {
+            // The solid is a rectangle of its own size at the origin of the layer; the layer
+            // transform, applied by the caller, places it.
+            double width = layer.solidWidth();
+            double height = layer.solidHeight();
+            gc.fillRect(0, 0, width, height);
+            logger.debug("Rendered solid color layer: {} color={} size={}x{}", layer.name(), color, width, height);
+            return;
+        }
+
+        // A solid without a size of its own ("sw", "sh"): fill the composition, generously, so
+        // that it is covered whatever the layer transform is.
         double width = layer.width() != null ? layer.width() : animationWidth;
         double height = layer.height() != null ? layer.height() : animationHeight;
-
-        // Fill from negative coordinates to ensure full coverage in precompositions
-        // This is important because solid color should fill the entire composition
-        gc.setFill(color);
         gc.fillRect(-width, -height, width * 3, height * 3);
 
         logger.debug("Rendered solid color layer: {} color={} size={}x{}", layer.name(), color, width, height);

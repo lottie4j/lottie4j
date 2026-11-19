@@ -53,7 +53,7 @@ class SequentialPlaybackTest {
         runOnFxThread(() -> {
             LottiePlayer sequential = newPlayer(animation);
             List<String> differingFrames = new ArrayList<>();
-            for (int frame = animation.inPoint(); frame < animation.outPoint(); frame++) {
+            for (int frame = (int) Math.round(animation.inPoint()); frame < animation.outPoint(); frame++) {
                 sequential.seekToFrame(frame);
                 LottiePlayer fresh = newPlayer(animation);
                 fresh.seekToFrame(frame);

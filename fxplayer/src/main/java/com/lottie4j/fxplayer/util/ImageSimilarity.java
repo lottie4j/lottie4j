@@ -3,6 +3,9 @@ package com.lottie4j.fxplayer.util;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * Color-aware, alpha-aware, windowed SSIM image similarity.
  *
@@ -59,6 +62,28 @@ public final class ImageSimilarity {
             double green,
             double blue,
             double[][] windowScores) {
+
+        /** Two results are equal when their scores are, window by window. */
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof SimilarityResult(double o, double r, double g, double b, double[][] windows)
+                    && Double.compare(overall, o) == 0
+                    && Double.compare(red, r) == 0
+                    && Double.compare(green, g) == 0
+                    && Double.compare(blue, b) == 0
+                    && Arrays.deepEquals(windowScores, windows);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(overall, red, green, blue) + Arrays.deepHashCode(windowScores);
+        }
+
+        @Override
+        public String toString() {
+            return "SimilarityResult[overall=" + overall + ", red=" + red + ", green=" + green + ", blue=" + blue
+                    + ", windowScores=" + Arrays.deepToString(windowScores) + "]";
+        }
     }
 
     /**
@@ -76,73 +101,57 @@ public final class ImageSimilarity {
             return new SimilarityResult(0, 0, 0, 0, new double[0][0]);
         }
 
-        int[][] r1 = new int[height][width];
-        int[][] g1 = new int[height][width];
-        int[][] b1 = new int[height][width];
-        int[][] r2 = new int[height][width];
-        int[][] g2 = new int[height][width];
-        int[][] b2 = new int[height][width];
+        int[][][] first = channels(a, width, height);
+        int[][][] second = channels(b, width, height);
 
-        PixelReader pr1 = a.getPixelReader();
-        PixelReader pr2 = b.getPixelReader();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int p1 = compositeOverWhite(pr1.getArgb(x, y));
-                int p2 = compositeOverWhite(pr2.getArgb(x, y));
-                r1[y][x] = (p1 >> 16) & 0xFF;
-                g1[y][x] = (p1 >> 8) & 0xFF;
-                b1[y][x] = p1 & 0xFF;
-                r2[y][x] = (p2 >> 16) & 0xFF;
-                g2[y][x] = (p2 >> 8) & 0xFF;
-                b2[y][x] = p2 & 0xFF;
-            }
-        }
-
-        int windowsY = Math.max(1, (height - WINDOW) / STRIDE + 1);
-        int windowsX = Math.max(1, (width - WINDOW) / STRIDE + 1);
         // Only count windows that fully fit; if image is smaller than WINDOW, fall back to a single
         // truncated window so we still produce a result.
         boolean fits = width >= WINDOW && height >= WINDOW;
-        if (!fits) {
-            windowsY = 1;
-            windowsX = 1;
-        }
+        int windowsY = fits ? (height - WINDOW) / STRIDE + 1 : 1;
+        int windowsX = fits ? (width - WINDOW) / STRIDE + 1 : 1;
+        int windowWidth = fits ? WINDOW : width;
+        int windowHeight = fits ? WINDOW : height;
 
         double[][] perWindow = new double[windowsY][windowsX];
-        double sumR = 0, sumG = 0, sumB = 0;
-        int windowCount = 0;
+        double[] sums = new double[3];
 
         for (int wy = 0; wy < windowsY; wy++) {
             for (int wx = 0; wx < windowsX; wx++) {
-                int x0 = wx * STRIDE;
-                int y0 = wy * STRIDE;
-                int wW = fits ? WINDOW : width;
-                int wH = fits ? WINDOW : height;
-                if (x0 + wW > width) wW = width - x0;
-                if (y0 + wH > height) wH = height - y0;
-                if (wW <= 0 || wH <= 0) continue;
-
-                double sR = ssim(r1, r2, x0, y0, wW, wH);
-                double sG = ssim(g1, g2, x0, y0, wW, wH);
-                double sB = ssim(b1, b2, x0, y0, wW, wH);
-
-                sumR += sR;
-                sumG += sG;
-                sumB += sB;
-                perWindow[wy][wx] = (sR + sG + sB) / 3.0;
-                windowCount++;
+                double total = 0;
+                for (int channel = 0; channel < 3; channel++) {
+                    double score = ssim(first[channel], second[channel], wx * STRIDE, wy * STRIDE,
+                            windowWidth, windowHeight);
+                    sums[channel] += score;
+                    total += score;
+                }
+                perWindow[wy][wx] = total / 3.0;
             }
         }
 
-        if (windowCount == 0) {
-            return new SimilarityResult(0, 0, 0, 0, perWindow);
-        }
-
-        double red = clampPct(sumR / windowCount);
-        double green = clampPct(sumG / windowCount);
-        double blue = clampPct(sumB / windowCount);
+        int windowCount = windowsY * windowsX;
+        double red = clampPct(sums[0] / windowCount);
+        double green = clampPct(sums[1] / windowCount);
+        double blue = clampPct(sums[2] / windowCount);
         double overall = (red + green + blue) / 3.0;
         return new SimilarityResult(overall, red, green, blue, perWindow);
+    }
+
+    /**
+     * The red, green and blue values of an image, composited over white, as
+     * {@code [channel][y][x]}.
+     */
+    private static int[][][] channels(WritableImage image, int width, int height) {
+        int[][][] result = new int[3][height][width];
+        PixelReader reader = image.getPixelReader();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = compositeOverWhite(reader.getArgb(x, y));
+                result[0][y][x] = (pixel >> 16) & 0xFF;
+                result[1][y][x] = (pixel >> 8) & 0xFF;
+                result[2][y][x] = pixel & 0xFF;
+            }
+        }
+        return result;
     }
 
     /**
@@ -174,7 +183,8 @@ public final class ImageSimilarity {
         long n = (long) w * h;
         if (n == 0) return 100.0;
 
-        double sumX = 0, sumY = 0;
+        double sumX = 0;
+        double sumY = 0;
         for (int yy = 0; yy < h; yy++) {
             int[] rowX = x[y0 + yy];
             int[] rowY = y[y0 + yy];
@@ -186,7 +196,9 @@ public final class ImageSimilarity {
         double meanX = sumX / n;
         double meanY = sumY / n;
 
-        double varX = 0, varY = 0, cov = 0;
+        double varX = 0;
+        double varY = 0;
+        double cov = 0;
         for (int yy = 0; yy < h; yy++) {
             int[] rowX = x[y0 + yy];
             int[] rowY = y[y0 + yy];

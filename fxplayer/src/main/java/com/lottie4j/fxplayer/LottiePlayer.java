@@ -263,8 +263,8 @@ public class LottiePlayer extends Canvas {
      *
      * @return frames per second
      */
-    private int getFramesPerSecond() {
-        return FrameTiming.getFramesPerSecond(animation);
+    private double getFramesPerSecond() {
+        return FrameTiming.getFrameRate(animation);
     }
 
     /**
@@ -590,10 +590,17 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
-     * Renders a frame and returns it as an image of the size of this player, for tests, thumbnails
-     * and visual comparison. Unlike {@link #render(double)} followed by a {@code snapshot} of the
-     * node, it does not depend on the player being part of a scene. The background color of the
-     * player is part of the image: white by default, so call
+     * Renders a frame into an image of the size of this player, for tests, thumbnails and visual
+     * comparison.
+     * <p>
+     * The frame is drawn on a canvas of its own, so what the player shows and its
+     * {@link #currentFrameProperty() current frame} stay as they are, the player need not be part
+     * of a scene, and a scale or rotation of the player node does not end up in the image. The
+     * layers drawn are the {@link #setVisibleLayerIndices(Set) visible layers} of the player.
+     * Adaptive off-screen scaling is not applied: the same frame gives the same image on a fast
+     * and on a slow machine.
+     * <p>
+     * The background color of the player is part of the image: white by default, so call
      * {@code setBackgroundColor(Color.TRANSPARENT)} first for an image with an alpha channel.
      * <p>
      * Must be called on the JavaFX application thread.
@@ -602,10 +609,20 @@ public class LottiePlayer extends Canvas {
      * @return the rendered frame
      */
     public WritableImage snapshotFrame(double frame) {
-        render(frame);
+        Canvas target = new Canvas(getWidth(), getHeight());
+        boolean adaptiveEnabled = adaptiveOffscreenScalingEnabled;
+        double adaptiveScale = adaptiveOffscreenScale;
+        adaptiveOffscreenScalingEnabled = false;
+        try {
+            renderFrame(target.getGraphicsContext2D(), frame, visibleLayerIndices);
+        } finally {
+            // rendering the snapshot must not count as a measurement of playback speed
+            adaptiveOffscreenScalingEnabled = adaptiveEnabled;
+            adaptiveOffscreenScale = adaptiveScale;
+        }
         SnapshotParameters parameters = new SnapshotParameters();
         parameters.setFill(Color.TRANSPARENT);
-        return snapshot(parameters, null);
+        return target.snapshot(parameters, null);
     }
 
     /**

@@ -5,10 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.helper.DoubleAsIntegerIfWholeSerializer;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.asset.Asset;
 import com.lottie4j.core.model.layer.Layer;
+import com.lottie4j.core.model.text.FontList;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.List;
 
@@ -28,7 +31,8 @@ import java.util.List;
  * @param name            the human-readable name of the animation
  * @param matchName       the match name identifier used for referencing
  * @param has3dLayers     flag indicating whether the animation contains 3D layers (1 for true, 0 for false)
- * @param framesPerSecond the frame rate at which the animation should be played
+ * @param framesPerSecond the frame rate at which the animation should be played; not always a whole
+ *                        number (29.97 is common)
  * @param inPoint         the starting frame of the animation timeline
  * @param outPoint        the ending frame of the animation timeline
  * @param width           the width of the animation canvas in pixels
@@ -37,6 +41,7 @@ import java.util.List;
  * @param layers          ordered collection of layers that compose the visual hierarchy of the animation
  * @param markers         collection of named markers for identifying specific points in the timeline
  * @param props           additional properties object
+ * @param fonts           the fonts used by the text layers, or {@code null} if the file has none
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
@@ -45,16 +50,42 @@ public record Animation(
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
         @JsonProperty("ddd") Integer has3dLayers,
-        @JsonProperty("fr") Integer framesPerSecond,
-        @JsonProperty("ip") Integer inPoint,
-        @JsonProperty("op") Integer outPoint,
+        @JsonProperty("fr") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double framesPerSecond,
+        @JsonProperty("ip") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double inPoint,
+        @JsonProperty("op") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double outPoint,
         @JsonProperty("w") Integer width,
         @JsonProperty("h") Integer height,
         @JsonProperty("assets") List<Asset> assets,
         @JsonProperty("layers") List<Layer> layers,
         @JsonProperty("markers") List<Marker> markers,
-        @JsonProperty("props") Object props
+        @JsonProperty("props") Object props,
+        @JsonProperty("fonts") FontList fonts
 ) implements PropertyListing {
+
+    /**
+     * Creates an animation without fonts.
+     *
+     * @param version         the version of the Lottie specification used for this animation
+     * @param name            the human-readable name of the animation
+     * @param matchName       the match name identifier used for referencing
+     * @param has3dLayers     1 if the animation contains 3D layers
+     * @param framesPerSecond the frame rate
+     * @param inPoint         the starting frame
+     * @param outPoint        the ending frame (exclusive)
+     * @param width           the width in pixels
+     * @param height          the height in pixels
+     * @param assets          the assets
+     * @param layers          the layers
+     * @param markers         the markers
+     * @param props           additional properties object
+     */
+    public Animation(String version, String name, String matchName, Integer has3dLayers, Double framesPerSecond,
+                     Double inPoint, Double outPoint, Integer width, Integer height, List<Asset> assets,
+                     List<Layer> layers, List<Marker> markers, Object props) {
+        this(version, name, matchName, has3dLayers, framesPerSecond, inPoint, outPoint, width, height, assets,
+                layers, markers, props, null);
+    }
+
     @Override
     @JsonIgnore
     public PropertyListingList getList() {
@@ -70,6 +101,7 @@ public record Animation(
         list.addList("Assets", assets);
         list.addList("Layers", layers);
         list.addList("Markers", markers);
+        list.add("Fonts", fonts != null && fonts.list() != null ? fonts.list().size() : null);
         return list;
     }
 }
