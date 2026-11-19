@@ -39,7 +39,7 @@ record AnimatedJson(
 
         @Override
         public AnimatedJson convert(Animated value) {
-            return new AnimatedJson(value.animated(), OldFormatKeyframes.restore(value.keyframes()), value.ix(), value.l(), value.s(),
+            return new AnimatedJson(value.animated(), value.keyframes() == null ? null : OldFormatKeyframes.restore(value.keyframes()), value.ix(), value.l(), value.s(),
                     value.x() != null ? value.x() : value.expression(), value.y());
         }
     }

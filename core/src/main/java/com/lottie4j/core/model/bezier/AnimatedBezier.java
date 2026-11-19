@@ -50,7 +50,9 @@ public record AnimatedBezier(
      * see {@link OldFormatKeyframes}.
      */
     public AnimatedBezier {
-        beziers = OldFormatKeyframes.completeBeziers(beziers);
+        if (beziers != null) {
+            beziers = OldFormatKeyframes.completeBeziers(beziers);
+        }
     }
     @Override
     @JsonIgnore

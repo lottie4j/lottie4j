@@ -2,7 +2,6 @@ package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.helper.LayerHierarchy;
-import com.lottie4j.core.helper.LayerHierarchy;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.asset.Asset;
 import com.lottie4j.core.model.layer.Layer;
@@ -227,13 +226,7 @@ public class PrecompRenderer {
         }
 
         List<Layer> precompLayers = asset.layers();
-        // layers another layer names as its matte ("tp") are drawn through that layer only
-        Set<Integer> namedMattes = new HashSet<>();
-        for (Layer candidate : precompLayers) {
-            if (candidate.matteMode() != null && candidate.tp() != null) {
-                namedMattes.add(candidate.tp());
-            }
-        }
+        Set<Integer> namedMattes = namedMattes(precompLayers);
         for (int i = precompLayers.size() - 1; i >= 0; i--) {
             Layer precompLayer = precompLayers.get(i);
             if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
@@ -272,8 +265,7 @@ public class PrecompRenderer {
                 continue;
             }
 
-            if ((precompLayer.matteTarget() != null && precompLayer.matteTarget() == 1)
-                    || namedMattes.contains(precompLayer.indexLayer())) {
+            if (isDrawnAsMatteOnly(precompLayer, namedMattes)) {
                 logger.debug("Skipping matte source layer in precomp: {}", precompLayer.name());
                 continue;
             }
@@ -623,6 +615,23 @@ public class PrecompRenderer {
         }
 
         return -1;
+    }
+
+    /** The indices of the layers another layer names as its matte ("tp"). */
+    private static Set<Integer> namedMattes(List<Layer> layers) {
+        Set<Integer> result = new HashSet<>();
+        for (Layer candidate : layers) {
+            if (candidate.matteMode() != null && candidate.tp() != null) {
+                result.add(candidate.tp());
+            }
+        }
+        return result;
+    }
+
+    /** Whether a layer is a matte for another one: it is drawn through that layer, not on its own. */
+    private static boolean isDrawnAsMatteOnly(Layer layer, Set<Integer> namedMattes) {
+        return (layer.matteTarget() != null && layer.matteTarget() == 1)
+                || namedMattes.contains(layer.indexLayer());
     }
 
     private Optional<Layer> resolveActiveMatteSource(List<Layer> layers,

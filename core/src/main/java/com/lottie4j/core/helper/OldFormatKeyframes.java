@@ -8,6 +8,9 @@ import com.lottie4j.core.model.keyframe.TimedKeyframe;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Completes keyframes written in the form Bodymovin used before version 5.
@@ -24,77 +27,58 @@ import java.util.List;
  */
 public final class OldFormatKeyframes {
 
+    /**
+     * How to look at one kind of keyframe.
+     *
+     * @param hasValues whether an element of the list is a keyframe of this kind at all
+     * @param value     the value of a keyframe
+     * @param end       the end value of a keyframe
+     * @param withValue a copy of a keyframe with another value
+     * @param <K>       the keyframe
+     * @param <V>       its value
+     */
+    private record Kind<K, V>(Predicate<K> hasValues, Function<K, List<V>> value, Function<K, List<V>> end,
+                              BiFunction<K, List<V>, K> withValue) {
+    }
+
+    private static final Kind<Keyframe, BigDecimal> TIMED = new Kind<>(
+            TimedKeyframe.class::isInstance,
+            keyframe -> ((TimedKeyframe) keyframe).values(),
+            keyframe -> ((TimedKeyframe) keyframe).unknown_e(),
+            (keyframe, value) -> {
+                TimedKeyframe timed = (TimedKeyframe) keyframe;
+                return new TimedKeyframe(timed.time(), value, timed.unknown_e(), timed.easingIn(),
+                        timed.easingOut(), timed.tangentOut(), timed.tangentIn(), timed.holdFrame());
+            });
+
+    private static final Kind<BezierKeyframe, BezierDefinition> BEZIER = new Kind<>(
+            java.util.Objects::nonNull,
+            BezierKeyframe::beziers,
+            BezierKeyframe::endBeziers,
+            (keyframe, value) -> new BezierKeyframe(keyframe.time(), keyframe.easingIn(), keyframe.easingOut(),
+                    value, keyframe.endBeziers()));
+
     private OldFormatKeyframes() {
     }
 
     /**
      * Completes the keyframes of a number, vector or color property.
      *
-     * @param keyframes the keyframes as read; may be {@code null}
+     * @param keyframes the keyframes as read
      * @return the same list if nothing was missing, otherwise a copy with the missing values filled in
      */
     public static List<Keyframe> complete(List<Keyframe> keyframes) {
-        if (keyframes == null) {
-            return null;
-        }
-        List<Keyframe> result = null;
-        List<BigDecimal> previousEnd = null;
-        List<BigDecimal> previousValue = null;
-        for (int i = 0; i < keyframes.size(); i++) {
-            if (!(keyframes.get(i) instanceof TimedKeyframe keyframe)) {
-                continue;
-            }
-            List<BigDecimal> value = keyframe.values();
-            if (value == null || value.isEmpty()) {
-                value = previousEnd != null && !previousEnd.isEmpty() ? previousEnd : previousValue;
-                if (value != null) {
-                    if (result == null) {
-                        result = new ArrayList<>(keyframes);
-                    }
-                    result.set(i, new TimedKeyframe(keyframe.time(), value, keyframe.unknown_e(),
-                            keyframe.easingIn(), keyframe.easingOut(), keyframe.tangentOut(), keyframe.tangentIn(),
-                            keyframe.holdFrame()));
-                }
-            }
-            previousEnd = keyframe.unknown_e();
-            previousValue = value;
-        }
-        return result == null ? keyframes : result;
+        return complete(keyframes, TIMED);
     }
 
     /**
      * Completes the keyframes of a path property.
      *
-     * @param keyframes the keyframes as read; may be {@code null}
+     * @param keyframes the keyframes as read
      * @return the same list if nothing was missing, otherwise a copy with the missing shapes filled in
      */
     public static List<BezierKeyframe> completeBeziers(List<BezierKeyframe> keyframes) {
-        if (keyframes == null) {
-            return null;
-        }
-        List<BezierKeyframe> result = null;
-        List<BezierDefinition> previousEnd = null;
-        List<BezierDefinition> previousValue = null;
-        for (int i = 0; i < keyframes.size(); i++) {
-            BezierKeyframe keyframe = keyframes.get(i);
-            if (keyframe == null) {
-                continue;
-            }
-            List<BezierDefinition> value = keyframe.beziers();
-            if (value == null || value.isEmpty()) {
-                value = previousEnd != null && !previousEnd.isEmpty() ? previousEnd : previousValue;
-                if (value != null) {
-                    if (result == null) {
-                        result = new ArrayList<>(keyframes);
-                    }
-                    result.set(i, new BezierKeyframe(keyframe.time(), keyframe.easingIn(), keyframe.easingOut(),
-                            value, keyframe.endBeziers()));
-                }
-            }
-            previousEnd = keyframe.endBeziers();
-            previousValue = value;
-        }
-        return result == null ? keyframes : result;
+        return complete(keyframes, BEZIER);
     }
 
     /**
@@ -102,60 +86,77 @@ public final class OldFormatKeyframes {
      * was read. A value that was filled in is the very list object of the keyframe before it,
      * which is how it is told apart from a value the file had.
      *
-     * @param keyframes the keyframes of a property; may be {@code null}
+     * @param keyframes the keyframes of a property
      * @return the same list if nothing had been filled in, otherwise a copy without the filled-in values
      */
     public static List<Keyframe> restore(List<Keyframe> keyframes) {
-        if (keyframes == null) {
-            return null;
-        }
-        List<Keyframe> result = null;
-        TimedKeyframe previous = null;
-        for (int i = 0; i < keyframes.size(); i++) {
-            if (!(keyframes.get(i) instanceof TimedKeyframe keyframe)) {
-                continue;
-            }
-            if (previous != null && keyframe.values() != null
-                    && (keyframe.values() == previous.unknown_e() || keyframe.values() == previous.values())) {
-                if (result == null) {
-                    result = new ArrayList<>(keyframes);
-                }
-                result.set(i, new TimedKeyframe(keyframe.time(), null, keyframe.unknown_e(), keyframe.easingIn(),
-                        keyframe.easingOut(), keyframe.tangentOut(), keyframe.tangentIn(), keyframe.holdFrame()));
-            }
-            previous = keyframe;
-        }
-        return result == null ? keyframes : result;
+        return restore(keyframes, TIMED);
     }
 
     /**
      * Undoes {@link #completeBeziers(List)} for writing; see {@link #restore(List)}.
      *
-     * @param keyframes the keyframes of a path property; may be {@code null}
+     * @param keyframes the keyframes of a path property
      * @return the same list if nothing had been filled in, otherwise a copy without the filled-in shapes
      */
     public static List<BezierKeyframe> restoreBeziers(List<BezierKeyframe> keyframes) {
-        if (keyframes == null) {
-            return null;
-        }
-        List<BezierKeyframe> result = null;
-        BezierKeyframe previous = null;
+        return restore(keyframes, BEZIER);
+    }
+
+    private static <K, V> List<K> complete(List<K> keyframes, Kind<K, V> kind) {
+        List<K> result = keyframes;
+        List<V> previousEnd = null;
+        List<V> previousValue = null;
         for (int i = 0; i < keyframes.size(); i++) {
-            BezierKeyframe keyframe = keyframes.get(i);
-            if (keyframe == null) {
+            K keyframe = keyframes.get(i);
+            if (!kind.hasValues().test(keyframe)) {
                 continue;
             }
-            if (previous != null && keyframe.beziers() != null
-                    && (keyframe.beziers() == previous.endBeziers() || keyframe.beziers() == previous.beziers())) {
-                if (result == null) {
-                    result = new ArrayList<>(keyframes);
-                }
-                result.set(i, new BezierKeyframe(keyframe.time(), keyframe.easingIn(), keyframe.easingOut(), null,
-                        keyframe.endBeziers()));
+            List<V> value = kind.value().apply(keyframe);
+            if (isEmpty(value)) {
+                value = isEmpty(previousEnd) ? previousValue : previousEnd;
+                result = replaced(result, keyframes, i,
+                        value == null ? keyframe : kind.withValue().apply(keyframe, value));
+            }
+            previousEnd = kind.end().apply(keyframe);
+            previousValue = value;
+        }
+        return result;
+    }
+
+    private static <K, V> List<K> restore(List<K> keyframes, Kind<K, V> kind) {
+        List<K> result = keyframes;
+        K previous = null;
+        for (int i = 0; i < keyframes.size(); i++) {
+            K keyframe = keyframes.get(i);
+            if (!kind.hasValues().test(keyframe)) {
+                continue;
+            }
+            if (previous != null && wasFilledIn(kind.value().apply(keyframe), previous, kind)) {
+                result = replaced(result, keyframes, i, kind.withValue().apply(keyframe, null));
             }
             previous = keyframe;
         }
-        return result == null ? keyframes : result;
+        return result;
+    }
+
+    /** Whether a value is the very list of the keyframe before it: its end value, or else its value. */
+    private static <K, V> boolean wasFilledIn(List<V> value, K previous, Kind<K, V> kind) {
+        return value != null && (value == kind.end().apply(previous) || value == kind.value().apply(previous));
+    }
+
+    private static boolean isEmpty(List<?> list) {
+        return list == null || list.isEmpty();
+    }
+
+    /** Puts an element into a copy of the original list, which is made when the first one is replaced. */
+    private static <K> List<K> replaced(List<K> result, List<K> original, int index, K element) {
+        if (element == original.get(index)) {
+            return result;
+        }
+        List<K> copy = result == original ? new ArrayList<>(original) : result;
+        copy.set(index, element);
+        return copy;
     }
 
     /** Writes the keyframes of a path property as they were read; see {@link #restoreBeziers(List)}. */

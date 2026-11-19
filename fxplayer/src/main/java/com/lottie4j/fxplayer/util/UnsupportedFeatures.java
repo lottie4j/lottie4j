@@ -39,6 +39,9 @@ public final class UnsupportedFeatures {
     /** How many layer names a finding lists at most. */
     private static final int MAX_NAMES = 10;
 
+    /** Deeper than any model goes; a stop for a structure that should not exist. */
+    private static final int MAX_DEPTH = 200;
+
     private static final Set<LayerType> RENDERED_LAYER_TYPES = Set.of(LayerType.PRECOMPOSITION,
             LayerType.SOLD_COLOR, LayerType.IMAGE, LayerType.NULL, LayerType.SHAPE, LayerType.TEXT);
 
@@ -117,8 +120,21 @@ public final class UnsupportedFeatures {
      *         if it uses none of them
      */
     public static List<Finding> find(Animation animation) {
-        Map<Feature, Integer> counts = new EnumMap<>(Feature.class);
-        Map<Feature, Set<String>> names = new EnumMap<>(Feature.class);
+        Tally tally = new Tally();
+        Map<String, Asset> compositions = compositions(animation);
+
+        inspect(animation.layers(), compositions, tally);
+        for (Asset composition : compositions.values()) {
+            inspect(composition.layers(), compositions, tally);
+            if (containsItself(composition, compositions)) {
+                tally.add(Feature.SELF_CONTAINING_PRECOMPOSITION, null);
+            }
+        }
+        return tally.findings();
+    }
+
+    /** The precompositions of an animation by id. */
+    private static Map<String, Asset> compositions(Animation animation) {
         Map<String, Asset> compositions = new HashMap<>();
         if (animation.assets() != null) {
             for (Asset asset : animation.assets()) {
@@ -127,115 +143,125 @@ public final class UnsupportedFeatures {
                 }
             }
         }
-        Collector collector = (feature, layer) -> {
+        return compositions;
+    }
+
+    /** Counts the uses of each feature and remembers which layers they are in. */
+    private static final class Tally {
+
+        private final Map<Feature, Integer> counts = new EnumMap<>(Feature.class);
+        private final Map<Feature, Set<String>> names = new EnumMap<>(Feature.class);
+
+        /**
+         * @param layer the layer that uses the feature; {@code null} if it is not one layer's doing
+         */
+        void add(Feature feature, Layer layer) {
             counts.merge(feature, 1, Integer::sum);
             Set<String> list = names.computeIfAbsent(feature, key -> new LinkedHashSet<>());
-            if (list.size() < MAX_NAMES) {
+            if (layer != null && list.size() < MAX_NAMES) {
                 list.add(layer.name() != null ? layer.name() : "(unnamed)");
             }
-        };
+        }
 
-        inspect(animation.layers(), compositions, collector);
-        for (Asset composition : compositions.values()) {
-            inspect(composition.layers(), compositions, collector);
-            if (containsItself(composition, compositions)) {
-                counts.merge(Feature.SELF_CONTAINING_PRECOMPOSITION, 1, Integer::sum);
-                names.computeIfAbsent(Feature.SELF_CONTAINING_PRECOMPOSITION, key -> new LinkedHashSet<>());
+        void addIf(boolean used, Feature feature, Layer layer) {
+            if (used) {
+                add(feature, layer);
             }
         }
 
-        List<Finding> findings = new ArrayList<>();
-        for (Feature feature : Feature.values()) {
-            if (counts.containsKey(feature)) {
-                findings.add(new Finding(feature, counts.get(feature), List.copyOf(names.get(feature))));
+        List<Finding> findings() {
+            List<Finding> findings = new ArrayList<>();
+            for (Map.Entry<Feature, Integer> entry : counts.entrySet()) {
+                findings.add(new Finding(entry.getKey(), entry.getValue(), List.copyOf(names.get(entry.getKey()))));
             }
+            return findings;
         }
-        return findings;
     }
 
-    private interface Collector {
-        void add(Feature feature, Layer layer);
-    }
-
-    private static void inspect(List<Layer> layers, Map<String, Asset> compositions, Collector collector) {
+    private static void inspect(List<Layer> layers, Map<String, Asset> compositions, Tally tally) {
         if (layers == null) {
             return;
         }
         Map<Integer, Layer> byIndex = LayerHierarchy.byIndex(layers);
         for (Layer layer : layers) {
-            if (layer == null) {
-                continue;
+            if (layer != null) {
+                inspect(layer, byIndex, compositions, tally);
             }
-            if (layer.layerType() == null || !RENDERED_LAYER_TYPES.contains(layer.layerType())) {
-                collector.add(Feature.LAYER_TYPE, layer);
-            }
-            if (layer.layerType() == LayerType.PRECOMPOSITION && !compositions.containsKey(layer.referenceId())) {
-                collector.add(Feature.MISSING_PRECOMPOSITION, layer);
-            }
-            if (layer.timeRemapping() != null) {
-                collector.add(Feature.TIME_REMAPPING, layer);
-            }
-            if (layer.autoRotate() != null && layer.autoRotate() != 0) {
-                collector.add(Feature.AUTO_ORIENT, layer);
-            }
-            if (layer.styles() != null) {
-                layer.styles().forEach(style -> collector.add(Feature.LAYER_STYLE, layer));
-            }
-            if (layer.effects() != null) {
-                for (Effect effect : layer.effects()) {
-                    boolean enabled = effect != null && (effect.enabled() == null || effect.enabled() != 0);
-                    if (enabled && effect.type() != EffectType.GAUSSIAN_BLUR) {
-                        collector.add(Feature.EFFECT, layer);
-                    }
-                }
-            }
-            if (layer.indexParent() != null && byIndex.containsKey(layer.indexParent())
-                    && LayerHierarchy.parentChain(layer, byIndex).isEmpty()) {
-                collector.add(Feature.CIRCULAR_PARENT, layer);
-            }
-            walk(layer, layer, collector, 0);
         }
+    }
+
+    private static void inspect(Layer layer, Map<Integer, Layer> byIndex, Map<String, Asset> compositions,
+                                Tally tally) {
+        LayerType type = layer.layerType();
+        tally.addIf(type == null || !RENDERED_LAYER_TYPES.contains(type), Feature.LAYER_TYPE, layer);
+        tally.addIf(type == LayerType.PRECOMPOSITION && !compositions.containsKey(layer.referenceId()),
+                Feature.MISSING_PRECOMPOSITION, layer);
+        tally.addIf(layer.timeRemapping() != null, Feature.TIME_REMAPPING, layer);
+        tally.addIf(layer.autoRotate() != null && layer.autoRotate() != 0, Feature.AUTO_ORIENT, layer);
+        tally.addIf(hasCircularParents(layer, byIndex), Feature.CIRCULAR_PARENT, layer);
+        if (layer.styles() != null) {
+            layer.styles().forEach(style -> tally.add(Feature.LAYER_STYLE, layer));
+        }
+        if (layer.effects() != null) {
+            layer.effects().forEach(effect -> tally.addIf(isUndrawnEffect(effect), Feature.EFFECT, layer));
+        }
+        walk(layer, layer, tally, 0);
+    }
+
+    private static boolean hasCircularParents(Layer layer, Map<Integer, Layer> byIndex) {
+        return layer.indexParent() != null && byIndex.containsKey(layer.indexParent())
+                && LayerHierarchy.parentChain(layer, byIndex).isEmpty();
+    }
+
+    /** An effect that is switched on and is not the one kind the player draws. */
+    private static boolean isUndrawnEffect(Effect effect) {
+        boolean enabled = effect != null && (effect.enabled() == null || effect.enabled() != 0);
+        return enabled && effect.type() != EffectType.GAUSSIAN_BLUR;
     }
 
     /**
      * Goes through everything a layer is made of. The model is records and lists of records all
      * the way down, so the components of each record are what there is to look at.
      */
-    private static void walk(Object value, Layer layer, Collector collector, int depth) {
-        if (value == null || depth > 200) {
+    private static void walk(Object value, Layer layer, Tally tally, int depth) {
+        if (value == null || depth > MAX_DEPTH) {
             return;
         }
         if (value instanceof List<?> list) {
-            for (Object element : list) {
-                walk(element, layer, collector, depth + 1);
-            }
+            list.forEach(element -> walk(element, layer, tally, depth + 1));
             return;
         }
         if (!value.getClass().isRecord()) {
             return;
         }
-        if (value instanceof Animated animated && animated.hasExpression()) {
-            collector.add(Feature.EXPRESSION, layer);
-        }
-        if (value instanceof com.lottie4j.core.model.transform.Transform transform && skewed(transform.skew())
-                || value instanceof com.lottie4j.core.model.shape.grouping.Transform shapeTransform
-                && skewed(shapeTransform.skew())) {
-            collector.add(Feature.SKEW, layer);
-        }
-        if (value instanceof Repeater || value instanceof RoundedCorners || value instanceof OffsetPath
-                || value instanceof Pucker || value instanceof Twist || value instanceof ZigZag) {
-            collector.add(Feature.SHAPE_MODIFIER, layer);
-        }
-        if (value instanceof UnknownShape) {
-            collector.add(Feature.UNKNOWN_SHAPE, layer);
-        }
+        tally.addIf(value instanceof Animated animated && animated.hasExpression(), Feature.EXPRESSION, layer);
+        tally.addIf(isSkewed(value), Feature.SKEW, layer);
+        tally.addIf(isUnappliedModifier(value), Feature.SHAPE_MODIFIER, layer);
+        tally.addIf(value instanceof UnknownShape, Feature.UNKNOWN_SHAPE, layer);
         for (RecordComponent component : value.getClass().getRecordComponents()) {
-            try {
-                walk(component.getAccessor().invoke(value), layer, collector, depth + 1);
-            } catch (ReflectiveOperationException | RuntimeException e) {
-                // a component that cannot be read has nothing to report
-            }
+            walk(read(component, value), layer, tally, depth + 1);
         }
+    }
+
+    /** The value of a record component; {@code null} if it cannot be read, which leaves nothing to report. */
+    private static Object read(RecordComponent component, Object record) {
+        try {
+            return component.getAccessor().invoke(record);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static boolean isSkewed(Object value) {
+        if (value instanceof com.lottie4j.core.model.transform.Transform transform) {
+            return skewed(transform.skew());
+        }
+        return value instanceof com.lottie4j.core.model.shape.grouping.Transform transform && skewed(transform.skew());
+    }
+
+    private static boolean isUnappliedModifier(Object value) {
+        return value instanceof Repeater || value instanceof RoundedCorners || value instanceof OffsetPath
+                || value instanceof Pucker || value instanceof Twist || value instanceof ZigZag;
     }
 
     private static boolean skewed(Animated skew) {

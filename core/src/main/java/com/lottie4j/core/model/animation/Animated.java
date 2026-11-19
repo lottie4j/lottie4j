@@ -77,7 +77,9 @@ public record Animated(
      * see {@link OldFormatKeyframes}.
      */
     public Animated {
-        keyframes = OldFormatKeyframes.complete(keyframes);
+        if (keyframes != null) {
+            keyframes = OldFormatKeyframes.complete(keyframes);
+        }
     }
 
     /**

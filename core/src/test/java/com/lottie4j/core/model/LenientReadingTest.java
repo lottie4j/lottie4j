@@ -85,7 +85,7 @@ class LenientReadingTest {
     }
 
     @Test
-    void aFractionalFrameRateIsKept() throws Exception {
+    void aFractionalFrameRateIsKept() {
         String json = document("", "{\"ty\":4," + KS + "}").replace("\"fr\":30", "\"fr\":29.97")
                 .replace("\"op\":60", "\"op\":60.5");
 
@@ -131,7 +131,7 @@ class LenientReadingTest {
     }
 
     @Test
-    void fontsAreReadAndFoundByName() throws Exception {
+    void fontsAreReadAndFoundByName() {
         String fonts = "\"fonts\":{\"list\":[{\"fName\":\"Arial-BoldMT\",\"fFamily\":\"Arial\",\"fStyle\":\"Bold\","
                 + "\"ascent\":71.6}]},";
 
