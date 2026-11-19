@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Cancel runs still in progress for the same branch/PR when a newer commit is pushed (never on main)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   test:
     name: Test validation
