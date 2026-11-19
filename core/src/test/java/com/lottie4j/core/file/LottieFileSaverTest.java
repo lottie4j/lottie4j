@@ -101,17 +101,17 @@ class LottieFileSaverTest {
     }
 
     @Test
-    void anArchiveWithoutAUsableManifestIsNotWritten() throws Exception {
+    void anArchiveWithoutAUsableManifestIsNotWritten() throws LottieFileException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Manifest unsafe = new Manifest("2", "test", null, List.of(
                 new ManifestAnimation("../outside", null, null, null, null, null, null, null, null)), null, null,
                 null);
+        DotLottie withoutManifest = new DotLottie(null, List.of(animation()), null, null, null, null);
+        DotLottie withUnsafeId = new DotLottie(unsafe, List.of(animation()), null, null, null, null);
+        DotLottie withoutAnimation = new DotLottie(unsafe, List.of(), null, null, null, null);
 
-        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(
-                new DotLottie(null, List.of(animation()), null, null, null, null), out));
-        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(
-                new DotLottie(unsafe, List.of(animation()), null, null, null, null), out));
-        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(
-                new DotLottie(unsafe, List.of(), null, null, null, null), out));
+        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(withoutManifest, out));
+        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(withUnsafeId, out));
+        assertThrows(LottieFileException.class, () -> LottieFileSaver.saveDotLottie(withoutAnimation, out));
     }
 }
