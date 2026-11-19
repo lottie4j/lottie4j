@@ -22,7 +22,7 @@ public final class FrameTiming {
      * @return first frame index used for playback
      */
     public static int getInPoint(Animation animation) {
-        return animation.inPoint() != null ? animation.inPoint() : 0;
+        return animation.inPoint() != null ? (int) Math.round(animation.inPoint()) : 0;
     }
 
     /**
@@ -34,7 +34,7 @@ public final class FrameTiming {
     public static int getOutPoint(Animation animation) {
         int inPoint = getInPoint(animation);
         int defaultOutPoint = inPoint + 60;
-        int outPoint = animation.outPoint() != null ? animation.outPoint() : defaultOutPoint;
+        int outPoint = animation.outPoint() != null ? (int) Math.round(animation.outPoint()) : defaultOutPoint;
         // Ensure exclusive out-point stays ahead of in-point by at least one frame.
         return Math.max(inPoint + 1, outPoint);
     }
@@ -62,13 +62,25 @@ public final class FrameTiming {
     }
 
     /**
-     * Returns frames-per-second with a safe default.
+     * Returns frames-per-second, rounded to a whole number, with a safe default. Use
+     * {@link #getFrameRate(Animation)} for timing: a frame rate such as 29.97 is not a whole number.
      *
      * @param animation animation model
-     * @return playback frame rate
+     * @return playback frame rate, rounded
      */
     public static int getFramesPerSecond(Animation animation) {
-        return animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
+        return (int) Math.round(getFrameRate(animation));
+    }
+
+    /**
+     * Returns the exact frame rate with a safe default.
+     *
+     * @param animation animation model
+     * @return playback frame rate in frames per second; 30 if the animation has none or one that is not positive
+     */
+    public static double getFrameRate(Animation animation) {
+        Double frameRate = animation.framesPerSecond();
+        return frameRate != null && frameRate > 0 && Double.isFinite(frameRate) ? frameRate : 30;
     }
 
     /**

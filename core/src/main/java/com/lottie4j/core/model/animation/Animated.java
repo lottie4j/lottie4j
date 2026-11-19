@@ -1,7 +1,12 @@
 package com.lottie4j.core.model.animation;
 
+import com.lottie4j.core.helper.ObjectMapperFactory;
+import com.lottie4j.core.helper.OldFormatKeyframes;
+import tools.jackson.databind.JsonNode;
+
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -44,9 +49,12 @@ import tools.jackson.databind.annotation.JsonSerialize;
  * @param s         indicates if this is a split/separated property
  * @param x         the X-axis component for split dimensional properties
  * @param y         the Y-axis component for split dimensional properties
+ * @param expression the expression of the property (the JSON member {@code x} when it is a string), or
+ *                  {@code null}; expressions are kept and written back, never evaluated
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
+@JsonSerialize(converter = AnimatedJson.Writer.class)
 public record Animated(
         @JsonProperty("a")
         Integer animated,
@@ -60,8 +68,76 @@ public record Animated(
         @JsonProperty("l") Integer l,
         @JsonProperty("s") Boolean s,
         @JsonProperty("x") Animated x,
-        @JsonProperty("y") Animated y
+        @JsonProperty("y") Animated y,
+        @JsonIgnore String expression
 ) implements PropertyListing {
+
+    /**
+     * Completes keyframes in the old form, in which the last keyframe has no value of its own;
+     * see {@link OldFormatKeyframes}.
+     */
+    public Animated {
+        if (keyframes != null) {
+            keyframes = OldFormatKeyframes.complete(keyframes);
+        }
+    }
+
+    /**
+     * Creates a property without an expression.
+     *
+     * @param animated  1 when the property has keyframes, 0 for a fixed value
+     * @param keyframes the keyframes, or the fixed value
+     * @param ix        the property index
+     * @param l         the number of components
+     * @param s         whether the dimensions are split into {@code x} and {@code y}
+     * @param x         the x dimension of a split property
+     * @param y         the y dimension of a split property
+     */
+    public Animated(Integer animated, List<Keyframe> keyframes, Integer ix, Integer l, Boolean s, Animated x,
+                    Animated y) {
+        this(animated, keyframes, ix, l, s, x, y, null);
+    }
+
+    /**
+     * Reads a property. The JSON member {@code x} has two meanings in Lottie: the x dimension of a
+     * position that is split into dimensions (an object), and the expression of a property (a
+     * string). Both are kept, each in its own component.
+     */
+    @JsonCreator
+    static Animated fromJson(
+            @JsonProperty("a") Integer animated,
+            @JsonProperty("k") @JsonDeserialize(using = KeyframeDeserializer.class) List<Keyframe> keyframes,
+            @JsonProperty("ix") Integer ix,
+            @JsonProperty("l") Integer l,
+            @JsonProperty("s") Boolean s,
+            @JsonProperty("x") JsonNode x,
+            @JsonProperty("y") Animated y) {
+        Animated dimension = x != null && x.isObject()
+                ? ObjectMapperFactory.getInstance().treeToValue(x, Animated.class) : null;
+        String expression = x != null && x.isString() ? x.stringValue() : null;
+        return new Animated(animated, keyframes, ix, l, s, dimension, y, expression);
+    }
+
+    /**
+     * Reads a property that is written as a bare number instead of an object with {@code a} and
+     * {@code k}, as some exporters do for fixed values.
+     */
+    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+    static Animated fromNumber(double value) {
+        return new Animated(0, List.of(new NumberKeyframe(value)), null, null, null, null, null, null);
+    }
+
+    /**
+     * Whether the property has an expression. Expressions are JavaScript and are not evaluated by
+     * this library: the keyframes hold the value the property has without it.
+     *
+     * @return true if the property carries an expression
+     */
+    @JsonIgnore
+    public boolean hasExpression() {
+        return expression != null && !expression.isBlank();
+    }
+
     @Override
     @JsonIgnore
     public PropertyListingList getList() {
@@ -73,6 +149,7 @@ public record Animated(
         list.add("s", s);
         list.add("x", x);
         list.add("y", y);
+        list.add("Expression", expression);
         return list;
     }
 

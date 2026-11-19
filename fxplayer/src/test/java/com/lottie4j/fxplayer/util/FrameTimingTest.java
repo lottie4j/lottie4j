@@ -33,7 +33,7 @@ class FrameTimingTest {
 
     @Test
     void enforcesOutPointToBeAfterInPoint() {
-        Animation animation = new Animation(null, null, null, null, 24, 20, 20, null, null,
+        Animation animation = new Animation(null, null, null, null, 24.0, 20.0, 20.0, null, null,
                 null, null, null, null);
 
         assertEquals(21, FrameTiming.getOutPointExclusive(animation));
@@ -56,7 +56,7 @@ class FrameTimingTest {
 
     @Test
     void returnsConfiguredTimingAndDimensionsWhenPresent() {
-        Animation animation = new Animation(null, null, null, null, 12, 3, 44, 640, 360,
+        Animation animation = new Animation(null, null, null, null, 12.0, 3.0, 44.0, 640, 360,
                 null, null, null, null);
 
         assertEquals(3, FrameTiming.getInPoint(animation));

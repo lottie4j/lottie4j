@@ -183,7 +183,7 @@ public class LottieFileDebugViewer extends Application {
      * @return the in-point frame number, or 0 if not defined
      */
     private int getInPoint() {
-        return animation != null && animation.inPoint() != null ? animation.inPoint() : 0;
+        return animation != null && animation.inPoint() != null ? (int) Math.round(animation.inPoint()) : 0;
     }
 
     /**
@@ -192,7 +192,7 @@ public class LottieFileDebugViewer extends Application {
      * @return the out-point frame number, or 60 if not defined
      */
     private int getOutPoint() {
-        return animation != null && animation.outPoint() != null ? animation.outPoint() : 60;
+        return animation != null && animation.outPoint() != null ? (int) Math.round(animation.outPoint()) : 60;
     }
 
     /**
@@ -201,7 +201,8 @@ public class LottieFileDebugViewer extends Application {
      * @return the FPS value, or 30 if not defined
      */
     private int getFramesPerSecond() {
-        return animation != null && animation.framesPerSecond() != null ? animation.framesPerSecond() : 30;
+        return animation != null && animation.framesPerSecond() != null
+                ? (int) Math.round(animation.framesPerSecond()) : 30;
     }
 
     /**

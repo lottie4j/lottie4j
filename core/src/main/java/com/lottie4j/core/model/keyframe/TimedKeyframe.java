@@ -64,6 +64,18 @@ public record TimedKeyframe(
         @JsonProperty("ti") List<BigDecimal> tangentIn,
         @JsonProperty("h") Integer holdFrame
 ) implements Keyframe, PropertyListing {
+
+    /**
+     * The value the segment that starts at this keyframe ends on ({@code e}). Only files written
+     * in the form Bodymovin used before version 5 have it; today that value is the {@code s} of
+     * the next keyframe. This is the component {@code unknown_e} under the name of what it is.
+     *
+     * @return the end value, or {@code null} if the keyframe has none
+     */
+    @JsonIgnore
+    public List<BigDecimal> endValues() {
+        return unknown_e;
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {

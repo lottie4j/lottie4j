@@ -19,6 +19,10 @@ module com.lottie4j.fxfileviewer {
     requires org.seleniumhq.selenium.chrome_driver;
     requires org.seleniumhq.selenium.remote_driver;
     requires org.seleniumhq.selenium.support;
+    // Selenium's HTTP client uses Guava (com.google.common.net.MediaType) but only declares it
+    // "requires static", so on the module path nothing brings Guava into the module graph and
+    // starting Chrome fails with NoClassDefFoundError. Requiring it here does.
+    requires com.google.common;
 
     exports com.lottie4j.fxfileviewer to javafx.scene, javafx.graphics, javafx.application;
     exports com.lottie4j.fxfileviewer.component to javafx.application, javafx.graphics, javafx.scene, tools.jackson.databind;

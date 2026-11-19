@@ -1,6 +1,7 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
 import com.lottie4j.core.definition.LayerType;
+import com.lottie4j.core.helper.LayerHierarchy;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.asset.Asset;
 import com.lottie4j.core.model.layer.Layer;
@@ -36,8 +37,11 @@ import java.util.*;
  */
 public class PrecompRenderer {
 
+    /**
+     * The deepest nesting of precompositions that is rendered.
+     */
+    static final int MAX_NESTING = 64;
     private static final Logger logger = LoggerFactory.getLogger(PrecompRenderer.class);
-
     private final TransformApplier transformApplier;
     private final TextRenderer textRenderer;
     private final ImageRenderer imageRenderer;
@@ -45,6 +49,10 @@ public class PrecompRenderer {
     private final MatteRenderer matteRenderer;
     private final MaskRenderer maskRenderer;
     private final Map<String, PrecompRenderCache> precompRenderCacheByAssetId = new HashMap<>();
+    /**
+     * The precompositions being rendered right now, innermost first.
+     */
+    private final Deque<String> openCompositions = new ArrayDeque<>();
 
     /**
      * Creates a precomposition renderer with required collaborators.
@@ -162,6 +170,41 @@ public class PrecompRenderer {
             return;
         }
 
+        // A precomposition that contains itself, directly or through others, never ends; and a
+        // file can nest compositions deeper than any drawing needs. Both stop here.
+        if (openCompositions.contains(layer.referenceId())) {
+            logger.warn("Precomposition {} contains itself; the inner one is not rendered", layer.referenceId());
+            return;
+        }
+        if (openCompositions.size() >= MAX_NESTING) {
+            logger.warn("Precompositions nested deeper than {} levels are not rendered", MAX_NESTING);
+            return;
+        }
+        openCompositions.push(layer.referenceId());
+        try {
+            renderOpenPrecompositionLayer(gc, layer, frame, asset, assetsById, animation, inheritedWidth,
+                    inheritedHeight, renderResolutionScale, layerActivityEvaluator, solidColorLayerRenderer,
+                    shapeGroupRenderer, shapeRendererDelegate);
+        } finally {
+            openCompositions.pop();
+        }
+    }
+
+    @SuppressWarnings("java:S107") // the collaborators of the calling method, passed on
+    private void renderOpenPrecompositionLayer(GraphicsContext gc,
+                                               Layer layer,
+                                               double frame,
+                                               Asset asset,
+                                               Map<String, Asset> assetsById,
+                                               Animation animation,
+                                               double inheritedWidth,
+                                               double inheritedHeight,
+                                               double renderResolutionScale,
+                                               LayerActivityEvaluator layerActivityEvaluator,
+                                               SolidColorLayerRenderer solidColorLayerRenderer,
+                                               ShapeGroupRenderer shapeGroupRenderer,
+                                               ShapeRendererDelegate shapeRendererDelegate) {
+
         double localFrame = FrameTiming.toLocalFrame(layer, frame);
         double precompWidth = resolvePrecompWidth(layer, asset, animation, inheritedWidth);
         double precompHeight = resolvePrecompHeight(layer, asset, animation, inheritedHeight);
@@ -183,9 +226,10 @@ public class PrecompRenderer {
         }
 
         List<Layer> precompLayers = asset.layers();
+        Set<Integer> namedMattes = namedMattes(precompLayers);
         for (int i = precompLayers.size() - 1; i >= 0; i--) {
             Layer precompLayer = precompLayers.get(i);
-            if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
+            if (!layerActivityEvaluator.isActive(precompLayer, localFrame) || precompLayer.isHidden()) {
                 continue;
             }
             logger.debug("Rendering precomp layer [{}] ind={} name='{}'", i, precompLayer.indexLayer(), precompLayer.name());
@@ -221,7 +265,7 @@ public class PrecompRenderer {
                 continue;
             }
 
-            if (precompLayer.matteTarget() != null && precompLayer.matteTarget() == 1) {
+            if (isDrawnAsMatteOnly(precompLayer, namedMattes)) {
                 logger.debug("Skipping matte source layer in precomp: {}", precompLayer.name());
                 continue;
             }
@@ -573,10 +617,34 @@ public class PrecompRenderer {
         return -1;
     }
 
+    /** The indices of the layers another layer names as its matte ("tp"). */
+    private static Set<Integer> namedMattes(List<Layer> layers) {
+        Set<Integer> result = new HashSet<>();
+        for (Layer candidate : layers) {
+            if (candidate.matteMode() != null && candidate.tp() != null) {
+                result.add(candidate.tp());
+            }
+        }
+        return result;
+    }
+
+    /** Whether a layer is a matte for another one: it is drawn through that layer, not on its own. */
+    private static boolean isDrawnAsMatteOnly(Layer layer, Set<Integer> namedMattes) {
+        return (layer.matteTarget() != null && layer.matteTarget() == 1)
+                || namedMattes.contains(layer.indexLayer());
+    }
+
     private Optional<Layer> resolveActiveMatteSource(List<Layer> layers,
                                                      int matteUserIndex,
                                                      double frame,
                                                      LayerActivityEvaluator layerActivityEvaluator) {
+        Layer matteUser = layers.get(matteUserIndex);
+        if (matteUser.tp() != null) {
+            // the layer names its matte: no guessing by position
+            Layer named = LayerHierarchy.byIndex(layers).get(matteUser.tp());
+            return named != null && named != matteUser && layerActivityEvaluator.isActive(named, frame)
+                    ? Optional.of(named) : Optional.empty();
+        }
         if (matteUserIndex > 0) {
             Layer previous = layers.get(matteUserIndex - 1);
             if (isMatteSource(previous, frame, layerActivityEvaluator)) {
@@ -637,19 +705,7 @@ public class PrecompRenderer {
     }
 
     private List<Layer> buildParentChain(Layer layer, Map<Integer, Layer> layersByIndex) {
-        List<Layer> chain = new ArrayList<>();
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                break;
-            }
-            chain.add(parent);
-            parentIndex = parent.indexParent();
-        }
-        Collections.reverse(chain);
-        return chain;
+        return LayerHierarchy.parentChain(layer, layersByIndex);
     }
 
     private boolean shouldSkipDueToParentMatte(List<Layer> parentChain) {

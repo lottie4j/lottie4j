@@ -1,6 +1,7 @@
 package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.definition.LayerType;
+import com.lottie4j.core.helper.LayerHierarchy;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.animation.Marker;
 import com.lottie4j.core.model.asset.Asset;
@@ -10,6 +11,7 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.*;
+import com.lottie4j.fxplayer.util.HiddenShapes;
 import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
 import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
@@ -20,6 +22,7 @@ import com.lottie4j.fxplayer.util.OffscreenRenderer;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.PixelReader;
@@ -125,7 +128,8 @@ public class LottiePlayer extends Canvas {
      * @param debug     Flag to define if debug info should be displayed on top of the animation
      */
     public LottiePlayer(Animation animation, int width, int height, boolean debug) {
-        this.animation = animation;
+        // shapes switched off in the file are taken out once, here, so that no renderer draws them
+        this.animation = HiddenShapes.strip(animation);
         this.debug = debug;
         this.baseRenderWidth = Math.max(1, width);
         this.baseRenderHeight = Math.max(1, height);
@@ -201,35 +205,16 @@ public class LottiePlayer extends Canvas {
     }
 
     private boolean computeSkipDueToParent(Layer layer) {
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                return false;
-            }
+        for (Layer parent : LayerHierarchy.parentChain(layer, layersByIndex)) {
             if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
                 return true;
             }
-            parentIndex = parent.indexParent();
         }
         return false;
     }
 
     private List<Layer> buildParentChain(Layer layer) {
-        List<Layer> chain = new ArrayList<>();
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                break;
-            }
-            chain.add(parent);
-            parentIndex = parent.indexParent();
-        }
-        Collections.reverse(chain);
-        return chain;
+        return LayerHierarchy.parentChain(layer, layersByIndex);
     }
 
     /**
@@ -262,8 +247,8 @@ public class LottiePlayer extends Canvas {
      *
      * @return frames per second
      */
-    private int getFramesPerSecond() {
-        return FrameTiming.getFramesPerSecond(animation);
+    private double getFramesPerSecond() {
+        return FrameTiming.getFrameRate(animation);
     }
 
     /**
@@ -589,6 +574,42 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Renders a frame into an image of the size of this player, for tests, thumbnails and visual
+     * comparison.
+     * <p>
+     * The frame is drawn on a canvas of its own, so what the player shows and its
+     * {@link #currentFrameProperty() current frame} stay as they are, the player need not be part
+     * of a scene, and a scale or rotation of the player node does not end up in the image. The
+     * layers drawn are the {@link #setVisibleLayerIndices(Set) visible layers} of the player.
+     * Adaptive off-screen scaling is not applied: the same frame gives the same image on a fast
+     * and on a slow machine.
+     * <p>
+     * The background color of the player is part of the image: white by default, so call
+     * {@code setBackgroundColor(Color.TRANSPARENT)} first for an image with an alpha channel.
+     * <p>
+     * Must be called on the JavaFX application thread.
+     *
+     * @param frame frame number to render
+     * @return the rendered frame
+     */
+    public WritableImage snapshotFrame(double frame) {
+        Canvas target = new Canvas(getWidth(), getHeight());
+        boolean adaptiveEnabled = adaptiveOffscreenScalingEnabled;
+        double adaptiveScale = adaptiveOffscreenScale;
+        adaptiveOffscreenScalingEnabled = false;
+        try {
+            renderFrame(target.getGraphicsContext2D(), frame, visibleLayerIndices);
+        } finally {
+            // rendering the snapshot must not count as a measurement of playback speed
+            adaptiveOffscreenScalingEnabled = adaptiveEnabled;
+            adaptiveOffscreenScale = adaptiveScale;
+        }
+        SnapshotParameters parameters = new SnapshotParameters();
+        parameters.setFill(Color.TRANSPARENT);
+        return target.snapshot(parameters, null);
+    }
+
+    /**
      * Render a specific frame with optional layer filtering
      *
      * @param frame               Frame number to render
@@ -721,6 +742,7 @@ public class LottiePlayer extends Canvas {
 
         // Render layers in reverse order with track matte support
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
+        Set<Layer> matteSources = LayerHierarchy.matteSources(animation.layers(), layersByIndex);
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
             logger.debug("Processing layer: {}", layer.name());
@@ -732,34 +754,30 @@ public class LottiePlayer extends Canvas {
                 continue;
             }
 
-            if (isLayerActiveAtFrame(layer, frame)) {
+            if (isLayerActiveAtFrame(layer, frame) && !layer.isHidden()) {
                 // Check if this layer uses a track matte (has tt set)
                 if (layer.matteMode() != null) {
-                    // This layer uses a matte. Per the Lottie/AE convention, the matte source is the
-                    // layer immediately ABOVE the consumer in the After Effects layer panel, which
-                    // corresponds to the IMMEDIATELY PRECEDING layer in the JSON layers array
-                    // (lower index, since index 0 is the top of the rendering stack).
-                    if (i - 1 >= 0) {
-                        Layer matteSource = animation.layers().get(i - 1);
-                        if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
-                                && isLayerActiveAtFrame(matteSource, frame)) {
-                            logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
-                            matteRenderer.renderLayerWithMatte(graphicsContext,
-                                    layer,
-                                    matteSource,
-                                    frame,
-                                    getAnimationWidth(),
-                                    getAnimationHeight(),
-                                    renderResolutionScale,
-                                    this::renderLayer);
-                            continue;
-                        }
+                    // This layer uses a matte: the layer it names with "tp", or else the layer
+                    // immediately ABOVE it in the After Effects layer panel, which is the one just
+                    // before it in the JSON layers array, if that one is marked as a matte ("td").
+                    Layer matteSource = LayerHierarchy.matteSource(animation.layers(), i, layersByIndex);
+                    if (matteSource != null && isLayerActiveAtFrame(matteSource, frame)) {
+                        logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
+                        matteRenderer.renderLayerWithMatte(graphicsContext,
+                                layer,
+                                matteSource,
+                                frame,
+                                getAnimationWidth(),
+                                getAnimationHeight(),
+                                renderResolutionScale,
+                                this::renderLayer);
+                        continue;
                     }
                     logger.debug("Layer {} has matte mode but no valid matte source found", layer.name());
                 }
 
                 // Skip matte source layers (td=1) - they should not be rendered directly
-                if (layer.matteTarget() != null && layer.matteTarget() == 1) {
+                if ((layer.matteTarget() != null && layer.matteTarget() == 1) || matteSources.contains(layer)) {
                     logger.debug("Skipping matte source layer: {}", layer.name());
                     continue;
                 }
@@ -969,17 +987,10 @@ public class LottiePlayer extends Canvas {
     }
 
     private boolean hasAnimatedParentTransformChain(Layer layer) {
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                return false;
-            }
+        for (Layer parent : LayerHierarchy.parentChain(layer, layersByIndex)) {
             if (effectsRenderer.containsAnimation(parent.transform())) {
                 return true;
             }
-            parentIndex = parent.indexParent();
         }
         return false;
     }

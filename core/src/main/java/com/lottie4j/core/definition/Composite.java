@@ -2,7 +2,6 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.lottie4j.core.exception.LottieModelDefinitionException;
 import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
@@ -42,15 +41,14 @@ public enum Composite implements DefinitionWithLabel {
      * Some files seem to contain decimal values. So some extra convertion is needed.
      *
      * @param value the string representation of the composite value
-     * @return the Composite corresponding to the given value
-     * @throws LottieModelDefinitionException if the value doesn't match any Composite
+     * @return the Composite corresponding to the given value, or {@code null} if the value is not a known one
      */
     @JsonCreator
-    public static Composite fromValue(String value) throws LottieModelDefinitionException {
+    public static Composite fromValue(String value) {
         return Arrays.stream(Composite.values()).sequential()
-                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
+                .filter(v -> UnknownDefinition.round(value) == v.value)
                 .findFirst()
-                .orElseThrow(() -> new LottieModelDefinitionException(Composite.class, value));
+                .orElseGet(() -> UnknownDefinition.report(Composite.class, value));
     }
 
     /**

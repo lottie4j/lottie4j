@@ -1,18 +1,10 @@
 package com.lottie4j.core.model.shape;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.shape.grouping.Group;
-import com.lottie4j.core.model.shape.grouping.Transform;
-import com.lottie4j.core.model.shape.modifier.*;
-import com.lottie4j.core.model.shape.shape.Ellipse;
-import com.lottie4j.core.model.shape.shape.Path;
-import com.lottie4j.core.model.shape.shape.Polystar;
-import com.lottie4j.core.model.shape.shape.Rectangle;
-import com.lottie4j.core.model.shape.style.*;
+import tools.jackson.databind.annotation.JsonTypeIdResolver;
 
 /**
  * Base interface for all shape types in Lottie animations.
@@ -25,7 +17,8 @@ import com.lottie4j.core.model.shape.style.*;
  * The interface uses Jackson annotations for polymorphic JSON deserialization, allowing the
  * animation parser to automatically instantiate the correct concrete shape type based on the
  * "ty" property in the JSON structure. Each shape type is mapped to a specific two-character
- * identifier used in Lottie files.
+ * identifier used in Lottie files, see {@link ShapeTypeIdResolver}; a shape of any other type is
+ * read as an {@link UnknownShape}.
  * <p>
  * Supported shape types include:
  * - Geometric primitives: Ellipse (el), Rectangle (rc), Polystar (sr), Path (sh)
@@ -41,28 +34,8 @@ import com.lottie4j.core.model.shape.style.*;
  * Implementing classes are responsible for defining their specific properties and behavior
  * while adhering to the common shape contract defined by this interface.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "ty")
-@JsonSubTypes({
-        @JsonSubTypes.Type(name = "el", value = Ellipse.class),
-        @JsonSubTypes.Type(name = "fl", value = Fill.class),
-        @JsonSubTypes.Type(name = "gf", value = GradientFill.class),
-        @JsonSubTypes.Type(name = "gs", value = GradientStroke.class),
-        @JsonSubTypes.Type(name = "gr", value = Group.class),
-        @JsonSubTypes.Type(name = "mm", value = Merge.class),
-        @JsonSubTypes.Type(name = "no", value = NoStyle.class),
-        @JsonSubTypes.Type(name = "op", value = OffsetPath.class),
-        @JsonSubTypes.Type(name = "sh", value = Path.class),
-        @JsonSubTypes.Type(name = "sr", value = Polystar.class),
-        @JsonSubTypes.Type(name = "pb", value = Pucker.class),
-        @JsonSubTypes.Type(name = "rc", value = Rectangle.class),
-        @JsonSubTypes.Type(name = "rp", value = Repeater.class),
-        @JsonSubTypes.Type(name = "rd", value = RoundedCorners.class),
-        @JsonSubTypes.Type(name = "st", value = Stroke.class),
-        @JsonSubTypes.Type(name = "tr", value = Transform.class),
-        @JsonSubTypes.Type(name = "tm", value = TrimPath.class),
-        @JsonSubTypes.Type(name = "tw", value = Twist.class),
-        @JsonSubTypes.Type(name = "zz", value = ZigZag.class)
-})
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "ty", defaultImpl = UnknownShape.class, visible = true)
+@JsonTypeIdResolver(ShapeTypeIdResolver.class)
 public interface BaseShape {
     /** Default name for the shape. */
     String name = "";
@@ -72,9 +45,6 @@ public interface BaseShape {
 
     /** Default shape type. */
     ShapeType type = ShapeType.UNKNOWN;
-
-    /** Default visibility state of the shape. */
-    Boolean hidden = false;
 
     /** Default blend mode for compositing. */
     BlendMode blendMode = BlendMode.NORMAL;
@@ -116,4 +86,24 @@ public interface BaseShape {
      * @return the shape type
      */
     ShapeType shapeType();
+
+    /**
+     * Whether the shape is switched off in the file ({@code hd}). A hidden shape draws nothing
+     * and, if it is a style or a modifier, applies to nothing.
+     *
+     * @return {@code true} if hidden; {@code null} or {@code false} otherwise
+     */
+    default Boolean hidden() {
+        return Boolean.FALSE;
+    }
+
+    /**
+     * Whether the shape is switched off in the file.
+     *
+     * @return true if {@link #hidden()} says so
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    default boolean isHidden() {
+        return Boolean.TRUE.equals(hidden());
+    }
 }

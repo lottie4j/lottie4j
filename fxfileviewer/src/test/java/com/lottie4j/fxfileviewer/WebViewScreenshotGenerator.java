@@ -122,8 +122,8 @@ public class WebViewScreenshotGenerator {
         }
         recreateDirectory(outputDir);
 
-        int inPoint = animation.inPoint() != null ? animation.inPoint() : 0;
-        int outPoint = animation.outPoint() != null ? animation.outPoint() : 60;
+        int inPoint = animation.inPoint() != null ? (int) Math.round(animation.inPoint()) : 0;
+        int outPoint = animation.outPoint() != null ? (int) Math.round(animation.outPoint()) : 60;
         // Both lottie-web and dotlottie-web/thorvg treat outPoint as exclusive: totalFrames is
         // op - ip and the last renderable frame index is op - 1. Sampling frame == op would
         // produce a reference that disagrees with the JavaFX player (which clamps seekToFrame

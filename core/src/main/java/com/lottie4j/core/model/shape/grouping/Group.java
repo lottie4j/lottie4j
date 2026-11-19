@@ -59,6 +59,16 @@ public record Group(
         @JsonProperty("np") Integer numberOfProperties,
         @JsonProperty("it") List<BaseShape> shapes
 ) implements BaseShape {
+
+    /**
+     * A copy of this group with other content.
+     *
+     * @param shapes the shapes of the copy
+     * @return the copy
+     */
+    public Group withShapes(List<BaseShape> shapes) {
+        return new Group(name, matchName, hidden, blendMode, index, clazz, id, d, cix, numberOfProperties, shapes);
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {

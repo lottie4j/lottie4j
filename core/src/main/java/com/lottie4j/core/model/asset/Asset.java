@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.lottie4j.core.definition.ShapeType;
+import com.lottie4j.core.helper.DoubleAsIntegerIfWholeSerializer;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
 import com.lottie4j.core.model.layer.Layer;
+
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ import java.util.List;
  * Images contain dimensional properties (width, height) and can be either embedded or
  * externally referenced. Image sequences are supported through the type field.
  * <p>
- * Audio assets (sounds) reference external audio files through the fileName and shapeType
+ * Audio assets (sounds) reference external audio files through the fileName and directory
  * properties.
  * <p>
  * Precompositions represent nested animation layers with their own layer hierarchy,
@@ -39,7 +41,8 @@ import java.util.List;
  *
  * @param id the unique identifier for the asset
  * @param name the display name of the asset
- * @param shapeType the shape type or path reference
+ * @param directory the directory that contains an externally stored image or sound file, such as
+ *                  {@code "images/"}; empty when the file is embedded
  * @param fileName the file name (Boolean or String URI)
  * @param embedded flag indicating if the asset is embedded
  * @param width the width in pixels (for images)
@@ -57,7 +60,7 @@ public record Asset(
         @JsonProperty("nm") String name,
 
         // Generic for Image, Sound, Datasource
-        @JsonProperty("u") ShapeType shapeType,
+        @JsonProperty("u") String directory,
         @JsonProperty("p") Object fileName,  // Can be Boolean (true/false) or String (base64 data URI)
         @JsonProperty("e") Integer embedded,
 
@@ -67,7 +70,7 @@ public record Asset(
 
         // Precomposition
         @JsonProperty("layers") List<Layer> layers,
-        @JsonProperty("fr") Integer frameRate,
+        @JsonProperty("fr") @JsonSerialize(using = DoubleAsIntegerIfWholeSerializer.class) Double frameRate,
         @JsonProperty("xt") Integer extraComposition,
 
         // Used for Image and Datasource
@@ -75,12 +78,23 @@ public record Asset(
         // Datasource "3" = Type
         @JsonProperty("t") Integer type
 ) implements PropertyListing {
+
+    /**
+     * A copy of this asset with other layers, for a precomposition.
+     *
+     * @param layers the layers of the copy
+     * @return the copy
+     */
+    public Asset withLayers(List<Layer> layers) {
+        return new Asset(id, name, directory, fileName, embedded, width, height, layers, frameRate,
+                extraComposition, type);
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Asset");
         list.add("ID", id());
-        list.add("Path", shapeType);
+        list.add("Directory", directory);
         list.add("File name", fileName != null ? fileName.toString() : null);
         list.add("Embedded", embedded());
         list.add("Width", width());

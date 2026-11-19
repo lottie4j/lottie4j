@@ -2,7 +2,6 @@ package com.lottie4j.core.definition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.lottie4j.core.exception.LottieModelDefinitionException;
 import com.lottie4j.core.info.DefinitionWithLabel;
 
 import java.util.Arrays;
@@ -71,15 +70,14 @@ public enum EffectType implements DefinitionWithLabel {
      * Some files seem to contain decimal values. So some extra convertion is needed.
      *
      * @param value the string representation of the effect type value
-     * @return the EffectType corresponding to the given value
-     * @throws LottieModelDefinitionException if the value doesn't match any EffectType
+     * @return the EffectType corresponding to the given value, or {@code null} if the value is not a known one
      */
     @JsonCreator
-    public static EffectType fromValue(String value) throws LottieModelDefinitionException {
+    public static EffectType fromValue(String value) {
         return Arrays.stream(EffectType.values()).sequential()
-                .filter(v -> Math.round(Double.valueOf(value)) == v.value)
+                .filter(v -> UnknownDefinition.round(value) == v.value)
                 .findFirst()
-                .orElseThrow(() -> new LottieModelDefinitionException(EffectType.class, value));
+                .orElseGet(() -> UnknownDefinition.report(EffectType.class, value));
     }
 
     /**

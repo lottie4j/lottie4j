@@ -7,6 +7,9 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.info.PropertyListingList;
 
+import com.lottie4j.core.helper.OldFormatKeyframes;
+import tools.jackson.databind.annotation.JsonSerialize;
+
 import java.util.List;
 
 /**
@@ -35,11 +38,22 @@ public record AnimatedBezier(
         Integer animated,
 
         @JsonProperty("k")
+        @JsonSerialize(converter = OldFormatKeyframes.BezierWriter.class)
         List<BezierKeyframe> beziers,
 
         @JsonProperty("ix")
         Integer ix
 ) implements Bezier {
+
+    /**
+     * Completes keyframes in the old form, in which the last keyframe has no shape of its own;
+     * see {@link OldFormatKeyframes}.
+     */
+    public AnimatedBezier {
+        if (beziers != null) {
+            beziers = OldFormatKeyframes.completeBeziers(beziers);
+        }
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {
