@@ -10,8 +10,10 @@ import com.lottie4j.core.info.PropertyListingList;
 /**
  * A shape of a type this library has no model for: one from a newer exporter, or one without a
  * type at all. It stands in for the shape so that the rest of the file can be read; it draws
- * nothing, and only its name survives, so writing the animation again does not restore it.
+ * nothing. Its type and name survive; its other members do not, so writing the animation again
+ * does not restore it.
  *
+ * @param type      the type as the file has it ({@code ty}); {@code null} if the shape has none
  * @param name      the name of the shape
  * @param matchName the match name of the shape
  * @param hidden    whether the shape is hidden
@@ -19,6 +21,7 @@ import com.lottie4j.core.info.PropertyListingList;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UnknownShape(
+        @JsonProperty(value = "ty", access = JsonProperty.Access.WRITE_ONLY) String type,
         @JsonProperty("nm") String name,
         @JsonProperty("mn") String matchName,
         @JsonProperty("hd") Boolean hidden
@@ -28,6 +31,7 @@ public record UnknownShape(
     @JsonIgnore
     public PropertyListingList getList() {
         var list = new PropertyListingList("Unknown shape");
+        list.add("Type", type);
         list.add("Match name", matchName);
         list.add("Hidden", hidden);
         return list;

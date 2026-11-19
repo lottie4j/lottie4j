@@ -67,6 +67,19 @@ public record TextKeyframe(
     }
 
     /**
+     * Get the justification of the text ({@code j}): 0 left, 1 right, 2 center, and higher values
+     * for the justified variants.
+     *
+     * @return the justification, or null if unavailable
+     */
+    public Integer getJustification() {
+        if (s instanceof Map<?, ?> map && map.get("j") instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
+    }
+
+    /**
      * Get font size from this keyframe
      *
      * @return the font size, or null if unavailable

@@ -89,6 +89,44 @@ public class LottieFileLoader {
     }
 
     /**
+     * Loads a Lottie animation from JSON that is not in a file: a resource, a download, a
+     * clipboard. The stream is read to its end as UTF-8 and is not closed.
+     *
+     * @param json a stream of Lottie JSON
+     * @return deserialized animation
+     * @throws LottieFileException if the stream cannot be read or its content is not a Lottie animation
+     */
+    public static Animation load(java.io.InputStream json) throws LottieFileException {
+        String text;
+        try {
+            text = new String(json.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new LottieFileException("JSON could not be read: " + e.getMessage());
+        }
+        return loadJson(text);
+    }
+
+    /**
+     * Loads a Lottie animation from JSON text.
+     *
+     * @param json Lottie JSON
+     * @return deserialized animation
+     * @throws LottieFileException if the text is not a Lottie animation
+     */
+    public static Animation loadJson(String json) throws LottieFileException {
+        Animation animation;
+        try {
+            animation = parseJsonString(json);
+        } catch (Exception e) {
+            throw new LottieFileException("JSON could not be read: " + e.getMessage());
+        }
+        if (animation == null) {
+            throw new LottieFileException("JSON does not contain a valid animation");
+        }
+        return animation;
+    }
+
+    /**
      * Loads a full dotLottie package from a `.lottie` archive file.
      *
      * @param file `.lottie` archive file

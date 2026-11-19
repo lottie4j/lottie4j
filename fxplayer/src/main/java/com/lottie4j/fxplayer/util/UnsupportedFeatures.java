@@ -3,6 +3,7 @@ package com.lottie4j.fxplayer.util;
 import com.lottie4j.core.definition.EffectType;
 import com.lottie4j.core.definition.LayerType;
 import com.lottie4j.core.helper.LayerHierarchy;
+import com.lottie4j.core.helper.ModelWalker;
 import com.lottie4j.core.model.animation.Animated;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.asset.Asset;
@@ -16,7 +17,6 @@ import com.lottie4j.core.model.shape.modifier.RoundedCorners;
 import com.lottie4j.core.model.shape.modifier.Twist;
 import com.lottie4j.core.model.shape.modifier.ZigZag;
 
-import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -38,9 +38,6 @@ public final class UnsupportedFeatures {
 
     /** How many layer names a finding lists at most. */
     private static final int MAX_NAMES = 10;
-
-    /** Deeper than any model goes; a stop for a structure that should not exist. */
-    private static final int MAX_DEPTH = 200;
 
     private static final Set<LayerType> RENDERED_LAYER_TYPES = Set.of(LayerType.PRECOMPOSITION,
             LayerType.SOLD_COLOR, LayerType.IMAGE, LayerType.NULL, LayerType.SHAPE, LayerType.TEXT);
@@ -205,7 +202,7 @@ public final class UnsupportedFeatures {
         if (layer.effects() != null) {
             layer.effects().forEach(effect -> tally.addIf(isUndrawnEffect(effect), Feature.EFFECT, layer));
         }
-        walk(layer, layer, tally, 0);
+        ModelWalker.visit(layer, part -> inspectPart(part, layer, tally));
     }
 
     private static boolean hasCircularParents(Layer layer, Map<Integer, Layer> byIndex) {
@@ -219,37 +216,12 @@ public final class UnsupportedFeatures {
         return enabled && effect.type() != EffectType.GAUSSIAN_BLUR;
     }
 
-    /**
-     * Goes through everything a layer is made of. The model is records and lists of records all
-     * the way down, so the components of each record are what there is to look at.
-     */
-    private static void walk(Object value, Layer layer, Tally tally, int depth) {
-        if (value == null || depth > MAX_DEPTH) {
-            return;
-        }
-        if (value instanceof List<?> list) {
-            list.forEach(element -> walk(element, layer, tally, depth + 1));
-            return;
-        }
-        if (!value.getClass().isRecord()) {
-            return;
-        }
+    /** Looks at one record of the layer: a property, a transform, a shape... */
+    private static void inspectPart(Object value, Layer layer, Tally tally) {
         tally.addIf(value instanceof Animated animated && animated.hasExpression(), Feature.EXPRESSION, layer);
         tally.addIf(isSkewed(value), Feature.SKEW, layer);
         tally.addIf(isUnappliedModifier(value), Feature.SHAPE_MODIFIER, layer);
         tally.addIf(value instanceof UnknownShape, Feature.UNKNOWN_SHAPE, layer);
-        for (RecordComponent component : value.getClass().getRecordComponents()) {
-            walk(read(component, value), layer, tally, depth + 1);
-        }
-    }
-
-    /** The value of a record component; {@code null} if it cannot be read, which leaves nothing to report. */
-    private static Object read(RecordComponent component, Object owner) {
-        try {
-            return component.getAccessor().invoke(owner);
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            return null;
-        }
     }
 
     private static boolean isSkewed(Object value) {

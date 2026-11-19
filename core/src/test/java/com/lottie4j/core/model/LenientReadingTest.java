@@ -190,4 +190,45 @@ class LenientReadingTest {
         assertTrue(new Font("a", "Inter", "Oblique", null, null, null, null, null).isItalic());
         assertFalse(new Font("a", "Inter", null, null, null, null, null, null).isItalic());
     }
+
+    @Test
+    void anUnknownShapeKeepsItsTypeAndIsWrittenBackWithIt() throws Exception {
+        String shapes = "[{\"ty\":\"xx\",\"nm\":\"new\"},{\"ty\":\"el\",\"nm\":\"dot\"}]";
+
+        Layer layer = read(document("", "{\"ty\":4," + KS + ",\"shapes\":" + shapes + "}")).layers().get(0);
+
+        assertEquals("xx", ((com.lottie4j.core.model.shape.UnknownShape) layer.shapes().get(0)).type());
+        JSONAssert.assertEquals(shapes, ObjectMapperFactory.getInstance()
+                .writerFor(new tools.jackson.core.type.TypeReference<java.util.List<com.lottie4j.core.model.shape.BaseShape>>() {
+                }).writeValueAsString(layer.shapes()), true);
+    }
+
+    @Test
+    void valuesOfTheWrongKindReadAsAbsentAndTheRestIsKept() {
+        Animation animation = read("{\"v\":\"5\",\"fr\":30,\"ip\":0,\"op\":60,\"w\":100,\"h\":100,"
+                + "\"markers\":[{}, 3],\"assets\":[3,{\"id\":\"c\",\"layers\":[]}],\"layers\":["
+                + "{}, 7, null, {\"ty\":4,\"nm\":\"kept\",\"ind\":\"one\",\"shapes\":[{\"ty\":\"el\"}, 5],"
+                + "\"ks\":{\"p\":{\"a\":1,\"k\":[{\"t\":0,\"s\":[1,2]},{\"t\":\"x\",\"s\":[3,4]}]}}}]}");
+
+        assertEquals(1, animation.markers().size());
+        assertEquals(1, animation.assets().size());
+        assertEquals(2, animation.layers().size());
+        Layer kept = animation.layers().get(1);
+        assertEquals("kept", kept.name());
+        assertNull(kept.indexLayer());
+        assertEquals(1, kept.shapes().size());
+        assertEquals(2, kept.transform().position().keyframes().size());
+    }
+
+    @Test
+    void damagedKeyframesAndValuesDoNotRejectTheProperty() {
+        Animated noTime = read("{\"a\":1,\"k\":[{\"t\":0,\"s\":[1]},{\"s\":[2]}]}", Animated.class);
+        Animated noValue = read("{\"a\":0,\"k\":[1,\"two\",null,4]}", Animated.class);
+        Animated empty = read("{\"a\":1,\"k\":[]}", Animated.class);
+
+        assertEquals(2, noTime.keyframes().size());
+        assertEquals(2, noValue.keyframes().size());
+        assertEquals(4.0, noValue.getValue(1));
+        assertTrue(empty.keyframes().isEmpty());
+    }
 }

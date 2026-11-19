@@ -48,10 +48,10 @@ public class KeyframeDeserializer extends ValueDeserializer {
 
         if (node instanceof ArrayNode array) {
             for (JsonNode childNode : array.elements()) {
-                rt.add(getKeyframe(childNode));
+                addKeyframe(rt, childNode);
             }
         } else {
-            rt.add(getKeyframe(node));
+            addKeyframe(rt, node);
         }
 
         return rt;
@@ -63,20 +63,16 @@ public class KeyframeDeserializer extends ValueDeserializer {
      * @param node the JSON node to parse
      * @return a TimedKeyframe if timing fields are present, otherwise a NumberKeyframe
      */
-    private Keyframe getKeyframe(JsonNode node) {
-        if (node.has("i") || node.has("o") || node.has("t") || node.has("x")) {
-            return mapper.convertValue(node, TimedKeyframe.class);
-        } else {
-            return new NumberKeyframe(node.doubleValue());
+    /** Adds what a node is: a keyframe, a number of a fixed value, or nothing if it is neither. */
+    private void addKeyframe(List<Keyframe> keyframes, JsonNode node) {
+        if (node.isObject()) {
+            // also an object without a time: a damaged keyframe is still a keyframe, not a number
+            keyframes.add(mapper.convertValue(node, TimedKeyframe.class));
+        } else if (node.isNumber()) {
+            keyframes.add(new NumberKeyframe(node.doubleValue()));
         }
     }
 
-    /**
-     * Extracts a double value from a JSON node, handling both integer and decimal types.
-     *
-     * @param node the JSON node
-     * @return the double value
-     */
     private Double getValue(JsonNode node) {
         if (node instanceof IntNode) {
             return (double) node.intValue();
