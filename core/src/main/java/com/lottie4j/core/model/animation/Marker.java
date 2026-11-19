@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.lottie4j.core.helper.ObjectMapperFactory;
 import com.lottie4j.core.info.PropertyListing;
 import com.lottie4j.core.info.PropertyListingList;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Represents a marker in a Lottie animation that defines a named point or range in time.
@@ -30,6 +33,31 @@ public record Marker(
         @JsonProperty("cm") String comment,
         @JsonProperty("dr") Double duration
 ) implements PropertyListing {
+
+    /**
+     * The name of the marker. The comment is usually the name itself, but some exporters write a
+     * JSON object there (<code>{"name": "intro"}</code>); then the name is taken out of it.
+     *
+     * @return the name, without surrounding white space; empty if the marker has none
+     */
+    @JsonIgnore
+    public String name() {
+        if (comment == null) {
+            return "";
+        }
+        String text = comment.trim();
+        if (text.startsWith("{")) {
+            try {
+                JsonNode name = ObjectMapperFactory.getInstance().readTree(text).get("name");
+                if (name != null && name.isString()) {
+                    return name.stringValue().trim();
+                }
+            } catch (JacksonException e) {
+                // not JSON after all: the comment is the name
+            }
+        }
+        return text;
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {

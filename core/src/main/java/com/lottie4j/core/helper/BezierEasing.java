@@ -139,6 +139,54 @@ public final class BezierEasing {
         return new BezierEasing(easingOut, easingIn).solve(t);
     }
 
+    /**
+     * The easing curve that continues a curve from a point on. A cubic easing runs from (0,0) to
+     * (1,1) with two control points; when an animation is cut at some progress, what follows is
+     * the rest of that curve, stretched to run from (0,0) to (1,1) again, so that the motion
+     * after the cut is exactly what it was.
+     *
+     * @param x1       x of the first control point, in {@code [0, 1]}
+     * @param y1       y of the first control point
+     * @param x2       x of the second control point, in {@code [0, 1]}
+     * @param y2       y of the second control point
+     * @param progress how far along the segment the cut is, as a share of its time in {@code [0, 1]}
+     * @return the control points {@code {x1, y1, x2, y2}} of the remaining curve; those of a
+     *         straight line if nothing remains or the curve is flat from there on
+     */
+    public static double[] remainder(double x1, double y1, double x2, double y2, double progress) {
+        double[] linear = {0, 0, 1, 1};
+        double cut = clamp01(progress);
+        // the curve parameter at which x reaches the cut; x is monotone for control points in [0, 1]
+        double low = 0;
+        double high = 1;
+        for (int i = 0; i < 60; i++) {
+            double middle = (low + high) / 2;
+            if (calcBezier(middle, x1, x2) < cut) {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+        double t = (low + high) / 2;
+        double startX = calcBezier(t, x1, x2);
+        double startY = calcBezier(t, y1, y2);
+        if (1 - startX < 1e-9 || Math.abs(1 - startY) < 1e-9) {
+            return linear;
+        }
+        // de Casteljau: the inner control points of the part of 0, c1, c2, 1 from t to 1
+        double restX1 = lerp(lerp(x1, x2, t), lerp(x2, 1, t), t);
+        double restX2 = lerp(x2, 1, t);
+        double restY1 = lerp(lerp(y1, y2, t), lerp(y2, 1, t), t);
+        double restY2 = lerp(y2, 1, t);
+        return new double[]{
+                clamp01((restX1 - startX) / (1 - startX)), (restY1 - startY) / (1 - startY),
+                clamp01((restX2 - startX) / (1 - startX)), (restY2 - startY) / (1 - startY)};
+    }
+
+    private static double lerp(double from, double to, double t) {
+        return from + (to - from) * t;
+    }
+
     private double getTForX(double aX) {
         double intervalStart = 0.0;
         int currentSample = 1;

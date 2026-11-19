@@ -1,6 +1,7 @@
 package com.lottie4j.fxplayer;
 
 import com.lottie4j.core.definition.LayerType;
+import com.lottie4j.core.helper.LayerHierarchy;
 import com.lottie4j.core.model.animation.Animation;
 import com.lottie4j.core.model.animation.Marker;
 import com.lottie4j.core.model.asset.Asset;
@@ -202,35 +203,16 @@ public class LottiePlayer extends Canvas {
     }
 
     private boolean computeSkipDueToParent(Layer layer) {
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                return false;
-            }
+        for (Layer parent : LayerHierarchy.parentChain(layer, layersByIndex)) {
             if (parent.matteMode() != null || (parent.matteTarget() != null && parent.matteTarget() == 1)) {
                 return true;
             }
-            parentIndex = parent.indexParent();
         }
         return false;
     }
 
     private List<Layer> buildParentChain(Layer layer) {
-        List<Layer> chain = new ArrayList<>();
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                break;
-            }
-            chain.add(parent);
-            parentIndex = parent.indexParent();
-        }
-        Collections.reverse(chain);
-        return chain;
+        return LayerHierarchy.parentChain(layer, layersByIndex);
     }
 
     /**
@@ -758,6 +740,7 @@ public class LottiePlayer extends Canvas {
 
         // Render layers in reverse order with track matte support
         // Lottie renders layers bottom-to-top (last in array is drawn first, appears behind)
+        Set<Layer> matteSources = LayerHierarchy.matteSources(animation.layers(), layersByIndex);
         for (int i = animation.layers().size() - 1; i >= 0; i--) {
             Layer layer = animation.layers().get(i);
             logger.debug("Processing layer: {}", layer.name());
@@ -772,31 +755,27 @@ public class LottiePlayer extends Canvas {
             if (isLayerActiveAtFrame(layer, frame)) {
                 // Check if this layer uses a track matte (has tt set)
                 if (layer.matteMode() != null) {
-                    // This layer uses a matte. Per the Lottie/AE convention, the matte source is the
-                    // layer immediately ABOVE the consumer in the After Effects layer panel, which
-                    // corresponds to the IMMEDIATELY PRECEDING layer in the JSON layers array
-                    // (lower index, since index 0 is the top of the rendering stack).
-                    if (i - 1 >= 0) {
-                        Layer matteSource = animation.layers().get(i - 1);
-                        if (matteSource.matteTarget() != null && matteSource.matteTarget() == 1
-                                && isLayerActiveAtFrame(matteSource, frame)) {
-                            logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
-                            matteRenderer.renderLayerWithMatte(graphicsContext,
-                                    layer,
-                                    matteSource,
-                                    frame,
-                                    getAnimationWidth(),
-                                    getAnimationHeight(),
-                                    renderResolutionScale,
-                                    this::renderLayer);
-                            continue;
-                        }
+                    // This layer uses a matte: the layer it names with "tp", or else the layer
+                    // immediately ABOVE it in the After Effects layer panel, which is the one just
+                    // before it in the JSON layers array, if that one is marked as a matte ("td").
+                    Layer matteSource = LayerHierarchy.matteSource(animation.layers(), i, layersByIndex);
+                    if (matteSource != null && isLayerActiveAtFrame(matteSource, frame)) {
+                        logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
+                        matteRenderer.renderLayerWithMatte(graphicsContext,
+                                layer,
+                                matteSource,
+                                frame,
+                                getAnimationWidth(),
+                                getAnimationHeight(),
+                                renderResolutionScale,
+                                this::renderLayer);
+                        continue;
                     }
                     logger.debug("Layer {} has matte mode but no valid matte source found", layer.name());
                 }
 
                 // Skip matte source layers (td=1) - they should not be rendered directly
-                if (layer.matteTarget() != null && layer.matteTarget() == 1) {
+                if ((layer.matteTarget() != null && layer.matteTarget() == 1) || matteSources.contains(layer)) {
                     logger.debug("Skipping matte source layer: {}", layer.name());
                     continue;
                 }
@@ -1006,17 +985,10 @@ public class LottiePlayer extends Canvas {
     }
 
     private boolean hasAnimatedParentTransformChain(Layer layer) {
-        Integer parentIndex = layer.indexParent();
-        int guard = 0;
-        while (parentIndex != null && guard++ < layersByIndex.size()) {
-            Layer parent = layersByIndex.get(parentIndex);
-            if (parent == null) {
-                return false;
-            }
+        for (Layer parent : LayerHierarchy.parentChain(layer, layersByIndex)) {
             if (effectsRenderer.containsAnimation(parent.transform())) {
                 return true;
             }
-            parentIndex = parent.indexParent();
         }
         return false;
     }

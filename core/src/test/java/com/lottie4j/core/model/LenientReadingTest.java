@@ -167,4 +167,27 @@ class LenientReadingTest {
         assertEquals("new", layer.shapes().get(0).name());
         assertEquals(com.lottie4j.core.definition.ShapeType.ELLIPSE, layer.shapes().get(1).shapeType());
     }
+
+    @Test
+    void theNameOfAMarkerIsItsCommentOrTheNameInside() {
+        Animation animation = read(document("\"markers\":[{\"cm\":\" intro \",\"tm\":0,\"dr\":10},"
+                + "{\"cm\":\"{\\\"name\\\": \\\"loop\\\"}\",\"tm\":10,\"dr\":20},"
+                + "{\"cm\":\"{not json\",\"tm\":30,\"dr\":0},{\"tm\":40}],", "{\"ty\":4," + KS + "}"));
+
+        assertEquals("intro", animation.markers().get(0).name());
+        assertEquals("loop", animation.markers().get(1).name());
+        assertEquals("{not json", animation.markers().get(2).name());
+        assertEquals("", animation.markers().get(3).name());
+    }
+
+    @Test
+    void aFontTellsWhetherItIsBoldOrItalic() {
+        assertTrue(new Font("a", "Arial", "Bold Italic", null, null, null, null, null).isBold());
+        assertTrue(new Font("a", "Arial", "Bold Italic", null, null, null, null, null).isItalic());
+        assertTrue(new Font("a", "Inter", "Regular", "700", null, null, null, null).isBold());
+        assertFalse(new Font("a", "Inter", "Regular", "400", null, null, null, null).isBold());
+        assertFalse(new Font("a", "Inter", null, "heavy-ish", null, null, null, null).isBold());
+        assertTrue(new Font("a", "Inter", "Oblique", null, null, null, null, null).isItalic());
+        assertFalse(new Font("a", "Inter", null, null, null, null, null, null).isItalic());
+    }
 }

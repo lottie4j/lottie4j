@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -199,5 +200,32 @@ class BezierEasingTest {
         double mid = easing.solve(0.5);
         assertFalse(Double.isNaN(mid));
         assertTrue(mid >= 0.0 && mid <= 1.0);
+    }
+
+    @Test
+    void theRemainderOfACurveContinuesIt() {
+        double x1 = 0.42;
+        double y1 = 0.0;
+        double x2 = 0.58;
+        double y2 = 1.0;
+        double cut = 0.3;
+        EasingHandle out = new EasingHandle(List.of(x1), List.of(y1));
+        EasingHandle in = new EasingHandle(List.of(x2), List.of(y2));
+        double valueAtCut = BezierEasing.solve(cut, out, in);
+
+        double[] rest = BezierEasing.remainder(x1, y1, x2, y2, cut);
+
+        EasingHandle restOut = new EasingHandle(List.of(rest[0]), List.of(rest[1]));
+        EasingHandle restIn = new EasingHandle(List.of(rest[2]), List.of(rest[3]));
+        for (double progress : new double[]{0.0, 0.1, 0.35, 0.5, 0.8, 1.0}) {
+            double original = BezierEasing.solve(cut + progress * (1 - cut), out, in);
+            double continued = valueAtCut + BezierEasing.solve(progress, restOut, restIn) * (1 - valueAtCut);
+            assertEquals(original, continued, 1e-3, "at " + progress);
+        }
+    }
+
+    @Test
+    void nothingRemainsOfACurveCutAtItsEnd() {
+        assertArrayEquals(new double[]{0, 0, 1, 1}, BezierEasing.remainder(0.42, 0, 0.58, 1, 1.0));
     }
 }

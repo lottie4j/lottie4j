@@ -30,13 +30,29 @@ import java.util.List;
  *                  from this keyframe to the next keyframe
  * @param beziers   list of Bézier curve definitions that specify the shape or path values at
  *                  this keyframe, supporting multi-path animations
+ * @param endBeziers the shape the segment that starts here ends on; only in files written in the old
+ *                   form, see {@link com.lottie4j.core.helper.OldFormatKeyframes}
  */
 public record BezierKeyframe(
         @JsonProperty("t") Integer time, // in frames
         @JsonProperty("i") EasingHandle easingIn,
         @JsonProperty("o") EasingHandle easingOut,
-        @JsonProperty("s") List<BezierDefinition> beziers
+        @JsonProperty("s") List<BezierDefinition> beziers,
+        @JsonProperty("e") List<BezierDefinition> endBeziers
 ) implements PropertyListing {
+
+    /**
+     * Creates a keyframe in the current form, without an end shape.
+     *
+     * @param time      the time of the keyframe in frames
+     * @param easingIn  the easing handle towards the next keyframe
+     * @param easingOut the easing handle away from this keyframe
+     * @param beziers   the shape at this keyframe
+     */
+    public BezierKeyframe(Integer time, EasingHandle easingIn, EasingHandle easingOut,
+                          List<BezierDefinition> beziers) {
+        this(time, easingIn, easingOut, beziers, null);
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {

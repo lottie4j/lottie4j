@@ -1,8 +1,11 @@
 package com.lottie4j.core.model.text;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Locale;
 
 /**
  * One font of an animation.
@@ -28,4 +31,35 @@ public record Font(
         @JsonProperty("origin") Integer origin,
         @JsonProperty("fClass") String cssClass
 ) {
+
+    /**
+     * Whether the font is a bold one, as far as the file says: by a style that names a heavy
+     * weight ("Bold", "Black", "Heavy", "ExtraBold"...) or a numeric weight of 600 or more.
+     *
+     * @return true for a bold font
+     */
+    @JsonIgnore
+    public boolean isBold() {
+        String text = style == null ? "" : style.toLowerCase(Locale.ROOT);
+        if (text.contains("bold") || text.contains("black") || text.contains("heavy")) {
+            return true;
+        }
+        try {
+            return weight != null && Double.parseDouble(weight.trim()) >= 600;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether the font is slanted, as far as the file says: a style that contains "Italic" or
+     * "Oblique".
+     *
+     * @return true for an italic or oblique font
+     */
+    @JsonIgnore
+    public boolean isItalic() {
+        String text = style == null ? "" : style.toLowerCase(Locale.ROOT);
+        return text.contains("italic") || text.contains("oblique");
+    }
 }

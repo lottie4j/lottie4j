@@ -1,6 +1,7 @@
 package com.lottie4j.core.model.animation;
 
 import com.lottie4j.core.helper.ObjectMapperFactory;
+import com.lottie4j.core.helper.OldFormatKeyframes;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
@@ -70,6 +71,14 @@ public record Animated(
         @JsonProperty("y") Animated y,
         @JsonIgnore String expression
 ) implements PropertyListing {
+
+    /**
+     * Completes keyframes in the old form, in which the last keyframe has no value of its own;
+     * see {@link OldFormatKeyframes}.
+     */
+    public Animated {
+        keyframes = OldFormatKeyframes.complete(keyframes);
+    }
 
     /**
      * Creates a property without an expression.

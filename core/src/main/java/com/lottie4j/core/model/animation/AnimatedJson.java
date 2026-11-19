@@ -3,6 +3,7 @@ package com.lottie4j.core.model.animation;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lottie4j.core.helper.KeyframeSerializer;
+import com.lottie4j.core.helper.OldFormatKeyframes;
 import com.lottie4j.core.model.keyframe.Keyframe;
 import tools.jackson.databind.annotation.JsonSerialize;
 import tools.jackson.databind.util.StdConverter;
@@ -38,7 +39,7 @@ record AnimatedJson(
 
         @Override
         public AnimatedJson convert(Animated value) {
-            return new AnimatedJson(value.animated(), value.keyframes(), value.ix(), value.l(), value.s(),
+            return new AnimatedJson(value.animated(), OldFormatKeyframes.restore(value.keyframes()), value.ix(), value.l(), value.s(),
                     value.x() != null ? value.x() : value.expression(), value.y());
         }
     }
