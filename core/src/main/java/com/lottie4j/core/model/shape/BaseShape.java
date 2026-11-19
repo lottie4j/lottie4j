@@ -1,18 +1,10 @@
 package com.lottie4j.core.model.shape;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import tools.jackson.databind.annotation.JsonTypeIdResolver;
 import com.lottie4j.core.definition.BlendMode;
 import com.lottie4j.core.definition.ShapeType;
 import com.lottie4j.core.info.PropertyListingList;
-import com.lottie4j.core.model.shape.grouping.Group;
-import com.lottie4j.core.model.shape.grouping.Transform;
-import com.lottie4j.core.model.shape.modifier.*;
-import com.lottie4j.core.model.shape.shape.Ellipse;
-import com.lottie4j.core.model.shape.shape.Path;
-import com.lottie4j.core.model.shape.shape.Polystar;
-import com.lottie4j.core.model.shape.shape.Rectangle;
-import com.lottie4j.core.model.shape.style.*;
+import tools.jackson.databind.annotation.JsonTypeIdResolver;
 
 /**
  * Base interface for all shape types in Lottie animations.
@@ -25,7 +17,8 @@ import com.lottie4j.core.model.shape.style.*;
  * The interface uses Jackson annotations for polymorphic JSON deserialization, allowing the
  * animation parser to automatically instantiate the correct concrete shape type based on the
  * "ty" property in the JSON structure. Each shape type is mapped to a specific two-character
- * identifier used in Lottie files.
+ * identifier used in Lottie files, see {@link ShapeTypeIdResolver}; a shape of any other type is
+ * read as an {@link UnknownShape}.
  * <p>
  * Supported shape types include:
  * - Geometric primitives: Ellipse (el), Rectangle (rc), Polystar (sr), Path (sh)
@@ -53,7 +46,6 @@ public interface BaseShape {
     /** Default shape type. */
     ShapeType type = ShapeType.UNKNOWN;
 
-    /** Default visibility state of the shape. */
     /** Default blend mode for compositing. */
     BlendMode blendMode = BlendMode.NORMAL;
 

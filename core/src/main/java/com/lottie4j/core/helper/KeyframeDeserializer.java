@@ -58,12 +58,12 @@ public class KeyframeDeserializer extends ValueDeserializer {
     }
 
     /**
-     * Determines the appropriate Keyframe type based on JSON node structure.
+     * Adds what a node is: a keyframe if it is an object, a number of a fixed value if it is a
+     * number, and nothing if it is neither.
      *
-     * @param node the JSON node to parse
-     * @return a TimedKeyframe if timing fields are present, otherwise a NumberKeyframe
+     * @param keyframes the list to add to
+     * @param node      the JSON node to read
      */
-    /** Adds what a node is: a keyframe, a number of a fixed value, or nothing if it is neither. */
     private void addKeyframe(List<Keyframe> keyframes, JsonNode node) {
         if (node.isObject()) {
             // also an object without a time: a damaged keyframe is still a keyframe, not a number
