@@ -135,6 +135,30 @@ public record Layer(
 ) implements PropertyListing {
 
     /**
+     * A copy of this layer with other shapes.
+     *
+     * @param shapes the shapes of the copy
+     * @return the copy
+     */
+    public Layer withShapes(List<BaseShape> shapes) {
+        return new Layer(name, matchName, has3dLayers, hidden, layerType, indexLayer, indexParent, timeStretch,
+                inPoint, outPoint, startTime, blendMode, clazz, idAttribute, tagName, matteMode, matteTarget,
+                hasMask, masks, effects, transform, autoRotate, hix, ct, tp, shapes, referenceId, width, height,
+                timeRemapping, solidColor, textData, solidWidth, solidHeight, styles);
+    }
+
+    /**
+     * Whether the layer is switched off in the file ({@code hd}). A hidden layer is not drawn;
+     * it still serves as a parent and as a track matte.
+     *
+     * @return true if the layer is hidden
+     */
+    @JsonIgnore
+    public boolean isHidden() {
+        return Boolean.TRUE.equals(hidden);
+    }
+
+    /**
      * Creates a layer without a solid size and without layer styles.
      *
      * @param name the display name of the layer

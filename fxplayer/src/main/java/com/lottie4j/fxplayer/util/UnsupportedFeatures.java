@@ -244,9 +244,9 @@ public final class UnsupportedFeatures {
     }
 
     /** The value of a record component; {@code null} if it cannot be read, which leaves nothing to report. */
-    private static Object read(RecordComponent component, Object record) {
+    private static Object read(RecordComponent component, Object owner) {
         try {
-            return component.getAccessor().invoke(record);
+            return component.getAccessor().invoke(owner);
         } catch (ReflectiveOperationException | RuntimeException e) {
             return null;
         }

@@ -11,6 +11,7 @@ import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
 import com.lottie4j.fxplayer.renderer.layer.*;
+import com.lottie4j.fxplayer.util.HiddenShapes;
 import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
 import com.lottie4j.fxplayer.renderer.shape.ShapeGroupRenderer;
 import com.lottie4j.fxplayer.renderer.shape.ShapeRenderer;
@@ -127,7 +128,8 @@ public class LottiePlayer extends Canvas {
      * @param debug     Flag to define if debug info should be displayed on top of the animation
      */
     public LottiePlayer(Animation animation, int width, int height, boolean debug) {
-        this.animation = animation;
+        // shapes switched off in the file are taken out once, here, so that no renderer draws them
+        this.animation = HiddenShapes.strip(animation);
         this.debug = debug;
         this.baseRenderWidth = Math.max(1, width);
         this.baseRenderHeight = Math.max(1, height);
@@ -752,7 +754,7 @@ public class LottiePlayer extends Canvas {
                 continue;
             }
 
-            if (isLayerActiveAtFrame(layer, frame)) {
+            if (isLayerActiveAtFrame(layer, frame) && !layer.isHidden()) {
                 // Check if this layer uses a track matte (has tt set)
                 if (layer.matteMode() != null) {
                     // This layer uses a matte: the layer it names with "tp", or else the layer

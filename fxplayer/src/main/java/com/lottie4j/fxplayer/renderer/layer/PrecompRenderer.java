@@ -229,7 +229,7 @@ public class PrecompRenderer {
         Set<Integer> namedMattes = namedMattes(precompLayers);
         for (int i = precompLayers.size() - 1; i >= 0; i--) {
             Layer precompLayer = precompLayers.get(i);
-            if (!layerActivityEvaluator.isActive(precompLayer, localFrame)) {
+            if (!layerActivityEvaluator.isActive(precompLayer, localFrame) || precompLayer.isHidden()) {
                 continue;
             }
             logger.debug("Rendering precomp layer [{}] ind={} name='{}'", i, precompLayer.indexLayer(), precompLayer.name());

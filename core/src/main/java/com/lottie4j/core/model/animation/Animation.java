@@ -63,6 +63,18 @@ public record Animation(
 ) implements PropertyListing {
 
     /**
+     * A copy of this animation with other layers and assets.
+     *
+     * @param layers the layers of the copy
+     * @param assets the assets of the copy
+     * @return the copy
+     */
+    public Animation withLayersAndAssets(List<Layer> layers, List<Asset> assets) {
+        return new Animation(version, name, matchName, has3dLayers, framesPerSecond, inPoint, outPoint, width,
+                height, assets, layers, markers, props, fonts);
+    }
+
+    /**
      * Creates an animation without fonts.
      *
      * @param version         the version of the Lottie specification used for this animation

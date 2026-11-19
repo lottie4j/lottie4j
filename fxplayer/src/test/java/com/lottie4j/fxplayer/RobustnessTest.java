@@ -144,4 +144,54 @@ class RobustnessTest {
 
         assertEquals(20, width);
     }
+
+    @Test
+    void aHiddenLayerIsNotDrawnButStillCarriesItsChildren() throws Exception {
+        // the hidden parent is moved 10 to the right; its red child follows, the parent's own blue does not show
+        String parent = rectangle("hidden parent", 2, 0, 0, 5, 5, BLUE, "\"hd\":true")
+                .replace("\"p\":{\"a\":0,\"k\":[0,0,0]}", "\"p\":{\"a\":0,\"k\":[10,0,0]}");
+        String json = document("", rectangle("child", 1, 0, 10, 5, 5, RED, "\"parent\":2"), parent);
+
+        assertRed(pixel(json, 12, 12));
+        assertNothing(pixel(json, 12, 2));
+        assertNothing(pixel(json, 2, 12));
+    }
+
+    @Test
+    void aHiddenShapeAndAHiddenFillDrawNothing() throws Exception {
+        String hiddenGroup = rectangle("hidden group", 1, 10, 10, 10, 10, BLUE, "")
+                .replace("{\"ty\":\"gr\",\"nm\":\"g\",", "{\"ty\":\"gr\",\"nm\":\"g\",\"hd\":true,");
+        String hiddenFill = rectangle("hidden fill", 2, 10, 0, 10, 10, BLUE, "")
+                .replace("{\"ty\":\"fl\",", "{\"ty\":\"fl\",\"hd\":true,");
+        String json = document("", hiddenGroup, hiddenFill, rectangle("red", 3, 0, 0, 10, 10, RED, ""));
+
+        assertRed(pixel(json, 5, 5));
+        assertNothing(pixel(json, 15, 15));
+        assertNothing(pixel(json, 15, 5));
+    }
+
+    @Test
+    void aHeldPathKeyframeKeepsItsShapeUntilTheNext() throws Exception {
+        String small = "{\"c\":true,\"v\":[[0,0],[4,0],[4,4],[0,4]],\"i\":[[0,0],[0,0],[0,0],[0,0]],"
+                + "\"o\":[[0,0],[0,0],[0,0],[0,0]]}";
+        String large = small.replace("4", "20");
+        String shapes = "\"shapes\":[{\"ty\":\"gr\",\"nm\":\"g\",\"it\":[{\"ty\":\"sh\",\"nm\":\"p\",\"ks\":{\"a\":1,\"k\":["
+                + "{\"t\":0,\"h\":1,\"s\":[" + small + "]},{\"t\":20.5,\"s\":[" + large + "]}]}},"
+                + "{\"ty\":\"fl\",\"nm\":\"f\",\"c\":{\"a\":0,\"k\":[1,0,0,1]},\"o\":{\"a\":0,\"k\":100}},"
+                + "{\"ty\":\"tr\",\"p\":{\"a\":0,\"k\":[0,0]},\"a\":{\"a\":0,\"k\":[0,0]},\"s\":{\"a\":0,\"k\":[100,100]},"
+                + "\"r\":{\"a\":0,\"k\":0},\"o\":{\"a\":0,\"k\":100}}]}]";
+        Animation animation = TestLottie.load(directory, document("", layer(4, "morph", 1, shapes)));
+
+        Color[] pixels = FxTestHelper.callAndWait(() -> {
+            LottiePlayer player = new LottiePlayer(animation, 20, 20);
+            player.setBackgroundColor(Color.TRANSPARENT);
+            return new Color[]{player.snapshotFrame(10).getPixelReader().getColor(10, 10),
+                    player.snapshotFrame(20).getPixelReader().getColor(10, 10),
+                    player.snapshotFrame(21).getPixelReader().getColor(10, 10)};
+        });
+
+        assertNothing(pixels[0]);
+        assertNothing(pixels[1]);
+        assertRed(pixels[2]);
+    }
 }

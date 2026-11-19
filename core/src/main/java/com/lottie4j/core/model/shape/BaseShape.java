@@ -116,4 +116,24 @@ public interface BaseShape {
      * @return the shape type
      */
     ShapeType shapeType();
+
+    /**
+     * Whether the shape is switched off in the file ({@code hd}). A hidden shape draws nothing
+     * and, if it is a style or a modifier, applies to nothing.
+     *
+     * @return {@code true} if hidden; {@code null} or {@code false} otherwise
+     */
+    default Boolean hidden() {
+        return Boolean.FALSE;
+    }
+
+    /**
+     * Whether the shape is switched off in the file.
+     *
+     * @return true if {@link #hidden()} says so
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    default boolean isHidden() {
+        return Boolean.TRUE.equals(hidden());
+    }
 }

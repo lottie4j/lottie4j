@@ -52,7 +52,8 @@ public class PathBezierInterpolator {
                     : null;
         }
 
-        if (nextKeyframe.beziers() == null || nextKeyframe.beziers().isEmpty()) {
+        if (nextKeyframe.beziers() == null || nextKeyframe.beziers().isEmpty() || prevKeyframe.isHold()) {
+            // nothing to move towards, or a hold keyframe: the shape stays until the next keyframe
             return prevKeyframe.beziers().get(0);
         }
 

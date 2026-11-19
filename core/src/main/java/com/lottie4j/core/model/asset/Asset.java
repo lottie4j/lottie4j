@@ -78,6 +78,17 @@ public record Asset(
         // Datasource "3" = Type
         @JsonProperty("t") Integer type
 ) implements PropertyListing {
+
+    /**
+     * A copy of this asset with other layers, for a precomposition.
+     *
+     * @param layers the layers of the copy
+     * @return the copy
+     */
+    public Asset withLayers(List<Layer> layers) {
+        return new Asset(id, name, directory, fileName, embedded, width, height, layers, frameRate,
+                extraComposition, type);
+    }
     @Override
     @JsonIgnore
     public PropertyListingList getList() {

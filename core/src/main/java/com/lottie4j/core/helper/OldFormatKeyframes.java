@@ -56,7 +56,7 @@ public final class OldFormatKeyframes {
             BezierKeyframe::beziers,
             BezierKeyframe::endBeziers,
             (keyframe, value) -> new BezierKeyframe(keyframe.time(), keyframe.easingIn(), keyframe.easingOut(),
-                    value, keyframe.endBeziers()));
+                    value, keyframe.endBeziers(), keyframe.holdFrame()));
 
     private OldFormatKeyframes() {
     }
