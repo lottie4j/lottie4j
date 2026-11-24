@@ -109,3 +109,23 @@ previous frame), and look at a heavier fixture, since this one is now well withi
 Release-note wording: *"Track mattes now only process the area the matted layer covers instead of
 the whole composition. Combined with the opacity change, winter-town renders 100× faster than
 before (360 ms to 3.2 ms per frame)."*
+
+## Second fixture: `json/animated_background_patterns.json`
+
+Chosen because it is heavier than winter-town and matte-heavy: 1080×1080, 30 fps, 134 layers, 14
+track mattes, no effects. Baseline taken after change 2 (same machine, real window, adaptive off):
+
+| Where | Avg render | p95 | Achievable fps | Delivered fps |
+|-------|-----------|-----|----------------|---------------|
+| Real window (`--bench=12`) | 45.8 ms | 59.0 ms | 21.8 | **18.2** (target 30) |
+
+The 14 mattes per frame are 99% of the render time (45.4 of 45.8 ms, 3.2 ms each):
+`matte.snapshot` 26.2 ms and `matte.probe` 15.1 ms per frame, so the fixed cost of the two
+snapshots plus the probe is now what dominates, not the pixel work. Next: cut the probe and the
+snapshot count per matte (hypotheses: derive the area without a probe snapshot, reuse one area for
+mattes whose content did not move, batch the content and matte snapshots).
+
+Other heavy files found in the repo (headless, native size, average render `record` / `raster`):
+`json/interactive_mood_selector_ui.json` 35 / 67 ms (257 layers, 10 effects),
+`json/collision.json` 27 / 45 ms (5 mattes). The window benchmark did not finish on the mood
+selector (the app sat idle, probably an error dialog), still to be looked at.
