@@ -21,8 +21,10 @@ public class Launcher {
      * @param args command-line arguments passed to the application
      */
     public static void main(String[] args) {
-        // -Dlottie.viewer=simple starts the simple viewer, which the playback benchmark uses
-        if ("simple".equals(System.getProperty("lottie.viewer"))) {
+        // --bench=SECONDS starts the simple viewer in playback benchmark mode
+        // (-Dlottie.viewer=simple starts the simple viewer without it)
+        boolean bench = java.util.Arrays.stream(args).anyMatch(arg -> arg.startsWith("--bench"));
+        if (bench || "simple".equals(System.getProperty("lottie.viewer"))) {
             Application.launch(LottieFileSimpleViewer.class, args);
             return;
         }
