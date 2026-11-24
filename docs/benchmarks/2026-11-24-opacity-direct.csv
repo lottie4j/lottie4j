@@ -1,0 +1,16 @@
+BENCH,dot/winter-town.lottie,600x400,adaptive=false,record,frames=120,avg_ms=3.09,p50_ms=3.06,p95_ms=3.47,p99_ms=3.98,max_ms=4.15,achievable_fps=324.0
+BENCH,dot/winter-town.lottie,600x400,adaptive=false,raster,frames=120,avg_ms=12.59,p50_ms=10.92,p95_ms=23.94,p99_ms=29.67,max_ms=52.17,achievable_fps=79.4
+BENCH-STAGE,dot/winter-town.lottie,600x400,adaptive=false,layer.matte,share_ms_per_frame=2.480,calls_per_frame=1.00,avg_ms=2.4805
+BENCH-STAGE,dot/winter-town.lottie,600x400,adaptive=false,layer.plain,share_ms_per_frame=0.554,calls_per_frame=346.00,avg_ms=0.0016
+BENCH,dot/winter-town.lottie,600x400,adaptive=true,record,frames=120,avg_ms=2.95,p50_ms=2.91,p95_ms=3.19,p99_ms=3.52,max_ms=3.55,achievable_fps=339.0
+BENCH,dot/winter-town.lottie,600x400,adaptive=true,raster,frames=120,avg_ms=11.36,p50_ms=10.85,p95_ms=13.04,p99_ms=19.49,max_ms=22.16,achievable_fps=88.1
+BENCH-STAGE,dot/winter-town.lottie,600x400,adaptive=true,layer.matte,share_ms_per_frame=2.366,calls_per_frame=1.00,avg_ms=2.3658
+BENCH-STAGE,dot/winter-town.lottie,600x400,adaptive=true,layer.plain,share_ms_per_frame=0.551,calls_per_frame=346.00,avg_ms=0.0016
+BENCH,dot/winter-town.lottie,1200x800,adaptive=false,record,frames=120,avg_ms=7.25,p50_ms=7.24,p95_ms=7.79,p99_ms=7.93,max_ms=8.88,achievable_fps=137.9
+BENCH,dot/winter-town.lottie,1200x800,adaptive=false,raster,frames=120,avg_ms=18.09,p50_ms=17.66,p95_ms=20.64,p99_ms=23.89,max_ms=25.33,achievable_fps=55.3
+BENCH-STAGE,dot/winter-town.lottie,1200x800,adaptive=false,layer.matte,share_ms_per_frame=6.600,calls_per_frame=1.00,avg_ms=6.6002
+BENCH-STAGE,dot/winter-town.lottie,1200x800,adaptive=false,layer.plain,share_ms_per_frame=0.608,calls_per_frame=346.00,avg_ms=0.0018
+BENCH,dot/winter-town.lottie,1200x800,adaptive=true,record,frames=120,avg_ms=7.32,p50_ms=7.27,p95_ms=7.71,p99_ms=8.10,max_ms=9.05,achievable_fps=136.6
+BENCH,dot/winter-town.lottie,1200x800,adaptive=true,raster,frames=120,avg_ms=17.44,p50_ms=17.35,p95_ms=18.83,p99_ms=19.40,max_ms=19.42,achievable_fps=57.3
+BENCH-STAGE,dot/winter-town.lottie,1200x800,adaptive=true,layer.matte,share_ms_per_frame=6.660,calls_per_frame=1.00,avg_ms=6.6596
+BENCH-STAGE,dot/winter-town.lottie,1200x800,adaptive=true,layer.plain,share_ms_per_frame=0.616,calls_per_frame=346.00,avg_ms=0.0018

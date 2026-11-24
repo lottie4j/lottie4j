@@ -125,16 +125,16 @@ public class LottieFileSimpleViewer extends Application {
             var measure = new PauseTransition(Duration.seconds(seconds));
             measure.setOnFinished(done -> {
                 var stats = lottiePlayer.getRenderStats();
-                System.out.printf("BENCH file=%s canvas=%.0fx%.0f adaptive=%s frames=%d%n"
+                System.out.printf("BENCH file=%s canvas=%.0fx%.0f adaptive=%s frames=%d (stats over the last %d)%n"
                                 + "BENCH render avg=%.2f p50=%.2f p95=%.2f p99=%.2f max=%.2f ms, achievable=%.1f fps, delivered~%.1f fps (display capped)%n",
                         file.getName(), lottiePlayer.getWidth(), lottiePlayer.getHeight(),
-                        adaptiveOffscreenScalingEnabled, stats.getFrameCount(),
+                        adaptiveOffscreenScalingEnabled, stats.getTotalRecorded(), stats.getFrameCount(),
                         stats.getAverageMillis(), stats.getPercentileMillis(50), stats.getPercentileMillis(95),
                         stats.getPercentileMillis(99), stats.getMaxMillis(), stats.getAchievableFps(),
-                        stats.getFrameCount() / seconds);
+                        stats.getTotalRecorded() / seconds);
                 RenderProfiler.snapshot().forEach((stage, t) -> System.out.printf(
                         "BENCH stage %-18s %8.2f ms/frame-share total=%.0f ms calls=%d avg=%.4f ms%n",
-                        stage, t.totalMillis() / Math.max(1, stats.getFrameCount()), t.totalMillis(), t.calls(), t.averageMillis()));
+                        stage, t.totalMillis() / Math.max(1, stats.getTotalRecorded()), t.totalMillis(), t.calls(), t.averageMillis()));
                 RenderProfiler.setEnabled(false);
                 Platform.exit();
             });

@@ -22,6 +22,7 @@ public final class RenderStats {
     private final double[] renderMillis;
     private int count = 0;
     private int next = 0;
+    private long totalRecorded = 0;
 
     /**
      * Creates statistics over the last {@link #DEFAULT_CAPACITY} frames.
@@ -47,6 +48,7 @@ public final class RenderStats {
     public void record(double millis) {
         renderMillis[next] = millis;
         next = (next + 1) % renderMillis.length;
+        totalRecorded++;
         if (count < renderMillis.length) {
             count++;
         }
@@ -58,6 +60,7 @@ public final class RenderStats {
     public void reset() {
         count = 0;
         next = 0;
+        totalRecorded = 0;
     }
 
     /**
@@ -67,6 +70,16 @@ public final class RenderStats {
      */
     public int getFrameCount() {
         return count;
+    }
+
+    /**
+     * Returns the number of frames recorded since creation or the last {@link #reset()}, also those
+     * that no longer fit in the window kept.
+     *
+     * @return number of frames recorded
+     */
+    public long getTotalRecorded() {
+        return totalRecorded;
     }
 
     /**

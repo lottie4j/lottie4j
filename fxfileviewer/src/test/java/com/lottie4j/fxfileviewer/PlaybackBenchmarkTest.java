@@ -154,6 +154,9 @@ class PlaybackBenchmarkTest {
     }
 
     private static void appendCsv(Path path, List<String> lines) throws IOException {
+        if (path.toAbsolutePath().getParent() != null) {
+            Files.createDirectories(path.toAbsolutePath().getParent());
+        }
         Files.write(path, lines, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
     }
 }

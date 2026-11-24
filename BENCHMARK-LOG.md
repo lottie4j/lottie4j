@@ -81,3 +81,15 @@ baseline, and the effect. Keep one change per row so the numbers can be attribut
 | # | Change | Before (avg ms / achievable fps) | After | Notes |
 |---|--------|----------------------------------|-------|-------|
 | 0 | Phase 1: render stats, stage profiler, headless benchmark and viewer `--bench` added (no renderer change) | 360.6 ms / 2.8 fps (window) | same | Baseline established |
+| 1 | Apply layer opacity directly (`setGlobalAlpha`) instead of through a full-canvas off-screen buffer, for shape layers that paint exactly one shape with one fill or stroke (no masks, effects or modifiers) | 360.6 ms / 2.8 fps (window, 1200×800) | **7.2 ms / 138 achievable fps; 59.8 fps delivered** (p95 8.0 ms) | Headless 1200×800: 316.9 → 7.5 ms (`record`), 366.2 → 18.3 ms (`raster`, 54.7 fps). 100 off-screen snapshots per frame gone. Pixels unchanged: at most 2/255 on ~0.01% of the bytes on 10 sampled frames. |
+
+### After change 1: where the time goes now
+
+Real window, per frame: `layer.matte` 6.6 ms for one layer, `layer.plain` 0.8 ms for the other 345.
+The track matte is now **92% of the render time**. Next candidate: size the matte buffers to the
+bounds of the layers instead of the full canvas, and reuse them (hypotheses 2 to 4 above).
+Raw rows: `docs/benchmarks/2026-11-24-opacity-direct.csv`.
+
+Release-note wording: *"Layers with an animated opacity that paint a single shape are now drawn
+directly instead of through an off-screen buffer. In the winter-town sample (348 layers, 1200×800)
+playback went from about 3 fps to a steady 60 fps."*

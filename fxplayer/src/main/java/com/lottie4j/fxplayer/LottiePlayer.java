@@ -10,6 +10,13 @@ import com.lottie4j.core.model.shape.BaseShape;
 import com.lottie4j.core.model.shape.grouping.Group;
 import com.lottie4j.core.model.shape.grouping.Transform;
 import com.lottie4j.core.model.shape.modifier.TrimPath;
+import com.lottie4j.core.model.shape.shape.Ellipse;
+import com.lottie4j.core.model.shape.shape.Polystar;
+import com.lottie4j.core.model.shape.shape.Rectangle;
+import com.lottie4j.core.model.shape.style.Fill;
+import com.lottie4j.core.model.shape.style.GradientFill;
+import com.lottie4j.core.model.shape.style.GradientStroke;
+import com.lottie4j.core.model.shape.style.Stroke;
 import com.lottie4j.fxplayer.renderer.layer.*;
 import com.lottie4j.fxplayer.util.HiddenShapes;
 import com.lottie4j.fxplayer.renderer.shape.PathBezierInterpolator;
@@ -57,6 +64,7 @@ public class LottiePlayer extends Canvas {
     private final Map<Layer, Boolean> skipDueToParentCache = new IdentityHashMap<>();
     private final Map<Layer, List<Layer>> parentChainCache = new IdentityHashMap<>();
     private final Map<Layer, TrimPath> layerTrimPathCache = new IdentityHashMap<>();
+    private final Map<Layer, Boolean> directOpacityCache = new IdentityHashMap<>();
     private final ImageRenderer imageRenderer = new ImageRenderer();
     private final TextRenderer textRenderer = new TextRenderer();
     private final TransformApplier transformApplier = new TransformApplier();
@@ -1057,7 +1065,7 @@ public class LottiePlayer extends Canvas {
         // For layers with animated opacity containing shapes, use off-screen rendering
         // to ensure shapes composite before opacity is applied (matching JS behavior)
         if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
-                layer.shapes() != null && !layer.shapes().isEmpty()) {
+                layer.shapes() != null && !layer.shapes().isEmpty() && !canApplyOpacityDirectly(layer)) {
             logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
             // Off-screen rendering handles parent transforms internally
             renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity, renderResolutionScale);
@@ -1340,6 +1348,55 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Returns whether the opacity of a layer can be applied while drawing, instead of to the
+     * composite of the layer in an off-screen buffer.
+     * <p>
+     * The two give the same pixels when the layer paints exactly one shape with exactly one fill
+     * or stroke: there is nothing that overlaps and would show through when each part is drawn
+     * with the opacity. That is the case for the many small layers of a typical animation (a dot,
+     * a snowflake), and drawing them directly saves a full-size buffer and snapshot per layer per
+     * frame. Layers with masks or more than one shape or style keep the off-screen buffer.
+     * The result depends on the layer only, so it is computed once.
+     */
+    private boolean canApplyOpacityDirectly(Layer layer) {
+        return directOpacityCache.computeIfAbsent(layer, key -> {
+            if (key.layerType() != LayerType.SHAPE
+                    || (key.masks() != null && !key.masks().isEmpty())
+                    || (key.effects() != null && !key.effects().isEmpty())) {
+                return false;
+            }
+            int[] counts = new int[2]; // geometries, styles
+            return countsPaintsOfSingleShape(key.shapes(), counts) && counts[0] == 1 && counts[1] == 1;
+        });
+    }
+
+    private static boolean countsPaintsOfSingleShape(List<BaseShape> shapes, int[] counts) {
+        if (shapes == null) {
+            return true;
+        }
+        for (BaseShape shape : shapes) {
+            if (shape instanceof Group group) {
+                if (group.blendMode() != null && group.blendMode() != com.lottie4j.core.definition.BlendMode.NORMAL) {
+                    return false;
+                }
+                if (!countsPaintsOfSingleShape(group.shapes(), counts)) {
+                    return false;
+                }
+            } else if (shape instanceof Ellipse || shape instanceof Rectangle
+                    || shape instanceof Polystar || shape instanceof com.lottie4j.core.model.shape.shape.Path) {
+                counts[0]++;
+            } else if (shape instanceof Fill || shape instanceof Stroke
+                    || shape instanceof GradientFill || shape instanceof GradientStroke) {
+                counts[1]++;
+            } else if (!(shape instanceof Transform)) {
+                // trim paths, merges, repeaters and other modifiers act across shapes
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Renders a layer to an off-screen buffer, applies opacity, and draws to the main context.
      * This ensures that all shapes composite before opacity is applied, matching JavaScript behavior.
      *
@@ -1583,7 +1640,7 @@ public class LottiePlayer extends Canvas {
 
         // For layers with animated opacity containing shapes, use off-screen rendering
         if (hasAnimatedOpacity && layerOpacity < 1.0 && layer.layerType() != LayerType.NULL &&
-                layer.shapes() != null && !layer.shapes().isEmpty()) {
+                layer.shapes() != null && !layer.shapes().isEmpty() && !canApplyOpacityDirectly(layer)) {
             logger.debug("Layer {} has animated opacity - using off-screen rendering", layer.name());
             renderLayerWithOffscreenBuffer(gc, layer, frame, layerOpacity, renderResolutionScale);
             gc.restore();
