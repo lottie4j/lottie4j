@@ -19,6 +19,8 @@ import com.lottie4j.fxplayer.renderer.shape.ShapeRendererFactory;
 import com.lottie4j.fxplayer.util.FrameTiming;
 import com.lottie4j.fxplayer.util.LayerActivity;
 import com.lottie4j.fxplayer.util.OffscreenRenderer;
+import com.lottie4j.fxplayer.util.RenderProfiler;
+import com.lottie4j.fxplayer.util.RenderStats;
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -81,6 +83,8 @@ public class LottiePlayer extends Canvas {
     private Set<Integer> visibleLayerIndices = null;  // null means all layers visible
     private long lastDebugRenderNanos = 0L;
     private double measuredPlaybackFps = 0.0;
+    private final RenderStats renderStats = new RenderStats();
+    private boolean recordRenderStats = true;
     private double adaptiveOffscreenScale = 1.0;
     private double smoothedRenderMillis = 16.67;
     private boolean adaptiveOffscreenScalingEnabled = true;
@@ -556,6 +560,17 @@ public class LottiePlayer extends Canvas {
     }
 
     /**
+     * Returns the render times of the most recent frames, which tell how fast this player can
+     * render rather than how fast the display asked for frames. Frames rendered by
+     * {@link #snapshotFrame(double)} are not counted. Read it on the JavaFX application thread.
+     *
+     * @return statistics over the last frames rendered
+     */
+    public RenderStats getRenderStats() {
+        return renderStats;
+    }
+
+    /**
      * Gets the property tracking the current frame position.
      *
      * @return observable double property for current frame
@@ -597,12 +612,14 @@ public class LottiePlayer extends Canvas {
         boolean adaptiveEnabled = adaptiveOffscreenScalingEnabled;
         double adaptiveScale = adaptiveOffscreenScale;
         adaptiveOffscreenScalingEnabled = false;
+        recordRenderStats = false;
         try {
             renderFrame(target.getGraphicsContext2D(), frame, visibleLayerIndices);
         } finally {
             // rendering the snapshot must not count as a measurement of playback speed
             adaptiveOffscreenScalingEnabled = adaptiveEnabled;
             adaptiveOffscreenScale = adaptiveScale;
+            recordRenderStats = true;
         }
         SnapshotParameters parameters = new SnapshotParameters();
         parameters.setFill(Color.TRANSPARENT);
@@ -679,7 +696,11 @@ public class LottiePlayer extends Canvas {
         }
 
         long renderEndNanos = System.nanoTime();
-        updateAdaptiveOffscreenScale((renderEndNanos - renderStartNanos) / 1_000_000.0);
+        double renderMillis = (renderEndNanos - renderStartNanos) / 1_000_000.0;
+        if (recordRenderStats) {
+            renderStats.record(renderMillis);
+        }
+        updateAdaptiveOffscreenScale(renderMillis);
 
         if (debug) {
             long nowNanos = System.nanoTime();
@@ -763,6 +784,7 @@ public class LottiePlayer extends Canvas {
                     Layer matteSource = LayerHierarchy.matteSource(animation.layers(), i, layersByIndex);
                     if (matteSource != null && isLayerActiveAtFrame(matteSource, frame)) {
                         logger.debug("Rendering matted layer {}: {} with matte from {}", i, layer.name(), matteSource.name());
+                        long matteToken = RenderProfiler.start();
                         matteRenderer.renderLayerWithMatte(graphicsContext,
                                 layer,
                                 matteSource,
@@ -771,6 +793,7 @@ public class LottiePlayer extends Canvas {
                                 getAnimationHeight(),
                                 renderResolutionScale,
                                 this::renderLayer);
+                        RenderProfiler.stop("layer.matte", matteToken);
                         continue;
                     }
                     logger.debug("Layer {} has matte mode but no valid matte source found", layer.name());
@@ -789,7 +812,9 @@ public class LottiePlayer extends Canvas {
                 }
 
                 logger.debug("Rendering layer: {}", layer.name());
+                long layerToken = RenderProfiler.start();
                 renderLayer(graphicsContext, layer, frame, renderResolutionScale);
+                RenderProfiler.stop("layer.plain", layerToken);
             }
         }
 
@@ -887,7 +912,7 @@ public class LottiePlayer extends Canvas {
         double x = 6;
         double y = 6;
         double width = 250;
-        double height = 80;
+        double height = 94;
 
         gc.setFill(Color.rgb(255, 255, 200, 0.92));
         gc.fillRoundRect(x, y, width, height, 6, 6);
@@ -900,7 +925,10 @@ public class LottiePlayer extends Canvas {
         gc.fillText("scale: " + String.format("%.2f", scale), x + 6, y + 30);
         gc.fillText("fps: " + String.format("%.1f", measuredPlaybackFps), x + 6, y + 44);
         gc.fillText("target fps: " + getFramesPerSecond(), x + 6, y + 58);
-        gc.fillText("w/h: " + this.getWidth() + "/" + this.getHeight(), x + 6, y + 72);
+        gc.fillText(String.format("render: avg %.1f p95 %.1f ms (max %.0f fps)",
+                renderStats.getAverageMillis(), renderStats.getPercentileMillis(95), renderStats.getAchievableFps()),
+                x + 6, y + 72);
+        gc.fillText("w/h: " + this.getWidth() + "/" + this.getHeight(), x + 6, y + 86);
         gc.restore();
     }
 

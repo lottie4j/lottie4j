@@ -46,13 +46,17 @@ public class OffscreenRenderer {
         offscreenGc.clearRect(0, 0, pixelWidth, pixelHeight);
 
         // Perform the rendering
+        long drawToken = RenderProfiler.start();
         renderer.render(offscreenGc);
+        RenderProfiler.stop("offscreen.draw", drawToken);
 
         // Create an image from the canvas with transparent fill.
         WritableImage image = new WritableImage(pixelWidth, pixelHeight);
         SnapshotParameters snapshotParameters = new SnapshotParameters();
         snapshotParameters.setFill(Color.TRANSPARENT);
+        long snapshotToken = RenderProfiler.start();
         offscreenCanvas.snapshot(snapshotParameters, image);
+        RenderProfiler.stop("offscreen.snapshot", snapshotToken);
 
         return image;
     }
