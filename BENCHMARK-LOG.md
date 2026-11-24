@@ -82,6 +82,7 @@ baseline, and the effect. Keep one change per row so the numbers can be attribut
 |---|--------|----------------------------------|-------|-------|
 | 0 | Phase 1: render stats, stage profiler, headless benchmark and viewer `--bench` added (no renderer change) | 360.6 ms / 2.8 fps (window) | same | Baseline established |
 | 1 | Apply layer opacity directly (`setGlobalAlpha`) instead of through a full-canvas off-screen buffer, for shape layers that paint exactly one shape with one fill or stroke (no masks, effects or modifiers) | 360.6 ms / 2.8 fps (window, 1200×800) | **7.2 ms / 138 achievable fps; 59.8 fps delivered** (p95 8.0 ms) | Headless 1200×800: 316.9 → 7.5 ms (`record`), 366.2 → 18.3 ms (`raster`, 54.7 fps). 100 off-screen snapshots per frame gone. Pixels unchanged: at most 2/255 on ~0.01% of the bytes on 10 sampled frames. |
+| 2 | Track matte: find the area the content layer paints in (probe at 1/8 size), then snapshot, read, compose and draw only that area; skip the matte when the content is empty | 7.2 ms / 138 achievable fps (window, 1200×800) | **3.2 ms / 313 achievable fps; 60 fps delivered** (p95 3.9 ms) | Matte 6.4 → 2.3 ms per frame. Headless 1200×800: `record` 7.3 → 2.0 ms, `raster` 18.1 → 12.1 ms (82.7 fps). 20 sampled frames pixel-identical; full test suite green. |
 
 ### After change 1: where the time goes now
 
@@ -93,3 +94,18 @@ Raw rows: `docs/benchmarks/2026-11-24-opacity-direct.csv`.
 Release-note wording: *"Layers with an animated opacity that paint a single shape are now drawn
 directly instead of through an off-screen buffer. In the winter-town sample (348 layers, 1200×800)
 playback went from about 3 fps to a steady 60 fps."*
+
+### After change 2: where the time goes now
+
+Real window, per frame (3.2 ms): `layer.matte` 2.3 ms (probe 1.1, snapshot 1.2, compose/read/write
+about 0.05), the other 345 layers 0.8 ms. The pixel work of the matte is gone; what is left is a
+fixed cost of two small snapshots. The animation now renders in about a fifth of the 16.6 ms budget
+at 1200×800, so there is room for larger canvases or heavier animations before fps drops.
+Raw rows: `docs/benchmarks/2026-11-24-matte-area.csv`.
+
+Next candidates: avoid the probe snapshot (derive the area from the layer geometry or from the
+previous frame), and look at a heavier fixture, since this one is now well within budget.
+
+Release-note wording: *"Track mattes now only process the area the matted layer covers instead of
+the whole composition. Combined with the opacity change, winter-town renders 100× faster than
+before (360 ms to 3.2 ms per frame)."*
