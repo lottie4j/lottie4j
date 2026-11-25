@@ -84,7 +84,8 @@ baseline, and the effect. Keep one change per row so the numbers can be attribut
 | 1 | Apply layer opacity directly (`setGlobalAlpha`) instead of through a full-canvas off-screen buffer, for shape layers that paint exactly one shape with one fill or stroke (no masks, effects or modifiers) | 360.6 ms / 2.8 fps (window, 1200×800) | **7.2 ms / 138 achievable fps; 59.8 fps delivered** (p95 8.0 ms) | Headless 1200×800: 316.9 → 7.5 ms (`record`), 366.2 → 18.3 ms (`raster`, 54.7 fps). 100 off-screen snapshots per frame gone. Pixels unchanged: at most 2/255 on ~0.01% of the bytes on 10 sampled frames. |
 | 2 | Track matte: find the area the content layer paints in (probe at 1/8 size), then snapshot, read, compose and draw only that area; skip the matte when the content is empty | 7.2 ms / 138 achievable fps (window, 1200×800) | **3.2 ms / 313 achievable fps; 60 fps delivered** (p95 3.9 ms) | Matte 6.4 → 2.3 ms per frame. Headless 1200×800: `record` 7.3 → 2.0 ms, `raster` 18.1 → 12.1 ms (82.7 fps). 20 sampled frames pixel-identical; full test suite green. |
 | 3 | Track matte: reuse the previous frame's content area (plus a margin) instead of probing every frame; verified against the drawn content (a miss falls back to the probe), and a probe is forced every 4th frame or when the frame jumps. Fixture: `animated_background_patterns` (14 mattes) | 45.8 ms / 21.8 achievable fps (window, 1080×1080) | **34.9 ms / 28.7 achievable fps** (p95 42.0 ms) | `matte.probe` 15.1 → 3.6 ms per frame; 2819 predictions used, 4 misses. Similarity vs thorvg unchanged on `animated_background_patterns` (99.61 / 96.61), `collision` (97.81 / 96.65) and `winter-town` (99.16 / 96.65), 100% / 50%. |
-| 4 | Track matte: draw the content and the matte source side by side into one canvas (each clipped to the area) so one snapshot and one pixel read-back serve both, instead of two | 34.9 ms / 28.7 achievable fps (window, 1080×1080) | **28.6 ms / 35.0 achievable fps** (p95 35.9 ms; 27.8 fps delivered, display capped) | `matte.snapshot` 24.9 → 18.4 ms per frame (1.43 ms per matte). Similarity vs thorvg identical on `animated_background_patterns`, `collision`, `winter-town`, `interactive_mood_selector_ui` (95.63) and `angry_bird`. |
+| 4 | Reverted: draw the content and the matte source side by side into one canvas (one snapshot instead of two) | 34.9 ms / 28.7 achievable fps (window, 1080×1080) | 28.6 ms / 35.0 achievable fps, **not kept** | Moving each layer to the origin of its half shifted the rasterizer's float rounding by one step on a few pixels, depending on the area. `SequentialPlaybackTest` (sequential playback equals a fresh seek) failed on CI. The exact variant needs a fixed offset and a wider snapshot, and measured 33.0 / 34.5 ms, so no gain over change 3. See "Tried and dropped" below. |
+| 5 | Track matte: crop the matted result to the content bounds plus 1 px before drawing it, whatever area it was composed in | 34.9 ms (change 3) | 35.4 ms / 28.2 achievable fps (same) | Correctness fix for change 3: the size and origin of the result image changed the rounding of the scaled draw, so a predicted area gave a few pixels different from a probed area (`SequentialPlaybackTest`). Now bit-identical, no measurable cost. |
 
 ### After change 1: where the time goes now
 
@@ -127,15 +128,30 @@ snapshots plus the probe is now what dominates, not the pixel work. Next: cut th
 snapshot count per matte (hypotheses: derive the area without a probe snapshot, reuse one area for
 mattes whose content did not move, batch the content and matte snapshots).
 
-After change 3 (area prediction): 34.9 ms average, 28.7 achievable fps, still below the 30 fps target in
-delivery (23.1 fps shown, display capped). The probe is down to 3.6 ms per frame; `matte.snapshot`
-(two snapshots per matte, 24.9 ms per frame) is now 71% of the time. Next: fewer or cheaper snapshots
-per matte.
+After change 3 (area prediction) and 5: 35.4 ms average, 28.2 achievable fps, just under the 30 fps target
+(about 23 fps shown, display capped). `matte.snapshot` is 25.7 ms of it (two snapshots per matte, 14 mattes)
+and the probe 4.0 ms. Cutting snapshots does not pay off, see below.
 
-After change 4 (one snapshot per matte): 28.6 ms average, 35.0 achievable fps, which is above the 30 fps
-target. `matte.snapshot` is still 64% of the time (18.4 ms for 14 mattes) and the probe is 4.0 ms.
-Next: render all mattes of a frame into one shared canvas and snapshot once per frame, instead of once
-per matte (the mattes are drawn off-screen and do not depend on the main canvas).
+### Tried and dropped: fewer snapshots
+
+Two attempts to cut the number of snapshots per frame. Neither is kept.
+
+1. **One canvas per matte** (content and matte source side by side, one snapshot): 28.6 ms in the window, but not
+   exact (change 4).
+2. **One canvas for all mattes of a frame** (`prepareMattes` called from `LottiePlayer` before the layer loop): the
+   pixels matched, the frame time did not improve. Two runs each: 28.5 / 28.1 ms against 28.7 / 28.2 ms for one
+   snapshot per matte. `matte.snapshot` fell from 18 to 15 ms per frame, but the probes got slower (1.0 to 1.8 ms
+   each) and cancelled it.
+
+What this shows: snapshot time is dominated by rasterizing what is drawn, not by a fixed cost per snapshot, so 14
+small snapshots cost about as much as one large one. And a rule that came out of it: **the output of a frame must not
+depend on the playback history**. `SequentialPlaybackTest` enforces it exactly. Moving layers by an area-dependent
+offset, or drawing result images of an area-dependent size, changes the rasterizer's float rounding by one step in a
+few pixels. The variant that stays exact (matte at a fixed offset of one canvas width) needs a wider snapshot and gave
+33.0 / 34.5 ms. Letting `SequentialPlaybackTest` allow one step per channel would make the 28.6 ms version possible.
+
+What is left is real work: drawing and rasterizing the 14 matte pairs. Candidates: reuse the result of a matte whose
+content and source did not change since the previous frame, draw soft masks at a lower resolution, cheaper probes.
 
 Other heavy files found in the repo (headless, native size, average render `record` / `raster`):
 `json/interactive_mood_selector_ui.json` 35 / 67 ms (257 layers, 10 effects),
