@@ -166,7 +166,11 @@ class CompareFxViewWithWebViewTest {
             // exactly by SequentialPlaybackTest). The remaining gap to thorvg is unrelated: it
             // grows from frame ~40 on, mostly in the blue channel (not yet investigated).
             // Observed 97.70 → floor(97.70 * 10) / 10 - 0.1 = 97.6.
-            Map.entry("json/collision.json", 97.6)
+            Map.entry("json/collision.json", 97.6),
+
+            // Added with the winter-town fixture (the playback-benchmark file, see BENCHMARK-LOG.md).
+            // Observed 99.16 (min frame 99.11) → floor(99.16 * 10) / 10 - 0.1 = 99.0.
+            Map.entry("dot/winter-town.lottie", 99.0)
     );
 
     /**
@@ -203,7 +207,9 @@ class CompareFxViewWithWebViewTest {
             Map.entry("dot/lottie4j.lottie", 98.1),
             Map.entry("dot/demo-1.lottie", 97.1),
             Map.entry("dot/demo-2.lottie", 97.5),
-            Map.entry("dot/demo-3.lottie", 98.0)
+            Map.entry("dot/demo-3.lottie", 98.0),
+            // Observed 96.65 (min frame 96.51) → floor(96.65 * 10) / 10 - 0.1 = 96.5.
+            Map.entry("dot/winter-town.lottie", 96.5)
     );
 
     private static final int CANVAS_WIDTH = 800;
@@ -260,7 +266,8 @@ class CompareFxViewWithWebViewTest {
                 "dot/lottie4j.lottie",
                 "dot/demo-1.lottie",
                 "dot/demo-2.lottie",
-                "dot/demo-3.lottie"
+                "dot/demo-3.lottie",
+                "dot/winter-town.lottie"
         );
         String filter = System.getProperty("lottie.file");
         if (filter != null && !filter.isBlank()) {
