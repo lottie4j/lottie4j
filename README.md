@@ -94,6 +94,12 @@ public class DemoApplication extends Application {
     * This repo contains test files in `src/main/resources`, of which some were downloaded
       as [free samples from lottiefiles.com](https://lottiefiles.com/featured-free-animations).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build and test the project. The repository is large
+because of the reference images used by the visual-regression tests; that page also explains how to
+clone it without them (or with only the ones you need).
+
 ## Internal Info
 
 ### Making a Release
