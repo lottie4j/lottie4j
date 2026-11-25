@@ -51,7 +51,7 @@ import com.lottie4j.fxfileviewer.util.ImageSaver;
  * <p><b>Runbook</b>: every-frame sampling can produce hundreds of frames per animation. Before
  * committing regenerated references, sanity-check the on-disk size:
  * <pre>
- *   du -sh src/test/resources/json src/test/resources/dot   # expected &lt; 500 MB
+ *   du -sh src/test/resources/json src/test/resources/dot   # expected &lt; 1 GB
  * </pre>
  * Reference PNGs are re-encoded through {@link ImageSaver} at
  * {@link java.util.zip.Deflater#BEST_COMPRESSION} to keep this bounded.</p>
