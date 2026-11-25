@@ -83,6 +83,7 @@ baseline, and the effect. Keep one change per row so the numbers can be attribut
 | 0 | Phase 1: render stats, stage profiler, headless benchmark and viewer `--bench` added (no renderer change) | 360.6 ms / 2.8 fps (window) | same | Baseline established |
 | 1 | Apply layer opacity directly (`setGlobalAlpha`) instead of through a full-canvas off-screen buffer, for shape layers that paint exactly one shape with one fill or stroke (no masks, effects or modifiers) | 360.6 ms / 2.8 fps (window, 1200×800) | **7.2 ms / 138 achievable fps; 59.8 fps delivered** (p95 8.0 ms) | Headless 1200×800: 316.9 → 7.5 ms (`record`), 366.2 → 18.3 ms (`raster`, 54.7 fps). 100 off-screen snapshots per frame gone. Pixels unchanged: at most 2/255 on ~0.01% of the bytes on 10 sampled frames. |
 | 2 | Track matte: find the area the content layer paints in (probe at 1/8 size), then snapshot, read, compose and draw only that area; skip the matte when the content is empty | 7.2 ms / 138 achievable fps (window, 1200×800) | **3.2 ms / 313 achievable fps; 60 fps delivered** (p95 3.9 ms) | Matte 6.4 → 2.3 ms per frame. Headless 1200×800: `record` 7.3 → 2.0 ms, `raster` 18.1 → 12.1 ms (82.7 fps). 20 sampled frames pixel-identical; full test suite green. |
+| 3 | Track matte: reuse the previous frame's content area (plus a margin) instead of probing every frame; verified against the drawn content (a miss falls back to the probe), and a probe is forced every 4th frame or when the frame jumps. Fixture: `animated_background_patterns` (14 mattes) | 45.8 ms / 21.8 achievable fps (window, 1080×1080) | **34.9 ms / 28.7 achievable fps** (p95 42.0 ms) | `matte.probe` 15.1 → 3.6 ms per frame; 2819 predictions used, 4 misses. Similarity vs thorvg unchanged on `animated_background_patterns` (99.61 / 96.61), `collision` (97.81 / 96.65) and `winter-town` (99.16 / 96.65), 100% / 50%. |
 
 ### After change 1: where the time goes now
 
@@ -124,6 +125,11 @@ The 14 mattes per frame are 99% of the render time (45.4 of 45.8 ms, 3.2 ms each
 snapshots plus the probe is now what dominates, not the pixel work. Next: cut the probe and the
 snapshot count per matte (hypotheses: derive the area without a probe snapshot, reuse one area for
 mattes whose content did not move, batch the content and matte snapshots).
+
+After change 3 (area prediction): 34.9 ms average, 28.7 achievable fps, still below the 30 fps target in
+delivery (23.1 fps shown, display capped). The probe is down to 3.6 ms per frame; `matte.snapshot`
+(two snapshots per matte, 24.9 ms per frame) is now 71% of the time. Next: fewer or cheaper snapshots
+per matte.
 
 Other heavy files found in the repo (headless, native size, average render `record` / `raster`):
 `json/interactive_mood_selector_ui.json` 35 / 67 ms (257 layers, 10 effects),

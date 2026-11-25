@@ -1,5 +1,8 @@
 package com.lottie4j.fxplayer.renderer.layer;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +43,35 @@ public class MatteRenderer {
     // The margin (in probe pixels) covers anti-aliasing and features thinner than a probe pixel.
     private static final int PROBE_DIVISOR = 8;
     private static final int PROBE_MARGIN = 2;
+
+    // Matte content moves smoothly in nearly every animation, so the area found in the previous frame (plus a
+    // margin) is used instead of probing again. The prediction is verified against the content that was drawn:
+    // when content touches the edge of the predicted area, the frame is redone with a probe. A probe is also
+    // forced every PROBE_INTERVAL frames and whenever the frame is not close to the previous one, so content
+    // that appears far from the previous area can be clipped for at most PROBE_INTERVAL - 1 frames.
+    private static final int PROBE_INTERVAL = 4;
+    private static final double MAX_PREDICTION_FRAME_STEP = 4;
+    private static final int MIN_PREDICTION_GROW = 16;
+    private static final int PREDICTION_GROW_DIVISOR = 16;
+    private final Map<Layer, AreaHint> areaHints = new IdentityHashMap<>();
+
+    /**
+     * The area a matted layer covered in the last frame it was rendered, in pixels of the matte canvas.
+     */
+    private static final class AreaHint {
+        double frame;
+        double scale;
+        int canvasWidth;
+        int canvasHeight;
+        Rectangle2D area; // null when the layer painted nothing
+        int framesSinceProbe;
+    }
+
+    /**
+     * Result of composing one area: the matted image and the bounds of its content within the canvas.
+     */
+    private record Composed(WritableImage image, Rectangle2D areaBounds, Rectangle2D contentBounds) {
+    }
 
     /**
      * Creates a new MatteRenderer.
@@ -138,42 +170,35 @@ public class MatteRenderer {
 
             // The matted result is transparent wherever the content layer is, so only the area the content
             // covers has to be snapshotted, read, composed and drawn. That is a small part of the composition
-            // for most mattes, and the pixel work scales with the area.
-            Rectangle2D area = contentArea(matteUser, frame, scale, matteWidth, matteHeight, layerRenderer, reuseBuffers);
-            if (area == null) {
-                return;
+            // for most mattes, and the pixel work scales with the area. The area comes from the previous frame
+            // when that is safe (see PROBE_INTERVAL), otherwise from a probe.
+            AreaHint hint = reuseBuffers ? areaHints.computeIfAbsent(matteUser, k -> new AreaHint()) : null;
+            Composed composed = null;
+            boolean probed = true;
+            Rectangle2D area;
+            if (canPredict(hint, frame, scale, matteWidth, matteHeight)) {
+                area = grow(hint.area, matteWidth, matteHeight);
+                composed = composeArea(matteCanvas, contentCanvas, area, matteWidth, matteHeight, matteMode, true, reuseBuffers);
+                probed = composed == null; // null: content touched the edge of the predicted area
+                RenderProfiler.stop(probed ? "matte.predictMiss" : "matte.predictHit", RenderProfiler.start());
             }
-            int areaX = (int) area.getMinX();
-            int areaY = (int) area.getMinY();
-            int areaWidth = (int) area.getWidth();
-            int areaHeight = (int) area.getHeight();
-            boolean wholeCanvas = areaWidth == matteWidth && areaHeight == matteHeight;
-            SnapshotParameters areaParameters = snapshotParameters;
-            if (!wholeCanvas) {
-                areaParameters = new SnapshotParameters();
-                areaParameters.setFill(Color.TRANSPARENT);
-                areaParameters.setViewport(area);
+            if (probed) {
+                area = contentArea(matteUser, frame, scale, matteWidth, matteHeight, layerRenderer, reuseBuffers);
+                if (area == null) {
+                    remember(hint, frame, scale, matteWidth, matteHeight, null, true);
+                    return;
+                }
+                composed = composeArea(matteCanvas, contentCanvas, area, matteWidth, matteHeight, matteMode, false, reuseBuffers);
             }
-
-            // Snapshot both canvases with transparent background (into the previous images when the size is unchanged)
-            t = RenderProfiler.start();
-            WritableImage matteImage = matteCanvas.snapshot(areaParameters,
-                    reuseBuffers ? reusableSnapshot(matteSnapshot, areaWidth, areaHeight) : new WritableImage(areaWidth, areaHeight));
-            WritableImage contentImage = contentCanvas.snapshot(areaParameters,
-                    reuseBuffers ? reusableSnapshot(contentSnapshot, areaWidth, areaHeight) : new WritableImage(areaWidth, areaHeight));
-            RenderProfiler.stop("matte.snapshot", t);
-            if (reuseBuffers) {
-                matteSnapshot = matteImage;
-                contentSnapshot = contentImage;
+            remember(hint, frame, scale, matteWidth, matteHeight, composed.contentBounds(), probed);
+            if (composed.image() == null) {
+                return; // the predicted area turned out to be empty
             }
-
-            if (logger.isDebugEnabled()) {
-                logDebugSamples(matteImage, contentImage, matteMode);
-            }
-
-            // Apply matte composition. The result must be a new image: the canvas only records the draw command
-            // and reads the pixels when it renders, possibly after another matte in the same frame.
-            WritableImage result = applyMatte(contentImage, matteImage, matteMode, reuseBuffers);
+            WritableImage result = composed.image();
+            int areaX = (int) composed.areaBounds().getMinX();
+            int areaY = (int) composed.areaBounds().getMinY();
+            int areaWidth = (int) result.getWidth();
+            int areaHeight = (int) result.getHeight();
 
             // IMPORTANT: Save the current composite operation and use SRC_OVER
             // This ensures transparent pixels in the matted result don't obscure
@@ -197,6 +222,83 @@ public class MatteRenderer {
             logger.debug("Matte rendering took: {}ms (scale={}, size={}x{})",
                     ((System.nanoTime() - startTime) / 1_000_000), scale, matteWidth, matteHeight);
         }
+    }
+
+    private static boolean canPredict(AreaHint hint, double frame, double scale, int canvasWidth, int canvasHeight) {
+        return hint != null
+                && hint.area != null
+                && hint.framesSinceProbe < PROBE_INTERVAL
+                && hint.scale == scale
+                && hint.canvasWidth == canvasWidth
+                && hint.canvasHeight == canvasHeight
+                && frame != hint.frame
+                && Math.abs(frame - hint.frame) <= MAX_PREDICTION_FRAME_STEP;
+    }
+
+    private static Rectangle2D grow(Rectangle2D area, int canvasWidth, int canvasHeight) {
+        int by = Math.max(MIN_PREDICTION_GROW, Math.min(canvasWidth, canvasHeight) / PREDICTION_GROW_DIVISOR);
+        int x0 = Math.max(0, (int) area.getMinX() - by);
+        int y0 = Math.max(0, (int) area.getMinY() - by);
+        int x1 = Math.min(canvasWidth, (int) area.getMaxX() + by);
+        int y1 = Math.min(canvasHeight, (int) area.getMaxY() + by);
+        return new Rectangle2D(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    }
+
+    private static void remember(AreaHint hint, double frame, double scale, int canvasWidth, int canvasHeight,
+                                 Rectangle2D contentBounds, boolean probed) {
+        if (hint == null) {
+            return;
+        }
+        hint.frame = frame;
+        hint.scale = scale;
+        hint.canvasWidth = canvasWidth;
+        hint.canvasHeight = canvasHeight;
+        hint.area = contentBounds;
+        hint.framesSinceProbe = probed ? 0 : hint.framesSinceProbe + 1;
+    }
+
+    /**
+     * Snapshots the matte and content canvases for an area, and composes them.
+     *
+     * @param validate when true, the content must not touch an edge of the area that is not also an edge of the
+     *                 canvas (it may then continue outside the area); {@code null} is returned in that case
+     * @return the composed area, or {@code null} when validation failed
+     */
+    private Composed composeArea(Canvas matteCanvas, Canvas contentCanvas, Rectangle2D area, int matteWidth,
+                                 int matteHeight, MatteMode matteMode, boolean validate, boolean reuseBuffers) {
+        int areaX = (int) area.getMinX();
+        int areaY = (int) area.getMinY();
+        int areaWidth = (int) area.getWidth();
+        int areaHeight = (int) area.getHeight();
+        SnapshotParameters areaParameters = snapshotParameters;
+        if (!(areaWidth == matteWidth && areaHeight == matteHeight)) {
+            areaParameters = new SnapshotParameters();
+            areaParameters.setFill(Color.TRANSPARENT);
+            areaParameters.setViewport(area);
+        }
+
+        // Snapshot both canvases with transparent background (into the previous images when the size is unchanged)
+        long t = RenderProfiler.start();
+        WritableImage matteImage = matteCanvas.snapshot(areaParameters,
+                reuseBuffers ? reusableSnapshot(matteSnapshot, areaWidth, areaHeight) : new WritableImage(areaWidth, areaHeight));
+        WritableImage contentImage = contentCanvas.snapshot(areaParameters,
+                reuseBuffers ? reusableSnapshot(contentSnapshot, areaWidth, areaHeight) : new WritableImage(areaWidth, areaHeight));
+        RenderProfiler.stop("matte.snapshot", t);
+        if (reuseBuffers) {
+            matteSnapshot = matteImage;
+            contentSnapshot = contentImage;
+        }
+
+        if (logger.isDebugEnabled()) {
+            logDebugSamples(matteImage, contentImage, matteMode);
+        }
+
+        // Apply matte composition. The result must be a new image: the canvas only records the draw command
+        // and reads the pixels when it renders, possibly after another matte in the same frame.
+        boolean[] openEdges = validate
+                ? new boolean[]{areaX > 0, areaY > 0, areaX + areaWidth < matteWidth, areaY + areaHeight < matteHeight}
+                : null;
+        return applyMatte(contentImage, matteImage, matteMode, reuseBuffers, area, openEdges);
     }
 
     /**
@@ -308,9 +410,13 @@ public class MatteRenderer {
      * @param matte        matte image
      * @param matteMode    matte composition mode
      * @param reuseBuffers whether the cached pixel buffers may be used
-     * @return composited image with matte applied
+     * @param area         the area of the canvas the images cover
+     * @param openEdges    when not null: left, top, right, bottom flags for the area edges that are not canvas edges;
+     *                     {@code null} is returned when content touches one of them
+     * @return composited image with matte applied (image is null when the content is empty), or {@code null}
      */
-    private WritableImage applyMatte(WritableImage content, WritableImage matte, MatteMode matteMode, boolean reuseBuffers) {
+    private Composed applyMatte(WritableImage content, WritableImage matte, MatteMode matteMode, boolean reuseBuffers,
+                                Rectangle2D area, boolean[] openEdges) {
         int width = (int) content.getWidth();
         int height = (int) content.getHeight();
         int pixelCount = width * height;
@@ -335,6 +441,33 @@ public class MatteRenderer {
 
         long t = RenderProfiler.start();
         content.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), contentPixels, 0, width);
+        RenderProfiler.stop("matte.readPixels", t);
+
+        // The bounds of what the content paints: they verify a predicted area and seed the next frame's prediction
+        int minX = width, minY = height, maxX = -1, maxY = -1;
+        for (int y = 0; y < height; y++) {
+            int row = y * width;
+            for (int x = 0; x < width; x++) {
+                if ((contentPixels[row + x] >>> 24) != 0) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        if (maxX < 0) {
+            return new Composed(null, area, null);
+        }
+        if (openEdges != null
+                && ((openEdges[0] && minX == 0) || (openEdges[1] && minY == 0)
+                || (openEdges[2] && maxX == width - 1) || (openEdges[3] && maxY == height - 1))) {
+            return null;
+        }
+        Rectangle2D contentBounds = new Rectangle2D(area.getMinX() + minX, area.getMinY() + minY,
+                maxX - minX + 1, maxY - minY + 1);
+
+        t = RenderProfiler.start();
         matte.getPixelReader().getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), mattePixels, 0, width);
         RenderProfiler.stop("matte.readPixels", t);
 
@@ -347,13 +480,13 @@ public class MatteRenderer {
         WritableImage result = new WritableImage(width, height);
         result.getPixelWriter().setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), resultPixels, 0, width);
         RenderProfiler.stop("matte.writeResult", t);
-        return result;
+        return new Composed(result, area, contentBounds);
     }
 
     /**
      * Composites a content buffer with a matte buffer in-place into {@code resultBuffer}.
      *
-     * <p>This is the pure, pixel-level core of {@link #applyMatte(WritableImage, WritableImage, MatteMode, boolean)}
+     * <p>This is the pure, pixel-level core of {@code applyMatte}
      * extracted so it can be unit-tested without a JavaFX runtime. All buffers are straight-alpha
      * ARGB (as produced by {@code PixelFormat.getIntArgbInstance()}).</p>
      *

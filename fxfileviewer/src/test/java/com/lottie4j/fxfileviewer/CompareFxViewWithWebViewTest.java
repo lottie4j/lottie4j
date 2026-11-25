@@ -153,7 +153,6 @@ class CompareFxViewWithWebViewTest {
             // have no Gaussian blur and no fh/fs/fb text animators, so the mood-selector fix
             // cannot affect them. Drop entries individually once their dedicated follow-up plans
             // land. Floors follow the documented `floor(observed * 10) / 10 - 0.1` rule.
-            Map.entry("json/animated_background_patterns.json", 99.2),
             Map.entry("json/angry_bird.json", 98.2),
             Map.entry("json/face-peeking.json", 98.5),
             Map.entry("json/java_duke_flip.json", 95.7),
